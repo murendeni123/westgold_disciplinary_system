@@ -1,0 +1,334 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { api } from '../../services/api';
+import Card from '../../components/Card';
+import Button from '../../components/Button';
+import { ArrowLeft } from 'lucide-react';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+const ChildProfile: React.FC = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [child, setChild] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [attendanceTrend, setAttendanceTrend] = useState<any[]>([]);
+  const [behaviorTrend, setBehaviorTrend] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (id) {
+      fetchChild();
+      fetchStats();
+    }
+  }, [id]);
+
+  const fetchChild = async () => {
+    try {
+      const response = await api.getStudent(Number(id));
+      setChild(response.data);
+    } catch (error) {
+      console.error('Error fetching child:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      // Fetch recent stats
+      const [meritsRes, incidentsRes, attendanceRes] = await Promise.all([
+        api.getMerits({ student_id: id, start_date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }),
+        api.getIncidents({ student_id: id }),
+        api.getAttendance({ student_id: id, start_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }),
+      ]);
+
+      const totalMerits = meritsRes.data.length;
+      const totalMeritPoints = meritsRes.data.reduce((sum: number, m: any) => sum + (m.points || 0), 0);
+      const totalIncidents = incidentsRes.data.length;
+      const totalDemeritPoints = incidentsRes.data.reduce((sum: number, i: any) => sum + (i.points || 0), 0);
+      const totalAttendance = attendanceRes.data.length;
+      const presentCount = attendanceRes.data.filter((a: any) => a.status === 'present').length;
+      const attendanceRate = totalAttendance > 0 ? ((presentCount / totalAttendance) * 100).toFixed(1) : '0';
+
+      setStats({
+        totalMerits,
+        totalMeritPoints,
+        totalIncidents,
+        totalDemeritPoints,
+        attendanceRate: parseFloat(attendanceRate),
+      });
+
+      // Prepare attendance trend (last 14 days)
+      const dailyAttendance: Record<string, { present: number; total: number }> = {};
+      attendanceRes.data.slice(-14).forEach((record: any) => {
+        const date = new Date(record.attendance_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        if (!dailyAttendance[date]) {
+          dailyAttendance[date] = { present: 0, total: 0 };
+        }
+        dailyAttendance[date].total++;
+        if (record.status === 'present') dailyAttendance[date].present++;
+      });
+
+      const attendanceTrendArray = Object.entries(dailyAttendance)
+        .map(([date, data]) => ({
+          date,
+          rate: data.total > 0 ? ((data.present / data.total) * 100).toFixed(0) : 0,
+        }))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      setAttendanceTrend(attendanceTrendArray);
+
+      // Prepare behavior trend (last 6 months)
+      const monthlyBehavior: Record<string, { merits: number; incidents: number }> = {};
+      [...meritsRes.data, ...incidentsRes.data].forEach((item: any) => {
+        const month = new Date(item.merit_date || item.incident_date).toLocaleDateString('en-US', { month: 'short' });
+        if (!monthlyBehavior[month]) {
+          monthlyBehavior[month] = { merits: 0, incidents: 0 };
+        }
+        if (item.merit_date) monthlyBehavior[month].merits++;
+        else monthlyBehavior[month].incidents++;
+      });
+
+      const behaviorTrendArray = Object.entries(monthlyBehavior)
+        .map(([month, data]) => ({ month, ...data }))
+        .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime())
+        .slice(-6);
+      setBehaviorTrend(behaviorTrendArray);
+
+      // Prepare recent activity (last 10 items)
+      const activities: any[] = [];
+      meritsRes.data.slice(-5).forEach((merit: any) => {
+        activities.push({
+          type: 'merit',
+          date: merit.merit_date,
+          description: `Awarded ${merit.points} merit points`,
+          points: merit.points,
+        });
+      });
+      incidentsRes.data.slice(-5).forEach((incident: any) => {
+        activities.push({
+          type: 'incident',
+          date: incident.incident_date,
+          description: incident.description || 'Behavior incident',
+          points: -incident.points,
+        });
+      });
+
+      activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setRecentActivity(activities.slice(0, 10));
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex justify-center items-center h-64">Loading...</div>;
+  }
+
+  if (!child) {
+    return <div>Child not found</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center space-x-4">
+        <Button variant="secondary" onClick={() => navigate('/parent/children')}>
+          <ArrowLeft size={20} className="mr-2" />
+          Back
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {child.first_name} {child.last_name}
+          </h1>
+          <p className="text-gray-600 mt-2">Child Profile</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card title="Basic Information">
+          <div className="flex gap-6">
+            {/* Photo in top left corner */}
+            <div className="flex-shrink-0">
+              <div className="w-32 h-32 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                {child.photo_path ? (
+                  <img
+                    src={(() => {
+                      const baseUrl = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+                        ? 'http://192.168.18.160:5000'
+                        : 'http://localhost:5000';
+                      return child.photo_path.startsWith('http') ? child.photo_path : `${baseUrl}${child.photo_path}`;
+                    })()}
+                    alt="Child"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Image load error:', child.photo_path);
+                      const target = e.currentTarget;
+                      target.style.display = 'none';
+                      const placeholder = target.parentElement?.querySelector('.photo-placeholder');
+                      if (placeholder) placeholder.classList.remove('hidden');
+                    }}
+                  />
+                ) : null}
+                {!child.photo_path && (
+                  <span className="text-gray-400 text-sm photo-placeholder">No Photo</span>
+                )}
+                <span className="text-gray-400 text-sm photo-placeholder hidden">Photo not found</span>
+              </div>
+            </div>
+
+            {/* Information on the right */}
+            <div className="flex-1 space-y-4">
+              <div>
+                <p className="text-sm text-gray-600">Student ID</p>
+                <p className="text-lg font-semibold">{child.student_id}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Full Name</p>
+                <p className="text-lg font-semibold">
+                  {child.first_name} {child.last_name}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Date of Birth</p>
+                <p className="text-lg font-semibold">{child.date_of_birth || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Grade Level</p>
+                <p className="text-lg font-semibold">{child.grade_level || 'Not assigned'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Class</p>
+                <p className="text-lg font-semibold">{child.class_name || 'Not assigned'}</p>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <Card title="Quick Stats">
+          {stats ? (
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="p-3 bg-green-50 rounded-lg">
+                <p className="text-xs text-gray-600">Total Merits</p>
+                <p className="text-2xl font-bold text-green-600">{stats.totalMerits}</p>
+                <p className="text-xs text-gray-500">{stats.totalMeritPoints} points</p>
+              </div>
+              <div className="p-3 bg-red-50 rounded-lg">
+                <p className="text-xs text-gray-600">Total Incidents</p>
+                <p className="text-2xl font-bold text-red-600">{stats.totalIncidents}</p>
+                <p className="text-xs text-gray-500">{stats.totalDemeritPoints} points</p>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-lg col-span-2">
+                <p className="text-xs text-gray-600">Attendance Rate (Last 30 days)</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.attendanceRate}%</p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4 text-gray-500">Loading stats...</div>
+          )}
+        </Card>
+
+        <Card title="Quick Actions">
+          <div className="space-y-3">
+            <Button
+              className="w-full"
+              onClick={() => navigate(`/parent/attendance?student=${id}`)}
+            >
+              View Attendance
+            </Button>
+            <Button
+              className="w-full"
+              variant="secondary"
+              onClick={() => navigate(`/parent/behaviour?student=${id}`)}
+            >
+              View Behaviour Reports
+            </Button>
+            <Button
+              className="w-full"
+              variant="secondary"
+              onClick={() => navigate(`/parent/merits?student=${id}`)}
+            >
+              View Merits
+            </Button>
+            <Button
+              className="w-full"
+              variant="secondary"
+              onClick={() => navigate(`/parent/detentions?student=${id}`)}
+            >
+              View Detentions
+            </Button>
+          </div>
+        </Card>
+      </div>
+
+      {/* Mini Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {attendanceTrend.length > 0 && (
+          <Card title="Attendance Trend (Last 14 Days)">
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={attendanceTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis domain={[0, 100]} />
+                <Tooltip />
+                <Line type="monotone" dataKey="rate" stroke="#3b82f6" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+        )}
+
+        {behaviorTrend.length > 0 && (
+          <Card title="Behavior Trend (Last 6 Months)">
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={behaviorTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="merits" fill="#10b981" name="Merits" />
+                <Bar dataKey="incidents" fill="#ef4444" name="Incidents" />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        )}
+      </div>
+
+      {/* Recent Activity */}
+      {recentActivity.length > 0 && (
+        <Card title="Recent Activity">
+          <div className="space-y-3">
+            {recentActivity.map((activity, index) => (
+              <div
+                key={index}
+                className={`p-3 rounded-lg border-l-4 ${
+                  activity.type === 'merit'
+                    ? 'bg-green-50 border-green-500'
+                    : 'bg-red-50 border-red-500'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">{activity.description}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {new Date(activity.date).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <span
+                    className={`text-lg font-bold ${
+                      activity.points > 0 ? 'text-green-600' : 'text-red-600'
+                    }`}
+                  >
+                    {activity.points > 0 ? '+' : ''}{activity.points}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+};
+
+export default ChildProfile;
+
