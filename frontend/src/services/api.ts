@@ -109,8 +109,21 @@ export const api = {
   deleteTeacher: (id: number) => axiosInstance.delete(`/teachers/${id}`),
 
   // Auth - Signup
-  signup: (data: { name: string; email: string; password: string; phone?: string }) =>
-    axiosInstance.post('/auth/signup', data),
+  signup: (data: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+    work_phone?: string;
+    relationship_to_child?: string;
+    emergency_contact_1_name?: string;
+    emergency_contact_1_phone?: string;
+    emergency_contact_2_name?: string;
+    emergency_contact_2_phone?: string;
+    home_address?: string;
+    city?: string;
+    postal_code?: string;
+  }) => axiosInstance.post('/auth/signup', data),
 
   // Parents
   getParents: () => axiosInstance.get('/parents'),

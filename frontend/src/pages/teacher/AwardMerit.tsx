@@ -119,6 +119,11 @@ const AwardMerit: React.FC = () => {
     setLoading(true);
 
     try {
+      if (!formData.description.trim()) {
+        error('Description is required');
+        return;
+      }
+
       await api.createMerit({
         ...formData,
         points: Number(formData.points),
@@ -307,6 +312,7 @@ const AwardMerit: React.FC = () => {
               label="Description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              required
               rows={5}
               placeholder="Describe why this merit is being awarded..."
               className="rounded-xl"

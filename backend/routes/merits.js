@@ -59,10 +59,14 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Student ID, date, and type are required' });
     }
 
+    if (!description || !String(description).trim()) {
+      return res.status(400).json({ error: 'Description is required' });
+    }
+
     const result = await dbRun(
       `INSERT INTO merits (student_id, teacher_id, merit_date, merit_type, description, points)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [student_id, req.user.id, merit_date, merit_type, description || null, points || 0]
+      [student_id, req.user.id, merit_date, merit_type, String(description).trim(), points || 0]
     );
 
     const merit = await dbGet('SELECT * FROM merits WHERE id = ?', [result.id]);

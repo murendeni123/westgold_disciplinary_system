@@ -144,6 +144,63 @@ CREATE TABLE IF NOT EXISTS teachers (
     UNIQUE(employee_id, school_id)
 );
 
+-- Parents table (extends users)
+CREATE TABLE IF NOT EXISTS parents (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL UNIQUE,
+    phone TEXT,
+    work_phone TEXT,
+    relationship_to_child TEXT,
+    emergency_contact_1_name TEXT,
+    emergency_contact_1_phone TEXT,
+    emergency_contact_2_name TEXT,
+    emergency_contact_2_phone TEXT,
+    home_address TEXT,
+    city TEXT,
+    postal_code TEXT,
+    school_id INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE
+);
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS phone TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS work_phone TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS relationship_to_child TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS emergency_contact_1_name TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS emergency_contact_1_phone TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS emergency_contact_2_name TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS emergency_contact_2_phone TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS home_address TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS city TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS postal_code TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS school_id INTEGER;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
 -- Behaviour incidents table (demerits)
 CREATE TABLE IF NOT EXISTS behaviour_incidents (
     id SERIAL PRIMARY KEY,

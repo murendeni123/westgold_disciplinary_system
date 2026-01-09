@@ -5,7 +5,7 @@ interface User {
   id: number;
   email: string;
   name: string;
-  role: 'admin' | 'teacher' | 'parent';
+  role: 'admin' | 'teacher' | 'parent' | 'platform_admin';
   school_id?: number;
   teacher?: any;
   children?: any[];

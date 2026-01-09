@@ -38,6 +38,15 @@ const ParentSignup: React.FC = () => {
     password: '',
     confirmPassword: '',
     phone: '',
+    work_phone: '',
+    relationship_to_child: '',
+    emergency_contact_1_name: '',
+    emergency_contact_1_phone: '',
+    emergency_contact_2_name: '',
+    emergency_contact_2_phone: '',
+    home_address: '',
+    city: '',
+    postal_code: '',
   });
   
   // School linking
@@ -79,6 +88,31 @@ const ParentSignup: React.FC = () => {
       return;
     }
 
+    if (!accountData.phone.trim()) {
+      setError('Phone number is required');
+      return;
+    }
+
+    if (!accountData.relationship_to_child.trim()) {
+      setError('Relationship to child is required');
+      return;
+    }
+
+    if (!accountData.emergency_contact_1_name.trim() || !accountData.emergency_contact_1_phone.trim()) {
+      setError('Emergency contact 1 name and phone are required');
+      return;
+    }
+
+    if (!accountData.emergency_contact_2_name.trim() || !accountData.emergency_contact_2_phone.trim()) {
+      setError('Emergency contact 2 name and phone are required');
+      return;
+    }
+
+    if (!accountData.home_address.trim()) {
+      setError('Home address is required');
+      return;
+    }
+
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountData.email)) {
       setError('Please enter a valid email address');
       return;
@@ -101,7 +135,16 @@ const ParentSignup: React.FC = () => {
         name: accountData.name.trim(),
         email: accountData.email.trim().toLowerCase(),
         password: accountData.password,
-        phone: accountData.phone.trim() || undefined,
+        phone: accountData.phone.trim(),
+        work_phone: accountData.work_phone.trim() || undefined,
+        relationship_to_child: accountData.relationship_to_child.trim(),
+        emergency_contact_1_name: accountData.emergency_contact_1_name.trim(),
+        emergency_contact_1_phone: accountData.emergency_contact_1_phone.trim(),
+        emergency_contact_2_name: accountData.emergency_contact_2_name.trim(),
+        emergency_contact_2_phone: accountData.emergency_contact_2_phone.trim(),
+        home_address: accountData.home_address.trim(),
+        city: accountData.city.trim() || undefined,
+        postal_code: accountData.postal_code.trim() || undefined,
       });
 
       // Auto-login after successful signup
@@ -374,15 +417,155 @@ const ParentSignup: React.FC = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Phone (Optional)</label>
+                    <label className="text-sm font-medium text-gray-700">Phone</label>
                     <div className="relative">
                       <Phone size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                       <input
                         type="tel"
                         value={accountData.phone}
                         onChange={(e) => setAccountData({ ...accountData, phone: e.target.value })}
+                        required
                         placeholder="Enter your phone number"
                         className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Work Phone (Optional)</label>
+                    <div className="relative">
+                      <Phone size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="tel"
+                        value={accountData.work_phone}
+                        onChange={(e) => setAccountData({ ...accountData, work_phone: e.target.value })}
+                        placeholder="Enter your work phone number"
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Relationship to Child</label>
+                    <div className="relative">
+                      <Users size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={accountData.relationship_to_child}
+                        onChange={(e) => setAccountData({ ...accountData, relationship_to_child: e.target.value })}
+                        required
+                        placeholder="e.g., Mother, Father, Legal Guardian"
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <p className="text-sm font-semibold text-gray-900">Emergency Contact 1</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Name</label>
+                    <div className="relative">
+                      <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={accountData.emergency_contact_1_name}
+                        onChange={(e) => setAccountData({ ...accountData, emergency_contact_1_name: e.target.value })}
+                        required
+                        placeholder="Enter emergency contact name"
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Phone</label>
+                    <div className="relative">
+                      <Phone size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="tel"
+                        value={accountData.emergency_contact_1_phone}
+                        onChange={(e) => setAccountData({ ...accountData, emergency_contact_1_phone: e.target.value })}
+                        required
+                        placeholder="Enter emergency contact phone"
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <p className="text-sm font-semibold text-gray-900">Emergency Contact 2</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Name</label>
+                    <div className="relative">
+                      <User size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={accountData.emergency_contact_2_name}
+                        onChange={(e) => setAccountData({ ...accountData, emergency_contact_2_name: e.target.value })}
+                        required
+                        placeholder="Enter emergency contact name"
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Phone</label>
+                    <div className="relative">
+                      <Phone size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="tel"
+                        value={accountData.emergency_contact_2_phone}
+                        onChange={(e) => setAccountData({ ...accountData, emergency_contact_2_phone: e.target.value })}
+                        required
+                        placeholder="Enter emergency contact phone"
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <p className="text-sm font-semibold text-gray-900">Home Address</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Address</label>
+                    <div className="relative">
+                      <Building2 size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        value={accountData.home_address}
+                        onChange={(e) => setAccountData({ ...accountData, home_address: e.target.value })}
+                        required
+                        placeholder="Street address"
+                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">City (Optional)</label>
+                      <input
+                        type="text"
+                        value={accountData.city}
+                        onChange={(e) => setAccountData({ ...accountData, city: e.target.value })}
+                        placeholder="City"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Postal Code (Optional)</label>
+                      <input
+                        type="text"
+                        value={accountData.postal_code}
+                        onChange={(e) => setAccountData({ ...accountData, postal_code: e.target.value })}
+                        placeholder="Postal code"
+                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
                       />
                     </div>
                   </div>

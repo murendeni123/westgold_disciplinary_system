@@ -4,6 +4,147 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Get parent profile (current user)
+router.get('/profile/me', authenticateToken, requireRole('parent'), async (req, res) => {
+    try {
+        const profile = await dbGet(
+            `SELECT u.id, u.email, u.name,
+                    p.phone, p.work_phone, p.relationship_to_child,
+                    p.emergency_contact_1_name, p.emergency_contact_1_phone,
+                    p.emergency_contact_2_name, p.emergency_contact_2_phone,
+                    p.home_address, p.city, p.postal_code
+             FROM users u
+             LEFT JOIN parents p ON p.user_id = u.id
+             WHERE u.id = ? AND u.role = 'parent'`,
+            [req.user.id]
+        );
+
+        if (!profile) {
+            return res.status(404).json({ error: 'Parent not found' });
+        }
+
+        res.json(profile);
+    } catch (error) {
+        console.error('Error fetching parent profile:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Update parent profile (current user)
+router.put('/profile/me', authenticateToken, requireRole('parent'), async (req, res) => {
+    try {
+        const {
+            name,
+            email,
+            phone,
+            work_phone,
+            relationship_to_child,
+            emergency_contact_1_name,
+            emergency_contact_1_phone,
+            emergency_contact_2_name,
+            emergency_contact_2_phone,
+            home_address,
+            city,
+            postal_code,
+        } = req.body;
+
+        if (!name || !email) {
+            return res.status(400).json({ error: 'Name and email are required' });
+        }
+
+        if (!phone) {
+            return res.status(400).json({ error: 'Phone number is required' });
+        }
+
+        if (!relationship_to_child) {
+            return res.status(400).json({ error: 'Relationship to child is required' });
+        }
+
+        if (!emergency_contact_1_name || !emergency_contact_1_phone) {
+            return res.status(400).json({ error: 'Emergency contact 1 name and phone are required' });
+        }
+
+        if (!emergency_contact_2_name || !emergency_contact_2_phone) {
+            return res.status(400).json({ error: 'Emergency contact 2 name and phone are required' });
+        }
+
+        if (!home_address) {
+            return res.status(400).json({ error: 'Home address is required' });
+        }
+
+        // Check if email is already taken by another user
+        const existingUser = await dbGet('SELECT id FROM users WHERE email = ? AND id != ?', [email, req.user.id]);
+        if (existingUser) {
+            return res.status(400).json({ error: 'Email already in use' });
+        }
+
+        await dbRun('UPDATE users SET name = ?, email = ? WHERE id = ?', [name, email, req.user.id]);
+
+        // Upsert into parents table
+        await dbRun(
+            `INSERT INTO parents (
+                user_id,
+                phone,
+                work_phone,
+                relationship_to_child,
+                emergency_contact_1_name,
+                emergency_contact_1_phone,
+                emergency_contact_2_name,
+                emergency_contact_2_phone,
+                home_address,
+                city,
+                postal_code,
+                school_id,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT (user_id) DO UPDATE SET
+                phone = EXCLUDED.phone,
+                work_phone = EXCLUDED.work_phone,
+                relationship_to_child = EXCLUDED.relationship_to_child,
+                emergency_contact_1_name = EXCLUDED.emergency_contact_1_name,
+                emergency_contact_1_phone = EXCLUDED.emergency_contact_1_phone,
+                emergency_contact_2_name = EXCLUDED.emergency_contact_2_name,
+                emergency_contact_2_phone = EXCLUDED.emergency_contact_2_phone,
+                home_address = EXCLUDED.home_address,
+                city = EXCLUDED.city,
+                postal_code = EXCLUDED.postal_code,
+                school_id = EXCLUDED.school_id,
+                updated_at = CURRENT_TIMESTAMP`,
+            [
+                req.user.id,
+                phone,
+                work_phone || null,
+                relationship_to_child,
+                emergency_contact_1_name,
+                emergency_contact_1_phone,
+                emergency_contact_2_name,
+                emergency_contact_2_phone,
+                home_address,
+                city || null,
+                postal_code || null,
+                req.user.school_id || null,
+            ]
+        );
+
+        const updatedProfile = await dbGet(
+            `SELECT u.id, u.email, u.name,
+                    p.phone, p.work_phone, p.relationship_to_child,
+                    p.emergency_contact_1_name, p.emergency_contact_1_phone,
+                    p.emergency_contact_2_name, p.emergency_contact_2_phone,
+                    p.home_address, p.city, p.postal_code
+             FROM users u
+             LEFT JOIN parents p ON p.user_id = u.id
+             WHERE u.id = ? AND u.role = 'parent'`,
+            [req.user.id]
+        );
+
+        res.json(updatedProfile);
+    } catch (error) {
+        console.error('Error updating parent profile:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Get all parents (admin only)
 router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
@@ -197,6 +338,13 @@ router.post('/link-school', authenticateToken, requireRole('parent'), async (req
             [school.id, req.user.id]
         );
 
+        // Keep parents table in sync (if present)
+        try {
+            await dbRun('UPDATE parents SET school_id = ? WHERE user_id = ?', [school.id, req.user.id]);
+        } catch (err) {
+            console.log('Could not update parents.school_id (table may not exist):', err.message);
+        }
+
         res.json({ message: 'School linked successfully', school });
     } catch (error) {
         console.error('Error linking school:', error);
@@ -295,6 +443,13 @@ router.post('/switch-school', authenticateToken, requireRole('parent'), async (r
             'UPDATE users SET school_id = ? WHERE id = ?',
             [school_id, req.user.id]
         );
+
+        // Keep parents table in sync (if present)
+        try {
+            await dbRun('UPDATE parents SET school_id = ? WHERE user_id = ?', [school_id, req.user.id]);
+        } catch (err) {
+            console.log('Could not update parents.school_id (table may not exist):', err.message);
+        }
 
         res.json({ message: 'School switched successfully', school });
     } catch (error) {

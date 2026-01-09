@@ -94,11 +94,15 @@ router.post('/', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Student ID, incident date, and incident type are required' });
         }
 
+        if (!description || !String(description).trim()) {
+            return res.status(400).json({ error: 'Description is required' });
+        }
+
         const result = await dbRun(
             `INSERT INTO behaviour_incidents 
              (student_id, teacher_id, incident_date, incident_time, incident_type, description, severity, points, status)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-            [student_id, req.user.id, incident_date, incident_time || null, incident_type, description || null, severity || 'low', points || 0]
+            [student_id, req.user.id, incident_date, incident_time || null, incident_type, String(description).trim(), severity || 'low', points || 0]
         );
 
         const incident = await dbGet('SELECT * FROM behaviour_incidents WHERE id = ?', [result.id]);

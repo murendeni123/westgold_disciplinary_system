@@ -127,6 +127,11 @@ const LogIncident: React.FC = () => {
     setLoading(true);
 
     try {
+      if (!formData.description.trim()) {
+        error('Description is required');
+        return;
+      }
+
       const consequencesSummary = selectedConsequences.length
         ? `\n\nConsequences applied: ${selectedConsequences.join(', ')}`
         : '';
@@ -345,6 +350,7 @@ const LogIncident: React.FC = () => {
               label="Description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              required
               rows={5}
               placeholder="Describe what happened..."
               className="rounded-xl"

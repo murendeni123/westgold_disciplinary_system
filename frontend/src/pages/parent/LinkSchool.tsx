@@ -90,6 +90,10 @@ const LinkSchool: React.FC = () => {
       return; // Already on this school
     }
 
+    if (!user) {
+      return;
+    }
+
     setSwitchingSchool(schoolId);
     try {
       await api.switchSchool(schoolId);

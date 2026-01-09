@@ -2,6 +2,18 @@
 
 A comprehensive full-stack school disciplinary management system built with React, TypeScript, Tailwind CSS, Node.js, Express, and PostgreSQL (Supabase).
 
+## Recent Updates
+
+### Mandatory Field Validation
+- **Incident Logging**: Teachers must now provide descriptions for all behaviour incidents
+- **Merit Awards**: Descriptions are now required for all merit awards  
+- **Enhanced Data Quality**: Server-side validation ensures complete incident and merit records
+
+### Improved Parent Signup Flow
+- **Two-Step Registration**: Streamlined signup with basic info first, contact details second
+- **Better User Experience**: Progressive information collection improves signup conversion
+- **Comprehensive Contact Data**: Collection of emergency contacts and detailed parent information
+
 ## Features
 
 ### Admin Portal
@@ -18,18 +30,20 @@ A comprehensive full-stack school disciplinary management system built with Reac
 - Dashboard with class and incident overview
 - Class management and student lists
 - Daily and period-based attendance tracking
-- Behaviour incident logging
+- **Behaviour incident logging with mandatory descriptions**
+- **Merit awards with required descriptions**
 - Incident history review
 - Messaging with parents and admin
 - Profile management
 
 ### Parent Portal
 - Dashboard with child overview
+- **Two-step signup process for better onboarding**
 - Link child using unique code
 - View children's attendance records
 - View behaviour reports and incidents
 - Messaging with teachers and admin
-- Account settings
+- Account settings with comprehensive contact information
 
 ## Tech Stack
 
@@ -227,7 +241,9 @@ pds system/
 - ✅ Charts and analytics (Recharts)
 - ✅ CSV export functionality
 - ✅ Real-time data updates
-- ✅ Form validation
+- ✅ **Mandatory field validation for incidents and merits**
+- ✅ **Two-step parent signup process**
+- ✅ Enhanced form validation with real-time feedback
 - ✅ Modal dialogs
 - ✅ Data tables with sorting and filtering
 

@@ -170,11 +170,45 @@ router.put('/change-password', authenticateToken, async (req, res) => {
 // Parent Signup
 router.post('/signup', async (req, res) => {
     try {
-        const { name, email, password, phone } = req.body;
+        const {
+            name,
+            email,
+            password,
+            phone,
+            work_phone,
+            relationship_to_child,
+            emergency_contact_1_name,
+            emergency_contact_1_phone,
+            emergency_contact_2_name,
+            emergency_contact_2_phone,
+            home_address,
+            city,
+            postal_code,
+        } = req.body;
 
         // Validation
         if (!name || !email || !password) {
             return res.status(400).json({ error: 'Name, email, and password are required' });
+        }
+
+        if (!phone) {
+            return res.status(400).json({ error: 'Phone number is required' });
+        }
+
+        if (!relationship_to_child) {
+            return res.status(400).json({ error: 'Relationship to child is required' });
+        }
+
+        if (!emergency_contact_1_name || !emergency_contact_1_phone) {
+            return res.status(400).json({ error: 'Emergency contact 1 name and phone are required' });
+        }
+
+        if (!emergency_contact_2_name || !emergency_contact_2_phone) {
+            return res.status(400).json({ error: 'Emergency contact 2 name and phone are required' });
+        }
+
+        if (!home_address) {
+            return res.status(400).json({ error: 'Home address is required' });
         }
 
         if (password.length < 6) {
@@ -194,6 +228,39 @@ router.post('/signup', async (req, res) => {
         const user = await dbGet(
             'INSERT INTO users (email, password, role, name) VALUES (?, ?, ?, ?) RETURNING id, email, role, name, school_id',
             [email.toLowerCase(), hashedPassword, 'parent', name]
+        );
+
+        // Create parent profile record
+        await dbRun(
+            `INSERT INTO parents (
+                user_id,
+                phone,
+                work_phone,
+                relationship_to_child,
+                emergency_contact_1_name,
+                emergency_contact_1_phone,
+                emergency_contact_2_name,
+                emergency_contact_2_phone,
+                home_address,
+                city,
+                postal_code,
+                school_id,
+                updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+            [
+                user.id,
+                String(phone).trim(),
+                work_phone ? String(work_phone).trim() : null,
+                String(relationship_to_child).trim(),
+                String(emergency_contact_1_name).trim(),
+                String(emergency_contact_1_phone).trim(),
+                String(emergency_contact_2_name).trim(),
+                String(emergency_contact_2_phone).trim(),
+                String(home_address).trim(),
+                city ? String(city).trim() : null,
+                postal_code ? String(postal_code).trim() : null,
+                user.school_id || null,
+            ]
         );
 
         // Generate token

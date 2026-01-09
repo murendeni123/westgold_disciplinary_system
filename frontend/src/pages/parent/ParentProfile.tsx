@@ -4,7 +4,7 @@ import { api } from '../../services/api';
 import Card from '../../components/Card';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
-import { Save, User, Phone, MapPin, AlertCircle } from 'lucide-react';
+import { Save, AlertCircle } from 'lucide-react';
 
 const ParentProfile: React.FC = () => {
   const { user, updateUser } = useAuth();
@@ -13,8 +13,11 @@ const ParentProfile: React.FC = () => {
     email: '',
     phone: '',
     work_phone: '',
-    emergency_contact_name: '',
-    emergency_contact_phone: '',
+    relationship_to_child: '',
+    emergency_contact_1_name: '',
+    emergency_contact_1_phone: '',
+    emergency_contact_2_name: '',
+    emergency_contact_2_phone: '',
     home_address: '',
     city: '',
     postal_code: '',
@@ -36,8 +39,11 @@ const ParentProfile: React.FC = () => {
         email: profile.email || user?.email || '',
         phone: profile.phone || '',
         work_phone: profile.work_phone || '',
-        emergency_contact_name: profile.emergency_contact_name || '',
-        emergency_contact_phone: profile.emergency_contact_phone || '',
+        relationship_to_child: profile.relationship_to_child || '',
+        emergency_contact_1_name: profile.emergency_contact_1_name || '',
+        emergency_contact_1_phone: profile.emergency_contact_1_phone || '',
+        emergency_contact_2_name: profile.emergency_contact_2_name || '',
+        emergency_contact_2_phone: profile.emergency_contact_2_phone || '',
         home_address: profile.home_address || '',
         city: profile.city || '',
         postal_code: profile.postal_code || '',
@@ -56,7 +62,7 @@ const ParentProfile: React.FC = () => {
     try {
       await api.updateParentProfile(formData);
       setSuccess('Profile updated successfully!');
-      if (updateUser) {
+      if (user) {
         const updatedUser = { ...user, ...formData };
         updateUser(updatedUser);
       }
@@ -96,7 +102,6 @@ const ParentProfile: React.FC = () => {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
-              icon="user"
             />
             <Input
               label="Email Address"
@@ -104,7 +109,6 @@ const ParentProfile: React.FC = () => {
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
-              icon="mail"
             />
           </div>
         </Card>
@@ -117,16 +121,22 @@ const ParentProfile: React.FC = () => {
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              icon="phone"
               placeholder="Enter your phone number"
+              required
             />
             <Input
               label="Work Phone"
               type="tel"
               value={formData.work_phone}
               onChange={(e) => setFormData({ ...formData, work_phone: e.target.value })}
-              icon="phone"
               placeholder="Enter your work phone number"
+            />
+            <Input
+              label="Relationship to Child"
+              value={formData.relationship_to_child}
+              onChange={(e) => setFormData({ ...formData, relationship_to_child: e.target.value })}
+              placeholder="e.g., Mother, Father, Legal Guardian"
+              required
             />
           </div>
         </Card>
@@ -135,19 +145,34 @@ const ParentProfile: React.FC = () => {
         <Card title="Emergency Contacts">
           <div className="space-y-4">
             <Input
-              label="Emergency Contact Name"
-              value={formData.emergency_contact_name}
-              onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
-              icon="user"
+              label="Emergency Contact 1 Name"
+              value={formData.emergency_contact_1_name}
+              onChange={(e) => setFormData({ ...formData, emergency_contact_1_name: e.target.value })}
               placeholder="Enter emergency contact name"
+              required
             />
             <Input
-              label="Emergency Contact Phone"
+              label="Emergency Contact 1 Phone"
               type="tel"
-              value={formData.emergency_contact_phone}
-              onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
-              icon="phone"
+              value={formData.emergency_contact_1_phone}
+              onChange={(e) => setFormData({ ...formData, emergency_contact_1_phone: e.target.value })}
               placeholder="Enter emergency contact phone"
+              required
+            />
+            <Input
+              label="Emergency Contact 2 Name"
+              value={formData.emergency_contact_2_name}
+              onChange={(e) => setFormData({ ...formData, emergency_contact_2_name: e.target.value })}
+              placeholder="Enter emergency contact name"
+              required
+            />
+            <Input
+              label="Emergency Contact 2 Phone"
+              type="tel"
+              value={formData.emergency_contact_2_phone}
+              onChange={(e) => setFormData({ ...formData, emergency_contact_2_phone: e.target.value })}
+              placeholder="Enter emergency contact phone"
+              required
             />
           </div>
         </Card>
@@ -159,8 +184,8 @@ const ParentProfile: React.FC = () => {
               label="Home Address"
               value={formData.home_address}
               onChange={(e) => setFormData({ ...formData, home_address: e.target.value })}
-              icon="map-pin"
               placeholder="Enter your home address"
+              required
             />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
