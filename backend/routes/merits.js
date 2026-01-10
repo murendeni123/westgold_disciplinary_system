@@ -1,6 +1,7 @@
 const express = require('express');
 const { dbAll, dbGet, dbRun } = require('../database/db');
 const { authenticateToken } = require('../middleware/auth');
+const notificationService = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -66,6 +67,18 @@ router.post('/', authenticateToken, async (req, res) => {
     );
 
     const merit = await dbGet('SELECT * FROM merits WHERE id = ?', [result.id]);
+
+    // Send notification to parent (in-app + WhatsApp) - positive news!
+    notificationService.sendMeritNotification({
+      meritId: result.id,
+      studentId: student_id,
+      meritType: merit_type,
+      points: points || 0,
+      description: description || '',
+      date: merit_date,
+      schoolId: req.user.school_id,
+    });
+
     res.status(201).json(merit);
   } catch (error) {
     console.error('Error creating merit:', error);

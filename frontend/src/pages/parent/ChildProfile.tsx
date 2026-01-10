@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
+import MedicalInfoSection from '../../components/MedicalInfoSection';
 import { ArrowLeft } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -326,6 +327,9 @@ const ChildProfile: React.FC = () => {
           </div>
         </Card>
       )}
+
+      {/* Medical Information Section - Read Only for Parents */}
+      {id && <MedicalInfoSection studentId={Number(id)} canEdit={false} />}
     </div>
   );
 };

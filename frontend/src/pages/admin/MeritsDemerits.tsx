@@ -182,27 +182,33 @@ const MeritsDemerits: React.FC = () => {
           </h1>
           <p className="text-gray-600 mt-2 text-lg">View and analyze student behavior records</p>
         </div>
-        <div className="flex space-x-3">
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              variant={viewType === 'merits' ? 'primary' : 'secondary'}
-              onClick={() => setViewType('merits')}
-              className={`rounded-xl ${viewType === 'merits' ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' : ''}`}
-            >
-              <Award size={20} className="mr-2" />
-              Merits
-            </Button>
-          </motion.div>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
-              variant={viewType === 'demerits' ? 'primary' : 'secondary'}
-              onClick={() => setViewType('demerits')}
-              className={`rounded-xl ${viewType === 'demerits' ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white' : ''}`}
-            >
-              <AlertTriangle size={20} className="mr-2" />
-              Demerits
-            </Button>
-          </motion.div>
+        <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setViewType('merits')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 ${
+              viewType === 'merits'
+                ? 'bg-white text-emerald-700 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Award size={18} />
+            <span>Merits</span>
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setViewType('demerits')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 ${
+              viewType === 'demerits'
+                ? 'bg-white text-red-700 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <AlertTriangle size={18} />
+            <span>Demerits</span>
+          </motion.button>
         </div>
       </motion.div>
 

@@ -1,6 +1,7 @@
 const express = require('express');
 const { dbAll, dbGet, dbRun } = require('../database/db');
 const { authenticateToken } = require('../middleware/auth');
+const notificationService = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -102,12 +103,30 @@ router.post('/', authenticateToken, async (req, res) => {
         );
 
         const incident = await dbGet('SELECT * FROM behaviour_incidents WHERE id = ?', [result.id]);
+
+        // Only send notification immediately for LOW severity incidents
+        // HIGH and MEDIUM severity require admin approval first
+        const incidentSeverity = (severity || 'low').toLowerCase();
+        if (incidentSeverity === 'low') {
+            notificationService.sendIncidentNotification({
+                incidentId: result.id,
+                studentId: student_id,
+                incidentType: incident_type,
+                description: description || '',
+                severity: incidentSeverity,
+                date: incident_date,
+                schoolId: req.user.school_id,
+            });
+        }
+        // For high/medium severity, notification will be sent when admin approves
+
         res.status(201).json(incident);
     } catch (error) {
         console.error('Error creating incident:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
 
 // Update incident
 router.put('/:id', authenticateToken, async (req, res) => {
@@ -161,12 +180,31 @@ router.put('/:id', authenticateToken, async (req, res) => {
             
             params.push(req.params.id);
             
+            // Get the incident before update to check if status is changing to approved
+            const existingIncident = await dbGet('SELECT * FROM behaviour_incidents WHERE id = ?', [req.params.id]);
+            
             await dbRun(
                 `UPDATE behaviour_incidents 
                  SET ${updates.join(', ')}
                  WHERE id = ?`,
                 params
             );
+
+            // If admin is approving a high/medium severity incident, send notification to parent now
+            if (status === 'approved' && existingIncident && existingIncident.status !== 'approved') {
+                const incidentSeverity = (existingIncident.severity || 'low').toLowerCase();
+                if (incidentSeverity === 'high' || incidentSeverity === 'medium') {
+                    notificationService.sendIncidentNotification({
+                        incidentId: existingIncident.id,
+                        studentId: existingIncident.student_id,
+                        incidentType: existingIncident.incident_type,
+                        description: existingIncident.description || '',
+                        severity: incidentSeverity,
+                        date: existingIncident.incident_date,
+                        schoolId: req.user.school_id,
+                    });
+                }
+            }
         } else {
             // Teachers can only update their own incidents
             await dbRun(

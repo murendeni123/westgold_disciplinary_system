@@ -240,6 +240,7 @@ export const api = {
   // Notifications
   getNotifications: (params?: any) => axiosInstance.get('/notifications', { params }),
   getUnreadCount: () => axiosInstance.get('/notifications/unread-count'),
+  getNotificationDetails: (id: number) => axiosInstance.get(`/notifications/${id}/details`),
   markNotificationRead: (id: number) => axiosInstance.put(`/notifications/${id}/read`),
   markAllNotificationsRead: () => axiosInstance.put('/notifications/read-all'),
   deleteNotification: (id: number) => axiosInstance.delete(`/notifications/${id}`),
@@ -363,5 +364,30 @@ export const api = {
   deleteSchoolFavicon: (schoolId: number) => axiosInstance.delete(`/school-customizations/${schoolId}/favicon`),
   deleteLoginBackground: (schoolId: number) => axiosInstance.delete(`/school-customizations/${schoolId}/login-background`),
   deleteDashboardBackground: (schoolId: number) => axiosInstance.delete(`/school-customizations/${schoolId}/dashboard-background`),
+
+  // Medical Information
+  getMedicalInfo: (studentId: number) => axiosInstance.get(`/medical-info/${studentId}`),
+  saveMedicalInfo: (studentId: number, data: any) => axiosInstance.post(`/medical-info/${studentId}`, data),
+  getEmergencyContacts: (studentId: number) => axiosInstance.get(`/medical-info/${studentId}/emergency-contacts`),
+  addEmergencyContact: (studentId: number, data: any) => axiosInstance.post(`/medical-info/${studentId}/emergency-contacts`, data),
+  updateEmergencyContact: (contactId: number, data: any) => axiosInstance.put(`/medical-info/emergency-contacts/${contactId}`, data),
+  deleteEmergencyContact: (contactId: number) => axiosInstance.delete(`/medical-info/emergency-contacts/${contactId}`),
+
+  // WhatsApp Notifications
+  getWhatsAppStatus: () => axiosInstance.get('/whatsapp/status'),
+  getWhatsAppLogs: (params?: { student_id?: number; type?: string; status?: string; start_date?: string; end_date?: string; limit?: number; offset?: number }) => 
+    axiosInstance.get('/whatsapp/logs', { params }),
+  getWhatsAppTemplates: () => axiosInstance.get('/whatsapp/templates'),
+  updateWhatsAppTemplate: (id: number, data: { status?: string; template_name?: string }) => 
+    axiosInstance.put(`/whatsapp/templates/${id}`, data),
+  getWhatsAppOptedInUsers: () => axiosInstance.get('/whatsapp/opted-in-users'),
+  sendWhatsAppTest: (phone: string, template_name?: string) => 
+    axiosInstance.post('/whatsapp/test', { phone, template_name }),
+  sendWhatsAppNotification: (data: { student_id: number; type: string; custom_message?: string }) => 
+    axiosInstance.post('/whatsapp/send', data),
+  updateWhatsAppOptIn: (userId: number, data: { opt_in: boolean; whatsapp_number?: string; notification_preferences?: object }) => 
+    axiosInstance.put(`/whatsapp/opt-in/${userId}`, data),
+  getWhatsAppStats: (params?: { start_date?: string; end_date?: string }) => 
+    axiosInstance.get('/whatsapp/stats', { params }),
 };
 

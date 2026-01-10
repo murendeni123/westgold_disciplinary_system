@@ -1,6 +1,7 @@
 const express = require('express');
 const { dbAll, dbGet, dbRun } = require('../database/db');
 const { authenticateToken } = require('../middleware/auth');
+const notificationService = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -102,6 +103,23 @@ router.post('/', authenticateToken, async (req, res) => {
         );
 
         const record = await dbGet('SELECT * FROM attendance WHERE id = ?', [result.id]);
+
+        // Send notification to parent (in-app + WhatsApp) for absent or late students
+        if (status === 'absent' || status === 'late') {
+            // Get class name for notification
+            const classInfo = await dbGet('SELECT class_name FROM classes WHERE id = ?', [class_id]);
+            
+            notificationService.sendAttendanceNotification({
+                attendanceId: result.id,
+                studentId: student_id,
+                status,
+                date: new Date(attendance_date).toLocaleDateString('en-ZA'),
+                period: period || null,
+                className: classInfo?.class_name || 'class',
+                schoolId: req.user.school_id,
+            });
+        }
+
         res.status(201).json(record);
     } catch (error) {
         console.error('Error creating attendance record:', error);
@@ -132,6 +150,23 @@ router.post('/bulk', authenticateToken, async (req, res) => {
                 results.push(attendanceRecord);
             } catch (err) {
                 console.error('Error creating attendance record:', err);
+            }
+        }
+
+        // Send notifications for absent/late students (in-app + WhatsApp, async)
+        const classInfo = await dbGet('SELECT class_name FROM classes WHERE id = ?', [class_id]);
+        for (const record of records) {
+            if (record.status === 'absent' || record.status === 'late') {
+                const attendanceRecord = results.find(r => r.student_id === record.student_id);
+                notificationService.sendAttendanceNotification({
+                    attendanceId: attendanceRecord?.id,
+                    studentId: record.student_id,
+                    status: record.status,
+                    date: new Date(attendance_date).toLocaleDateString('en-ZA'),
+                    period: record.period || null,
+                    className: classInfo?.class_name || 'class',
+                    schoolId: req.user.school_id,
+                });
             }
         }
 

@@ -42,11 +42,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
     { path: '/admin/teachers', label: 'Teachers', icon: UserCheck },
     { path: '/admin/parents', label: 'Parents', icon: Users },
     { path: '/admin/attendance', label: 'Attendance', icon: Calendar },
+    { path: '/admin/incident-approval', label: 'Incident Approval', icon: AlertTriangle },
     { path: '/admin/discipline', label: 'Discipline Center', icon: Scale },
     { path: '/admin/discipline-rules', label: 'Discipline Rules', icon: Shield },
     { path: '/admin/detention-sessions', label: 'Detention Sessions', icon: Clock },
     { path: '/admin/merits', label: 'Merits & Recognition', icon: Award },
     { path: '/admin/reports', label: 'Reports & Analytics', icon: BarChart3 },
+    { path: '/admin/whatsapp', label: 'WhatsApp', icon: MessageSquare },
     { path: '/admin/bulk-import', label: 'Bulk Import', icon: Upload },
     { path: '/admin/settings', label: 'Settings', icon: Settings },
   ];

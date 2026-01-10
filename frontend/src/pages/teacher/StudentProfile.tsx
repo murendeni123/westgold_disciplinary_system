@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
+import MedicalInfoSection from '../../components/MedicalInfoSection';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Camera, Upload, User, TrendingUp } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -457,6 +458,9 @@ const StudentProfile: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {/* Medical Information Section */}
+      {id && <MedicalInfoSection studentId={Number(id)} canEdit={true} />}
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { PlatformAuthProvider } from './contexts/PlatformAuthContext';
@@ -29,6 +30,8 @@ import DisciplineCenter from './pages/admin/DisciplineCenter';
 import DisciplineRules from './pages/admin/DisciplineRules';
 import DetentionSessions from './pages/admin/DetentionSessions';
 import ReportsAnalytics from './pages/admin/ReportsAnalytics';
+import WhatsAppManagement from './pages/admin/WhatsAppManagement';
+import IncidentApproval from './pages/admin/IncidentApproval';
 
 // Platform pages
 import PlatformLogin from './pages/platform/PlatformLogin';
@@ -81,6 +84,7 @@ import ParentProfile from './pages/parent/ParentProfile';
 function App() {
   return (
     <Router>
+      <Toaster position="top-right" />
       <AuthProvider>
         <SchoolThemeProvider>
           <NotificationProvider>
@@ -105,6 +109,8 @@ function App() {
             <Route path="merits" element={<MeritsDemerits />} />
             <Route path="reports" element={<ReportsAnalytics />} />
             <Route path="bulk-import" element={<BulkImport />} />
+            <Route path="whatsapp" element={<WhatsAppManagement />} />
+            <Route path="incident-approval" element={<IncidentApproval />} />
             <Route path="settings" element={<AdminSettings />} />
           </Route>
 
