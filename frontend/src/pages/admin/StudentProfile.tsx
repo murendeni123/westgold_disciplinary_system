@@ -5,6 +5,7 @@ import Button from '../../components/Button';
 import Modal from '../../components/Modal';
 import Select from '../../components/Select';
 import ParentProfileModal from '../../components/ParentProfileModal';
+import MedicalInfoSection from '../../components/MedicalInfoSection';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Copy, Camera, Upload, User, Award, AlertTriangle, Calendar, TrendingUp } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -220,50 +221,39 @@ const StudentProfile: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <ToastContainer />
       
-      {/* Header */}
+      {/* Hero Section with Student Photo and Key Info */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex items-center space-x-4"
+        className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 shadow-2xl"
       >
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <Button
-            variant="secondary"
-            onClick={() => navigate('/admin/students')}
-            className="rounded-xl"
-          >
-            <ArrowLeft size={20} className="mr-2" />
-            Back
-          </Button>
-        </motion.div>
-        <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            {student.first_name} {student.last_name}
-          </h1>
-          <p className="text-gray-600 mt-2 text-lg">Student Profile</p>
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+            backgroundSize: '40px 40px'
+          }} />
         </div>
-      </motion.div>
+        
+        <div className="relative p-8">
+          <motion.div whileHover={{ scale: 1.02, x: -2 }} whileTap={{ scale: 0.98 }} className="mb-6">
+            <button
+              onClick={() => navigate('/admin/students')}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-white font-medium hover:bg-white/20 transition-all duration-200"
+            >
+              <ArrowLeft size={18} strokeWidth={2} />
+              <span>Back to Students</span>
+            </button>
+          </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Basic Information */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Basic Information</h2>
-            <User className="text-amber-600" size={24} />
-          </div>
-          <div className="flex gap-6">
-            {/* Photo in top left corner */}
-            <div className="flex-shrink-0">
-              <div className="w-32 h-32 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+            {/* Large Profile Photo */}
+            <div className="relative">
+              <div className="w-40 h-40 rounded-2xl overflow-hidden bg-white/20 backdrop-blur-md border-4 border-white/30 shadow-2xl flex items-center justify-center">
                 {student.photo_path ? (
                   <img
                     src={(() => {
@@ -274,97 +264,144 @@ const StudentProfile: React.FC = () => {
                     })()}
                     alt="Student"
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      console.error('Image load error:', student.photo_path);
-                      const target = e.currentTarget;
-                      target.style.display = 'none';
-                      const placeholder = target.parentElement?.querySelector('.photo-placeholder');
-                      if (placeholder) placeholder.classList.remove('hidden');
-                    }}
                   />
-                ) : null}
-                {!student.photo_path && (
-                  <span className="text-gray-400 text-sm photo-placeholder">No Photo</span>
+                ) : (
+                  <User className="text-white/50" size={64} />
                 )}
-                <span className="text-gray-400 text-sm photo-placeholder hidden">Photo not found</span>
               </div>
-              <div className="flex flex-col space-y-2 mt-3">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
-                <input
-                  ref={cameraInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
+              {/* Photo Upload Buttons */}
+              <div className="absolute -bottom-2 -right-2 flex gap-2">
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+                <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileSelect} className="hidden" />
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="p-2 rounded-xl bg-white text-amber-600 shadow-lg hover:shadow-xl transition-all"
+                >
+                  <Upload size={16} />
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={handleCameraCapture}
+                  disabled={uploading}
+                  className="p-2 rounded-xl bg-white text-amber-600 shadow-lg hover:shadow-xl transition-all"
+                >
+                  <Camera size={16} />
+                </motion.button>
+              </div>
+            </div>
+
+            {/* Student Info */}
+            <div className="flex-1 text-white">
+              <h1 className="text-5xl font-bold mb-2">
+                {student.first_name} {student.last_name}
+              </h1>
+              <div className="flex flex-wrap gap-3 mb-4">
+                <span className="px-4 py-2 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 font-semibold">
+                  ID: {student.student_id}
+                </span>
+                <span className="px-4 py-2 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 font-semibold">
+                  Grade {student.grade_level || 'N/A'}
+                </span>
+                <span className="px-4 py-2 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 font-semibold">
+                  {student.class_name || 'No Class'}
+                </span>
+              </div>
+              <p className="text-white/90 text-lg">
+                {student.date_of_birth ? `Born: ${new Date(student.date_of_birth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}` : 'Date of birth not set'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Quick Info Cards Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 p-6 text-white shadow-lg hover:shadow-xl transition-shadow"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <Calendar className="opacity-80" size={32} />
+            <span className="text-sm font-medium opacity-90">Attendance</span>
+          </div>
+          <p className="text-4xl font-bold mb-1">{stats?.attendanceRate || 0}%</p>
+          <p className="text-sm opacity-80">Last 30 days</p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 p-6 text-white shadow-lg hover:shadow-xl transition-shadow"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <Award className="opacity-80" size={32} />
+            <span className="text-sm font-medium opacity-90">Merits</span>
+          </div>
+          <p className="text-4xl font-bold mb-1">{stats?.totalMeritPoints || 0}</p>
+          <p className="text-sm opacity-80">{stats?.totalMerits || 0} awards</p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="rounded-2xl bg-gradient-to-br from-red-500 to-pink-600 p-6 text-white shadow-lg hover:shadow-xl transition-shadow"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <AlertTriangle className="opacity-80" size={32} />
+            <span className="text-sm font-medium opacity-90">Incidents</span>
+          </div>
+          <p className="text-4xl font-bold mb-1">{stats?.totalDemeritPoints || 0}</p>
+          <p className="text-sm opacity-80">{stats?.totalIncidents || 0} incidents</p>
+        </motion.div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Academic Information */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4 }}
+          className="rounded-2xl bg-white shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition-shadow"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Academic Information</h2>
+            <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500">
+              <User className="text-white" size={24} />
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200">
+              <p className="text-sm text-gray-600 mb-1 font-medium">Class Assignment</p>
+              <div className="flex items-center justify-between">
+                <p className="text-lg font-bold text-gray-900">{student.class_name || 'Not assigned'}</p>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Button
-                    variant="secondary"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    className="text-xs py-1 px-2 rounded-xl"
+                    size="sm"
+                    onClick={() => setIsClassModalOpen(true)}
+                    className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0"
                   >
-                    <Upload size={14} className="mr-1" />
-                    Upload
-                  </Button>
-                </motion.div>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button
-                    variant="secondary"
-                    onClick={handleCameraCapture}
-                    disabled={uploading}
-                    className="text-xs py-1 px-2 rounded-xl"
-                  >
-                    <Camera size={14} className="mr-1" />
-                    Camera
+                    {student.class_id ? 'Change Class' : 'Assign Class'}
                   </Button>
                 </motion.div>
               </div>
             </div>
-
-            {/* Information on the right */}
-            <div className="flex-1 space-y-4">
-              <div className="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
-                <p className="text-sm text-gray-600 mb-1">Student ID</p>
-                <p className="text-lg font-semibold text-amber-700">{student.student_id}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
-                <p className="text-sm text-gray-600 mb-1">Full Name</p>
-                <p className="text-lg font-semibold text-amber-700">
-                  {student.first_name} {student.last_name}
-                </p>
-              </div>
-              <div className="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
-                <p className="text-sm text-gray-600 mb-1">Date of Birth</p>
-                <p className="text-lg font-semibold text-amber-700">{student.date_of_birth || 'N/A'}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
-                <p className="text-sm text-gray-600 mb-1">Grade Level</p>
-                <p className="text-lg font-semibold text-amber-700">{student.grade_level || 'Not assigned'}</p>
-              </div>
-              <div className="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
-                <p className="text-sm text-gray-600 mb-1">Class</p>
-                <div className="flex items-center space-x-2">
-                  <p className="text-lg font-semibold text-amber-700">{student.class_name || 'Not assigned'}</p>
-                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setIsClassModalOpen(true)}
-                      className="rounded-xl"
-                    >
-                      {student.class_id ? 'Change' : 'Assign'}
-                    </Button>
-                  </motion.div>
-                </div>
-              </div>
+            <div className="p-4 rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200">
+              <p className="text-sm text-gray-600 mb-1 font-medium">Grade Level</p>
+              <p className="text-lg font-bold text-gray-900">{student.grade_level || 'Not set'}</p>
+            </div>
+            <div className="p-4 rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200">
+              <p className="text-sm text-gray-600 mb-1 font-medium">Date of Birth</p>
+              <p className="text-lg font-bold text-gray-900">
+                {student.date_of_birth ? new Date(student.date_of_birth).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Not set'}
+              </p>
             </div>
           </div>
         </motion.div>
@@ -373,59 +410,63 @@ const StudentProfile: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+          transition={{ delay: 0.5 }}
+          className="rounded-2xl bg-white shadow-xl border border-gray-100 p-6 hover:shadow-2xl transition-shadow"
         >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Parent Information</h2>
-            <User className="text-amber-600" size={24} />
+            <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500">
+              <User className="text-white" size={24} />
+            </div>
           </div>
           <div className="space-y-4">
-            <div className="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
-              <p className="text-sm text-gray-600 mb-1">Parent Name</p>
-              <p className="text-lg font-semibold text-amber-700">{student.parent_name || 'Not linked'}</p>
+            <div className="p-4 rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200">
+              <p className="text-sm text-gray-600 mb-1 font-medium">Parent Name</p>
+              <p className="text-lg font-bold text-gray-900">{student.parent_name || 'Not linked'}</p>
             </div>
-            <div className="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
-              <p className="text-sm text-gray-600 mb-1">Parent Email</p>
-              <p className="text-lg font-semibold text-amber-700">{student.parent_email || 'N/A'}</p>
+            <div className="p-4 rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200">
+              <p className="text-sm text-gray-600 mb-1 font-medium">Parent Email</p>
+              <p className="text-lg font-bold text-gray-900">{student.parent_email || 'N/A'}</p>
             </div>
             {student.parent_id && parentData && (
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
-                  variant="secondary"
                   onClick={() => setIsParentModalOpen(true)}
-                  className="mt-2 rounded-xl w-full"
+                  className="w-full rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 shadow-lg"
                 >
-                  <User size={16} className="mr-2" />
                   View Parent Profile
                 </Button>
               </motion.div>
             )}
-            <div className="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
-              <p className="text-sm text-gray-600 mb-2">Parent Link Code</p>
+            <div className="p-4 rounded-xl bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200">
+              <p className="text-sm text-gray-600 mb-2 font-medium">Parent Link Code</p>
               <div className="flex items-center space-x-2">
-                <code className="px-3 py-2 bg-white rounded-xl font-mono text-sm border border-amber-200">
-                  {student.parent_link_code}
+                <code className="flex-1 text-lg font-mono font-bold text-indigo-700 bg-white px-4 py-2 rounded-lg border border-indigo-200">
+                  {student.parent_link_code || 'Not generated'}
                 </code>
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={handleCopyLink}
-                  className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-colors"
-                >
-                  <Copy size={18} />
-                </motion.button>
+                {student.parent_link_code && (
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => {
+                      navigator.clipboard.writeText(student.parent_link_code);
+                      success('Link code copied to clipboard!');
+                    }}
+                    className="p-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg transition-colors"
+                  >
+                    <Copy size={18} />
+                  </motion.button>
+                )}
               </div>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="mt-2">
-                <Button
-                  variant="secondary"
-                  onClick={handleGenerateLink}
-                  className="rounded-xl w-full"
-                >
-                  Generate New Link Code
-                </Button>
-              </motion.div>
             </div>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={handleGenerateLink}
+                className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white border-0 shadow-lg"
+              >
+                Generate New Link Code
+              </Button>
+            </motion.div>
           </div>
         </motion.div>
       </div>
@@ -509,6 +550,9 @@ const StudentProfile: React.FC = () => {
           </motion.div>
         </div>
       )}
+
+      {/* Medical Information Section */}
+      {id && <MedicalInfoSection studentId={Number(id)} canEdit={true} />}
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

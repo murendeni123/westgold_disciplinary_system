@@ -298,13 +298,13 @@ const BehaviourDashboard: React.FC = () => {
           </h1>
           <p className="text-gray-600 mt-2 text-lg">Review and manage behaviour incidents</p>
         </div>
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+        <motion.div whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}>
           <Button
             onClick={handleExportCSV}
-            className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 shadow-lg hover:shadow-xl"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-medium shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all duration-200 border-0"
           >
-            <Download size={20} className="mr-2" />
-            Export CSV
+            <Download size={18} strokeWidth={2.5} />
+            <span>Export CSV</span>
           </Button>
         </motion.div>
       </motion.div>

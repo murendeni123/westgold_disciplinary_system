@@ -90,6 +90,8 @@ app.use('/api/push', require('./routes/push').router);
 app.use('/api/platform', require('./routes/platform'));
 app.use('/api/school-customizations', require('./routes/schoolCustomizations'));
 app.use('/api/users', require('./routes/users'));
+app.use('/api/medical-info', require('./routes/medicalInfo'));
+app.use('/api/whatsapp', require('./routes/whatsapp'));
 
 // Health check
 app.get('/api/health', (req, res) => {

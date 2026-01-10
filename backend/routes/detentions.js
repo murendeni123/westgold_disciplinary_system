@@ -1,7 +1,7 @@
 const express = require('express');
 const { dbAll, dbGet, dbRun } = require('../database/db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
-const { createNotification } = require('./notifications');
+const notificationService = require('../services/notificationService');
 
 const router = express.Router();
 
@@ -158,6 +158,22 @@ router.post('/:id/assign', authenticateToken, requireRole('admin'), async (req, 
     );
 
     const assignment = await dbGet('SELECT * FROM detention_assignments WHERE id = ?', [result.id]);
+
+    // Get detention details for notification
+    const detention = await dbGet('SELECT * FROM detentions WHERE id = ?', [req.params.id]);
+
+    // Send notification to parent (in-app + WhatsApp)
+    notificationService.sendDetentionNotification({
+      detentionAssignmentId: result.id,
+      studentId: student_id,
+      detentionDate: detention?.detention_date ? new Date(detention.detention_date).toLocaleDateString('en-ZA') : 'TBD',
+      detentionTime: detention?.detention_time || 'TBD',
+      duration: detention?.duration || 60,
+      location: detention?.location || 'School',
+      reason: reason || 'Behaviour issue',
+      schoolId: req.user.school_id,
+    });
+
     res.status(201).json(assignment);
   } catch (error) {
     console.error('Error assigning student:', error);
