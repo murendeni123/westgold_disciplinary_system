@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../hooks/useParentStudents';
 import { Building2, ChevronDown, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -14,7 +15,8 @@ interface SchoolSwitcherProps {
 }
 
 const SchoolSwitcher: React.FC<SchoolSwitcherProps> = ({ onSchoolChange }) => {
-  const { user, updateUser } = useAuth();
+  const { profile } = useAuth();
+  const { students } = useParentStudents();
   const [schools, setSchools] = useState<School[]>([]);
   const [currentSchool, setCurrentSchool] = useState<School | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -22,22 +24,21 @@ const SchoolSwitcher: React.FC<SchoolSwitcherProps> = ({ onSchoolChange }) => {
 
   useEffect(() => {
     fetchSchools();
-  }, [user]);
+  }, [students, profile]);
 
   const fetchSchools = async () => {
     try {
-      // Get unique schools from user's children
-      if (user?.children && user.children.length > 0) {
+      // Get unique schools from parent's students
+      if (students.length > 0) {
         const uniqueSchoolIds = new Set<number>();
         const schoolMap = new Map<number, School>();
 
-        user.children.forEach((child: any) => {
-          if (child.school_id && !uniqueSchoolIds.has(child.school_id)) {
-            uniqueSchoolIds.add(child.school_id);
-            // We'll fetch school details, but for now use child's school_id
-            schoolMap.set(child.school_id, {
-              id: child.school_id,
-              name: child.school_name || `School ${child.school_id}`,
+        students.forEach((student) => {
+          if (student.school_id && !uniqueSchoolIds.has(student.school_id)) {
+            uniqueSchoolIds.add(student.school_id);
+            schoolMap.set(student.school_id, {
+              id: student.school_id,
+              name: student.school_name || `School ${student.school_id}`,
             });
           }
         });
@@ -45,9 +46,9 @@ const SchoolSwitcher: React.FC<SchoolSwitcherProps> = ({ onSchoolChange }) => {
         const schoolsList = Array.from(schoolMap.values());
         setSchools(schoolsList);
 
-        // Set current school from user's school_id or first child's school
-        if (user.school_id) {
-          const school = schoolsList.find(s => s.id === user.school_id);
+        // Set current school from profile's school_id or first student's school
+        if (profile?.school_id) {
+          const school = schoolsList.find(s => s.id === Number(profile.school_id));
           if (school) {
             setCurrentSchool(school);
           } else if (schoolsList.length > 0) {
@@ -56,15 +57,15 @@ const SchoolSwitcher: React.FC<SchoolSwitcherProps> = ({ onSchoolChange }) => {
         } else if (schoolsList.length > 0) {
           setCurrentSchool(schoolsList[0]);
         }
-      } else if (user?.school_id) {
-        // If no children but has school_id, create school object from user data
+      } else if (profile?.school_id) {
+        // If no students but has school_id, create school object from profile data
         setCurrentSchool({
-          id: user.school_id,
-          name: `School ${user.school_id}`,
+          id: Number(profile.school_id),
+          name: `School ${profile.school_id}`,
         });
         setSchools([{
-          id: user.school_id,
-          name: `School ${user.school_id}`,
+          id: Number(profile.school_id),
+          name: `School ${profile.school_id}`,
         }]);
       }
     } catch (error) {
@@ -81,10 +82,6 @@ const SchoolSwitcher: React.FC<SchoolSwitcherProps> = ({ onSchoolChange }) => {
     setLoading(true);
     try {
       // Update user's school context
-      if (user && user.id) {
-        const updatedUser = { ...user, school_id: school.id };
-        updateUser(updatedUser);
-      }
       setCurrentSchool(school);
       setIsOpen(false);
 

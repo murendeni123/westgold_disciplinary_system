@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../../hooks/useParentStudents';
 import { api } from '../../services/api';
 import Card from '../../components/Card';
 import { Users, AlertTriangle, Calendar, Bell, Award } from 'lucide-react';
@@ -7,7 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 const ParentDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
+  const { students } = useParentStudents();
   const navigate = useNavigate();
   const [stats, setStats] = useState<any>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -21,7 +23,7 @@ const ParentDashboard: React.FC = () => {
     fetchNotifications();
     fetchBehaviorData();
     fetchAttendanceData();
-  }, [user]);
+  }, [students]);
 
   const fetchNotifications = async () => {
     try {
@@ -49,13 +51,13 @@ const ParentDashboard: React.FC = () => {
 
   const fetchBehaviorData = async () => {
     try {
-      if (!user?.children || user.children.length === 0) return;
+      if (students.length === 0) return;
 
       // Get incidents and merits for all children
       const allIncidents: any[] = [];
       const allMerits: any[] = [];
 
-      for (const child of user.children) {
+      for (const child of students) {
         try {
           const [incidentsRes, meritsRes] = await Promise.all([
             api.getIncidents({ student_id: child.id }),
@@ -105,11 +107,11 @@ const ParentDashboard: React.FC = () => {
 
   const fetchAttendanceData = async () => {
     try {
-      if (!user?.children || user.children.length === 0) return;
+      if (students.length === 0) return;
 
       // Get attendance for all children for last 30 days
       const allAttendance: any[] = [];
-      for (const child of user.children) {
+      for (const child of students) {
         try {
           const response = await api.getAttendance({
             student_id: child.id,
@@ -210,7 +212,7 @@ const ParentDashboard: React.FC = () => {
       </div>
 
       {/* Quick Actions */}
-      {user?.children && user.children.length > 0 && (
+      {students.length > 0 && (
         <Card title="Quick Actions">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <button

@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../../hooks/useParentStudents';
 import Table from '../../components/Table';
 import Card from '../../components/Card';
 import Select from '../../components/Select';
 import { Filter } from 'lucide-react';
 
 const ParentConsequences: React.FC = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
+  const { students } = useParentStudents();
   const [consequences, setConsequences] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -17,7 +19,7 @@ const ParentConsequences: React.FC = () => {
 
   useEffect(() => {
     fetchConsequences();
-  }, [filters, user]);
+  }, [filters, students]);
 
   const fetchConsequences = async () => {
     try {
@@ -25,7 +27,7 @@ const ParentConsequences: React.FC = () => {
       const params: any = {};
       
       // Filter by children's student IDs
-      if (user?.children && user.children.length > 0) {
+      if (students && students.length > 0) {
         if (filters.student_id) {
           params.student_id = filters.student_id;
         }
@@ -41,7 +43,7 @@ const ParentConsequences: React.FC = () => {
       const response = await api.getConsequences(params);
       
       // Filter to only show consequences for parent's children
-      const childIds = user?.children?.map((child: any) => child.id) || [];
+      const childIds = students?.map((child: any) => child.id) || [];
       const filtered = response.data.filter((consequence: any) => {
         return childIds.includes(consequence.student_id);
       });
@@ -85,7 +87,7 @@ const ParentConsequences: React.FC = () => {
         <p className="text-gray-600 mt-2">View consequences for your children</p>
       </div>
 
-      {user?.children && user.children.length > 0 ? (
+      {students && students.length > 0 ? (
         <>
           <Card>
             <div className="flex items-center space-x-2 mb-4">
@@ -99,7 +101,7 @@ const ParentConsequences: React.FC = () => {
                 onChange={(e) => setFilters({ ...filters, student_id: e.target.value })}
               >
                 <option value="">All Children</option>
-                {user.children.map((child: any) => (
+                {students.map((child: any) => (
                   <option key={child.id} value={child.id}>
                     {child.first_name} {child.last_name}
                   </option>

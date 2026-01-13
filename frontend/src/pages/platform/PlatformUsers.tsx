@@ -5,7 +5,7 @@ import Button from '../../components/Button';
 import Input from '../../components/Input';
 import Modal from '../../components/Modal';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit, Trash2, Power, Shield, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, Power } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 const PlatformUsers: React.FC = () => {

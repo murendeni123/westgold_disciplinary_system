@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../../hooks/useParentStudents';
 import { api } from '../../services/api';
 import { usePushNotifications } from '../../hooks/usePushNotifications';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { motion } from 'framer-motion';
-import { Save, Lock, User, Bell, AlertTriangle, Settings, Sparkles } from 'lucide-react';
+import { Save, Lock, User, Bell, AlertTriangle } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 const ParentSettings: React.FC = () => {
-  const { user, updateUser } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
+  const { students } = useParentStudents();
   const { success, error, ToastContainer } = useToast();
   const { isSupported, isSubscribed, subscribe, unsubscribe } = usePushNotifications();
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'notifications'>('profile');
@@ -33,11 +35,11 @@ const ParentSettings: React.FC = () => {
   useEffect(() => {
     if (user) {
       setProfileData({
-        name: user.name || '',
+        name: profile?.full_name || '',
         email: user.email || '',
       });
     }
-  }, [user]);
+  }, [user, profile]);
 
   useEffect(() => {
     if ('Notification' in window) {
@@ -65,9 +67,7 @@ const ParentSettings: React.FC = () => {
         email: profileData.email.trim().toLowerCase(),
       });
       success('Profile updated successfully!');
-      if (updateUser && response.data.user) {
-        updateUser(response.data.user);
-      }
+      await refreshProfile();
     } catch (err: any) {
       error(err.response?.data?.error || 'Error updating profile');
     } finally {
@@ -192,10 +192,10 @@ const ParentSettings: React.FC = () => {
                   <p className="text-sm text-gray-600 mb-1">Role</p>
                   <p className="text-lg font-semibold capitalize text-blue-700">{user?.role}</p>
                 </div>
-                {user?.children && user.children.length > 0 && (
+                {students && students.length > 0 && (
                   <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
                     <p className="text-sm text-gray-600 mb-1">Linked Children</p>
-                    <p className="text-lg font-semibold text-blue-700">{user.children.length} child(ren)</p>
+                    <p className="text-lg font-semibold text-blue-700">{students.length} child(ren)</p>
                   </div>
                 )}
               </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { api } from '../../services/api';
 import DetentionDutyNotification from '../../components/DetentionDutyNotification';
 import { motion } from 'framer-motion';
@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 
 const TeacherDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<any>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -222,7 +222,7 @@ const TeacherDashboard: React.FC = () => {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
               Teacher Dashboard
             </h1>
-            <p className="text-gray-600 mt-2 text-lg">Welcome back, {user?.name}! Here's your overview</p>
+            <p className="text-gray-600 mt-2 text-lg">Welcome back, {profile?.full_name}! Here's your overview</p>
           </div>
           <motion.div
             whileHover={{ scale: 1.05 }}

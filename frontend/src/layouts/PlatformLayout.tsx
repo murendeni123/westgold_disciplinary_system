@@ -13,7 +13,6 @@ import {
   Menu,
   X,
   Shield,
-  Sparkles,
 } from 'lucide-react';
 import Button from '../components/Button';
 

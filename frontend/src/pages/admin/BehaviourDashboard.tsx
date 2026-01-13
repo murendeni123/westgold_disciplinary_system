@@ -7,7 +7,7 @@ import Button from '../../components/Button';
 import Textarea from '../../components/Textarea';
 import AssignConsequenceModal from '../../components/AssignConsequenceModal';
 import { motion } from 'framer-motion';
-import { Filter, Download, AlertTriangle, Check, X, Eye, Edit2, Save, Scale, TrendingUp, Sparkles } from 'lucide-react';
+import { Filter, Download, AlertTriangle, Check, X, Eye, Edit2, Save, Scale, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { useToast } from '../../hooks/useToast';
 
@@ -216,7 +216,7 @@ const BehaviourDashboard: React.FC = () => {
     {
       key: 'actions',
       label: 'Actions',
-      render: (value: any, row: any) => (
+      render: (_value: any, row: any) => (
         <div className="flex items-center space-x-2">
           <button
             onClick={(e) => {

@@ -100,7 +100,7 @@ const StudentProfile: React.FC = () => {
     }
   };
 
-  const handleCopyLink = () => {
+  const _handleCopyLink = () => {
     if (student?.parent_link_code) {
       navigator.clipboard.writeText(student.parent_link_code);
       success('Link code copied to clipboard!');

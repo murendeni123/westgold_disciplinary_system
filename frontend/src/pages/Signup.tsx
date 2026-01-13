@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Input from '../components/Input';
 import Button from '../components/Button';
-import Card from '../components/Card';
+// Card available for future use
 import { api } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
 import { GraduationCap } from 'lucide-react';
 
 const Signup: React.FC = () => {
@@ -18,7 +18,7 @@ const Signup: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +62,7 @@ const Signup: React.FC = () => {
 
       // Auto-login after successful signup
       try {
-        await login(formData.email.trim().toLowerCase(), formData.password);
+        await signIn(formData.email.trim().toLowerCase(), formData.password);
         navigate('/parent');
       } catch (loginError: any) {
         // If auto-login fails, redirect to login page

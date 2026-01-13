@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { api } from '../../services/api';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
@@ -18,13 +18,13 @@ import {
 
 const LinkChild: React.FC = () => {
   const navigate = useNavigate();
-  const { refreshUser } = useAuth();
+  const { refreshProfile } = useAuth();
   const [linkCode, setLinkCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [linkedChild, setLinkedChild] = useState<any>(null);
-  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [, ] = useState(false);
 
   const handleLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +35,7 @@ const LinkChild: React.FC = () => {
     try {
       const response = await api.linkChild(linkCode);
       // Refresh user data to get the newly linked child
-      await refreshUser();
+      await refreshProfile();
       setLinkedChild(response.data.student);
       setSuccess(true);
       setLinkCode('');

@@ -4,7 +4,7 @@ import { usePlatformAuth } from '../../contexts/PlatformAuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
-import { Save, Settings, User, Lock, Sparkles } from 'lucide-react';
+import { Save, Settings, User, Lock } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 const PlatformSettings: React.FC = () => {

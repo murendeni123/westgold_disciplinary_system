@@ -6,7 +6,7 @@ import Modal from '../../components/Modal';
 import Input from '../../components/Input';
 import Select from '../../components/Select';
 import Card from '../../components/Card';
-import { Plus, Edit, Trash2, Download, Printer } from 'lucide-react';
+import { Plus, Edit, Trash2, Printer } from 'lucide-react';
 
 const Timetables: React.FC = () => {
   const [timetables, setTimetables] = useState<any[]>([]);
@@ -30,7 +30,7 @@ const Timetables: React.FC = () => {
     room: '',
     is_break: false,
   });
-  const [bulkEntries, setBulkEntries] = useState<any[]>([]);
+  const [, setBulkEntries] = useState<any[]>([]);
   const [bulkFormData, setBulkFormData] = useState({
     class_id: '',
     teacher_id: '',
@@ -393,7 +393,7 @@ const Timetables: React.FC = () => {
     {
       key: 'is_break',
       label: 'Status',
-      render: (value: number, row: any) => {
+      render: (value: number, _row: any) => {
         if (value === 1) return <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">Break</span>;
         if (viewMode === 'teacher') return <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Lesson</span>;
         return <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Lesson</span>;

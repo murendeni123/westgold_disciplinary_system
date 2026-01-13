@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { api } from '../../services/api';
 import Button from '../../components/Button';
 import { motion } from 'framer-motion';
@@ -7,7 +7,7 @@ import { Camera, Upload, User, Building2 } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 const TeacherProfile: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { success, error, ToastContainer } = useToast();
   const [teacher, setTeacher] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
@@ -23,7 +23,7 @@ const TeacherProfile: React.FC = () => {
   const fetchTeacher = async () => {
     try {
       if (!user?.id) return;
-      const response = await api.getTeacher(user.id);
+      const response = await api.getTeacher(parseInt(user.id, 10));
       console.log('Teacher data received:', response.data);
       setTeacher(response.data);
     } catch (error) {
@@ -35,7 +35,7 @@ const TeacherProfile: React.FC = () => {
     if (!user?.id) return;
     setUploading(true);
     try {
-      await api.uploadTeacherPhoto(user.id, file);
+      await api.uploadTeacherPhoto(parseInt(user.id, 10), file);
       fetchTeacher();
       success('Photo uploaded successfully!');
     } catch (err) {
@@ -153,7 +153,7 @@ const TeacherProfile: React.FC = () => {
           <div className="flex-1 space-y-4">
             <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
               <p className="text-sm text-gray-600 mb-1">Name</p>
-              <p className="text-lg font-semibold text-emerald-700">{user?.name}</p>
+              <p className="text-lg font-semibold text-emerald-700">{profile?.full_name}</p>
             </div>
             <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
               <p className="text-sm text-gray-600 mb-1">Email</p>

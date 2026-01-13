@@ -20,17 +20,44 @@ const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
 });
 
+// Helper to get Supabase session token from localStorage
+const getSupabaseToken = (): string | null => {
+  // Supabase stores session in localStorage with a key pattern
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  if (supabaseUrl) {
+    // Extract project ref from URL (e.g., https://abc123.supabase.co -> abc123)
+    const match = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/);
+    if (match) {
+      const projectRef = match[1];
+      const storageKey = `sb-${projectRef}-auth-token`;
+      const sessionData = localStorage.getItem(storageKey);
+      if (sessionData) {
+        try {
+          const parsed = JSON.parse(sessionData);
+          return parsed.access_token || null;
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+  return null;
+};
+
 // Request interceptor - add JWT token
 axiosInstance.interceptors.request.use(
   (config) => {
-    // Check for platform token first (for Super Admin), then regular token
+    // Check for platform token first (for Super Admin), then Supabase token, then legacy token
     const platformToken = localStorage.getItem('platform_token');
-    const token = localStorage.getItem('token');
+    const supabaseToken = getSupabaseToken();
+    const legacyToken = localStorage.getItem('token');
     
     if (platformToken) {
       config.headers.Authorization = `Bearer ${platformToken}`;
-    } else if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    } else if (supabaseToken) {
+      config.headers.Authorization = `Bearer ${supabaseToken}`;
+    } else if (legacyToken) {
+      config.headers.Authorization = `Bearer ${legacyToken}`;
     }
     
     // Log request in development
@@ -72,10 +99,20 @@ axiosInstance.interceptors.response.use(
       data: error.response?.data,
     });
     
-    // Handle 401 - Unauthorized
-    if (error.response?.status === 401) {
+    // Handle 401 - Unauthorized or 403 - Forbidden (invalid/expired token)
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Clear all auth-related storage
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      // Clear Supabase session
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (supabaseUrl) {
+        const match = supabaseUrl.match(/https:\/\/([^.]+)\.supabase\.co/);
+        if (match) {
+          const projectRef = match[1];
+          localStorage.removeItem(`sb-${projectRef}-auth-token`);
+        }
+      }
       window.location.href = '/login';
     }
     

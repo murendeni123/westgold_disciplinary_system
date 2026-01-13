@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../../hooks/useParentStudents';
 import { api } from '../../services/api';
 import Table from '../../components/Table';
 import Card from '../../components/Card';
 import Select from '../../components/Select';
 import Modal from '../../components/Modal';
-import { AlertTriangle, Calendar, Clock } from 'lucide-react';
+import { AlertTriangle, Calendar } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const ViewDetentions: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const _navigate = useNavigate();
+  const { profile } = useAuth();
+  const { students } = useParentStudents();
   const [detentions, setDetentions] = useState<any[]>([]);
   const [selectedDetention, setSelectedDetention] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -22,14 +24,14 @@ const ViewDetentions: React.FC = () => {
   const [chartData, setChartData] = useState<any[]>([]);
 
   useEffect(() => {
-    if (selectedChild || user?.children?.[0]) {
+    if (selectedChild || students?.[0]) {
       fetchDetentions();
     }
-  }, [selectedChild, user]);
+  }, [selectedChild, students]);
 
   const fetchDetentions = async () => {
     try {
-      const studentId = selectedChild || user?.children?.[0]?.id;
+      const studentId = selectedChild || students?.[0]?.id;
       if (!studentId) return;
 
       // Get all detentions and filter by student
@@ -226,13 +228,13 @@ const ViewDetentions: React.FC = () => {
         </div>
       )}
 
-      {user?.children && user.children.length > 1 && (
+      {students && students.length > 1 && (
         <Card title="Filters">
           <Select
             label="Child"
             value={selectedChild}
             onChange={(e) => setSelectedChild(e.target.value)}
-            options={user.children.map((c: any) => ({
+            options={students.map((c: any) => ({
               value: c.id,
               label: `${c.first_name} ${c.last_name}`,
             }))}

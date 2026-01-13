@@ -4,7 +4,7 @@ import Table from '../../components/Table';
 import Button from '../../components/Button';
 import Modal from '../../components/Modal';
 import Input from '../../components/Input';
-import Select from '../../components/Select';
+// Select available for future use
 import Textarea from '../../components/Textarea';
 import AssignInterventionModal from '../../components/AssignInterventionModal';
 import { motion } from 'framer-motion';
@@ -16,7 +16,7 @@ const Interventions: React.FC = () => {
   const navigate = useNavigate();
   const { success, error, ToastContainer } = useToast();
   const [interventions, setInterventions] = useState<any[]>([]);
-  const [types, setTypes] = useState<any[]>([]);
+  const [, setTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);

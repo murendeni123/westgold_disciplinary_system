@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { motion } from 'framer-motion';
-import { Building2, Users, GraduationCap, DollarSign, TrendingUp, Sparkles, ArrowUpRight } from 'lucide-react';
+import { Building2, Users, GraduationCap, DollarSign, TrendingUp, Sparkles } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -14,7 +14,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 
@@ -185,7 +184,7 @@ const PlatformDashboard: React.FC = () => {
                   outerRadius={100}
                   label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 >
-                  {stats.schools_by_status.map((entry: any, index: number) => (
+                  {stats.schools_by_status.map((_entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>

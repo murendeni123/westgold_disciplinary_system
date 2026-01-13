@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../../hooks/useParentStudents';
 import { api } from '../../services/api';
 import ModernCard from '../../components/ModernCard';
 import AnimatedStatCard from '../../components/AnimatedStatCard';
 import { motion } from 'framer-motion';
-import { AlertTriangle, Calendar, Clock, CheckCircle } from 'lucide-react';
+import { AlertTriangle, Calendar, CheckCircle } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import Table from '../../components/Table';
 import Select from '../../components/Select';
@@ -13,8 +14,9 @@ import Modal from '../../components/Modal';
 
 const ModernViewDetentions: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const _navigate = useNavigate();
+  const { profile } = useAuth();
+  const { students } = useParentStudents();
   const [detentions, setDetentions] = useState<any[]>([]);
   const [selectedDetention, setSelectedDetention] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -24,14 +26,14 @@ const ModernViewDetentions: React.FC = () => {
   const [chartData, setChartData] = useState<any[]>([]);
 
   useEffect(() => {
-    if (selectedChild || user?.children?.[0]) {
+    if (selectedChild || students?.[0]) {
       fetchDetentions();
     }
-  }, [selectedChild, user]);
+  }, [selectedChild, students]);
 
   const fetchDetentions = async () => {
     try {
-      const studentId = selectedChild || user?.children?.[0]?.id;
+      const studentId = selectedChild || students?.[0]?.id;
       if (!studentId) return;
 
       const response = await api.getDetentions({});
@@ -261,14 +263,14 @@ const ModernViewDetentions: React.FC = () => {
       )}
 
       {/* Filters */}
-      {user?.children && user.children.length > 1 && (
+      {students && students.length > 1 && (
         <motion.div variants={itemVariants}>
           <ModernCard title="Filters" variant="glass">
             <Select
               label="Child"
               value={selectedChild}
               onChange={(e) => setSelectedChild(e.target.value)}
-              options={user.children.map((c: any) => ({
+              options={students.map((c: any) => ({
                 value: c.id,
                 label: `${c.first_name} ${c.last_name}`,
               }))}

@@ -17,8 +17,8 @@ const StudentProfile: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [timeline, setTimeline] = useState<any[]>([]);
-  const [timelineLoading, setTimelineLoading] = useState(false);
+  const [, setTimeline] = useState<any[]>([]);
+  const [, setTimelineLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { api } from '../../services/api';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { motion } from 'framer-motion';
-import { Save, Lock, User, Settings, Sparkles } from 'lucide-react';
+import { Save, Lock, User, Settings } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 const AdminSettings: React.FC = () => {
-  const { user, updateUser } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const { success, error, ToastContainer } = useToast();
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'preferences'>('profile');
   
@@ -30,11 +30,11 @@ const AdminSettings: React.FC = () => {
   useEffect(() => {
     if (user) {
       setProfileData({
-        name: user.name || '',
+        name: profile?.full_name || '',
         email: user.email || '',
       });
     }
-  }, [user]);
+  }, [user, profile]);
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,9 +56,7 @@ const AdminSettings: React.FC = () => {
         email: profileData.email.trim().toLowerCase(),
       });
       success('Profile updated successfully!');
-      if (updateUser && response.data.user) {
-        updateUser(response.data.user);
-      }
+      await refreshProfile();
     } catch (err: any) {
       error(err.response?.data?.error || 'Error updating profile');
     } finally {

@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
-import { api } from '../services/api';
+import { useParentStudents } from '../hooks/useParentStudents';
 import {
   LayoutDashboard,
   Users,
@@ -28,51 +28,14 @@ interface ModernSidebarProps {
 const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { profile, signOut } = useAuth();
   const { customizations, getImageUrl } = useSchoolTheme();
+  const { hasStudents, loading: studentsLoading } = useParentStudents();
 
   // Track parent setup status
-  const [hasLinkedSchool, setHasLinkedSchool] = useState(false);
-  const [hasLinkedChild, setHasLinkedChild] = useState(false);
-  const [setupChecked, setSetupChecked] = useState(false);
-
-  // Check if parent has completed setup (linked school and child)
-  useEffect(() => {
-    const checkParentSetup = async () => {
-      if (user?.role !== 'parent') {
-        setSetupChecked(true);
-        return;
-      }
-
-      try {
-        // Check for linked school - simply trust user.school_id
-        setHasLinkedSchool(!!user.school_id);
-
-        // Check for children - we can infer from the children page data
-        // For now, check if user has children property or fetch from API
-        if (user.children && user.children.length > 0) {
-          setHasLinkedChild(true);
-        } else {
-          // Try to fetch children count from students endpoint
-          try {
-            const childrenRes = await api.getStudents();
-            // Filter for students linked to this parent
-            const myChildren = childrenRes.data?.filter?.((s: any) => s.parent_id === user.id) || [];
-            setHasLinkedChild(myChildren.length > 0);
-          } catch {
-            // If we can't fetch, assume no children yet
-            setHasLinkedChild(false);
-          }
-        }
-      } catch (error) {
-        console.error('Error checking parent setup:', error);
-      } finally {
-        setSetupChecked(true);
-      }
-    };
-
-    checkParentSetup();
-  }, [user]);
+  const hasLinkedSchool = !!profile?.school_id;
+  const hasLinkedChild = hasStudents;
+  const setupChecked = !studentsLoading;
 
   // Build parent menu dynamically based on setup status
   const getParentMenu = () => {
@@ -125,7 +88,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
   };
 
   const handleLogout = () => {
-    logout();
+    signOut();
     navigate('/login');
   };
 
@@ -229,17 +192,17 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
               <div className="flex items-center space-x-3">
                 <div className="relative">
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                    {user?.name?.charAt(0).toUpperCase() || 'P'}
+                    {profile?.full_name?.charAt(0).toUpperCase() || 'P'}
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-gray-900 truncate">
-                    {user?.name}
+                    {profile?.full_name}
                   </p>
                   <div className="flex items-center space-x-1">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 capitalize">
-                      {user?.role}
+                      {profile?.role}
                     </span>
                   </div>
                 </div>

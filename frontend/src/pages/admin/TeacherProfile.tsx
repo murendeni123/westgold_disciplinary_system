@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import Button from '../../components/Button';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Camera, Upload, User, Mail, Phone, GraduationCap, Sparkles } from 'lucide-react';
+import { ArrowLeft, Camera, Upload, User, GraduationCap } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 const TeacherProfile: React.FC = () => {

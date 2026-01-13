@@ -241,7 +241,7 @@ const AttendanceOverview: React.FC = () => {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {chartData.map((entry, index) => (
+                  {chartData.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={['#10B981', '#EF4444', '#F59E0B', '#3B82F6'][index % 4]} />
                   ))}
                 </Pie>

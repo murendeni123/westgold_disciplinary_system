@@ -3,9 +3,9 @@ import { api } from '../../services/api';
 import Table from '../../components/Table';
 import Input from '../../components/Input';
 import Select from '../../components/Select';
-import Button from '../../components/Button';
+// Button available for future use
 import { motion } from 'framer-motion';
-import { FileText, Filter, Search } from 'lucide-react';
+// lucide-react icons available for future use
 import { useToast } from '../../hooks/useToast';
 
 const PlatformLogs: React.FC = () => {

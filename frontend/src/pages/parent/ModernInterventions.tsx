@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../../hooks/useParentStudents';
 import Card from '../../components/Card';
 import { Heart, Activity } from 'lucide-react';
 import Table from '../../components/Table';
 import Select from '../../components/Select';
 
 const ModernInterventions: React.FC = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
+  const { students } = useParentStudents();
   const [interventions, setInterventions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -18,14 +20,14 @@ const ModernInterventions: React.FC = () => {
 
   useEffect(() => {
     fetchInterventions();
-  }, [filters, user]);
+  }, [filters, students]);
 
   const fetchInterventions = async () => {
     try {
       setLoading(true);
       const params: any = {};
       
-      if (user?.children && user.children.length > 0) {
+      if (students && students.length > 0) {
         if (filters.student_id) {
           params.student_id = filters.student_id;
         }
@@ -40,7 +42,7 @@ const ModernInterventions: React.FC = () => {
 
       const response = await api.getInterventions(params);
       
-      const childIds = user?.children?.map((child: any) => child.id) || [];
+      const childIds = students?.map((child: any) => child.id) || [];
       const filtered = response.data.filter((intervention: any) => {
         return childIds.includes(intervention.student_id);
       });
@@ -84,7 +86,7 @@ const ModernInterventions: React.FC = () => {
         <p className="text-gray-600 mt-2">View support interventions for your children</p>
       </div>
 
-      {user?.children && user.children.length > 0 ? (
+      {students && students.length > 0 ? (
         <>
           {/* Filters */}
           <Card title="Filters">
@@ -95,7 +97,7 @@ const ModernInterventions: React.FC = () => {
                 onChange={(e) => setFilters({ ...filters, student_id: e.target.value })}
               >
                 <option value="">All Children</option>
-                {user.children.map((child: any) => (
+                {students.map((child: any) => (
                   <option key={child.id} value={child.id}>
                     {child.first_name} {child.last_name}
                   </option>

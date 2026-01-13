@@ -1,6 +1,6 @@
 import React from 'react';
 import Modal from './Modal';
-import { User, Phone, Mail, MapPin, Building2, UserCircle } from 'lucide-react';
+import { User, Phone, MapPin, Building2, UserCircle } from 'lucide-react';
 
 interface ParentProfileModalProps {
   isOpen: boolean;

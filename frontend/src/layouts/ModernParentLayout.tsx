@@ -7,38 +7,35 @@ import SchoolSwitcher from '../components/SchoolSwitcher';
 import PageTransition from '../components/PageTransition';
 import AnimatedBackground from '../components/AnimatedBackground';
 import { Menu, Sparkles } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
 import NotificationDropdown from '../components/NotificationDropdown';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
+import { useParentStudents } from '../hooks/useParentStudents';
 import { api } from '../services/api';
 
 const ModernParentLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { customizations, getImageUrl } = useSchoolTheme();
+  const { hasStudents, loading: studentsLoading } = useParentStudents();
   const navigate = useNavigate();
   const location = useLocation();
   const [setupChecked, setSetupChecked] = useState(false);
   const [hasLinkedSchool, setHasLinkedSchool] = useState(false);
-  const [hasLinkedChild, setHasLinkedChild] = useState(false);
 
   // Check setup status on mount and when user changes
   useEffect(() => {
     checkSetupStatus();
-  }, [user, location.pathname]);
+  }, [user, location.pathname, hasStudents, studentsLoading]);
 
   const checkSetupStatus = async () => {
-    if (!user) return;
+    if (!user || studentsLoading) return;
 
     try {
       // Check if parent has linked a school
       const schoolsResponse = await api.getLinkedSchools();
       const hasSchool = schoolsResponse.data && schoolsResponse.data.length > 0;
       setHasLinkedSchool(hasSchool);
-
-      // Check if parent has linked children
-      const hasChildren = !!(user?.children && user.children.length > 0);
-      setHasLinkedChild(hasChildren);
 
       setSetupChecked(true);
 
@@ -50,7 +47,7 @@ const ModernParentLayout: React.FC = () => {
       if (!setupPaths.includes(currentPath)) {
         if (!hasSchool) {
           navigate('/parent/link-school', { replace: true });
-        } else if (!hasChildren) {
+        } else if (!hasStudents) {
           navigate('/parent/link-child', { replace: true });
         }
       }
@@ -166,7 +163,7 @@ const ModernParentLayout: React.FC = () => {
                 whileHover={{ scale: 1.05, borderColor: 'rgba(255,255,255,0.5)' }}
                 whileTap={{ scale: 0.95 }}
               >
-                {user?.name?.charAt(0).toUpperCase() || 'P'}
+                {profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'P'}
               </motion.div>
             </div>
           </div>

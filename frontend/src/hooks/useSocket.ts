@@ -1,11 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
 
 export const useSocket = () => {
-  const { token } = useAuth();
+  const { session } = useAuth();
+  const token = session?.access_token;
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {

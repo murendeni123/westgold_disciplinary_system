@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
+import { getDefaultRouteForRole } from '../types/auth';
 import { 
   GraduationCap, 
   Mail, 
@@ -23,9 +24,17 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const { login } = useAuth();
+  const { signIn, profile } = useAuth();
   const { customizations, getImageUrl } = useSchoolTheme();
   const navigate = useNavigate();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (profile) {
+      const redirectPath = getDefaultRouteForRole(profile.role);
+      navigate(redirectPath, { replace: true });
+    }
+  }, [profile, navigate]);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -40,12 +49,19 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      await login(email, password);
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const role = user.role || 'admin';
-      navigate(`/${role}`);
-    } catch (err: any) {
-      setError(err.message || 'Login failed');
+      const result = await signIn(email, password);
+      
+      if (!result.success) {
+        setError(result.error || 'Login failed');
+        return;
+      }
+
+      // Redirect based on role
+      const redirectPath = getDefaultRouteForRole(result.role || null);
+      navigate(redirectPath, { replace: true });
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Login failed';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
