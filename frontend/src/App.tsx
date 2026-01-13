@@ -45,6 +45,7 @@ import PlatformAnalytics from './pages/platform/PlatformAnalytics';
 import PlatformBilling from './pages/platform/PlatformBilling';
 import PlatformLogs from './pages/platform/PlatformLogs';
 import PlatformUsers from './pages/platform/PlatformUsers';
+import FeatureFlags from './pages/platform/FeatureFlags';
 
 // Teacher pages
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
@@ -163,6 +164,7 @@ function App() {
             <Route path="analytics" element={<PlatformAnalytics />} />
             <Route path="billing" element={<PlatformBilling />} />
             <Route path="logs" element={<PlatformLogs />} />
+            <Route path="feature-flags" element={<FeatureFlags />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/login" replace />} />

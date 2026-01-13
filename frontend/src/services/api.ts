@@ -389,5 +389,19 @@ export const api = {
     axiosInstance.put(`/whatsapp/opt-in/${userId}`, data),
   getWhatsAppStats: (params?: { start_date?: string; end_date?: string }) => 
     axiosInstance.get('/whatsapp/stats', { params }),
+
+  // Feature Flags (School-level)
+  getFeatureFlag: (featureName: string) => axiosInstance.get(`/feature-flags/${featureName}`),
+  getAllFeatureFlags: () => axiosInstance.get('/feature-flags'),
+
+  // Feature Flags (Platform Admin)
+  getAllSchoolFeatureFlags: () => axiosInstance.get('/platform/feature-flags'),
+  getSchoolFeatureFlags: (schoolId: number) => axiosInstance.get(`/platform/feature-flags/${schoolId}`),
+  getSchoolFeatureFlag: (schoolId: number, featureName: string) => 
+    axiosInstance.get(`/platform/feature-flags/${schoolId}/${featureName}`),
+  toggleSchoolFeatureFlag: (schoolId: number, featureName: string, isEnabled: boolean) => 
+    axiosInstance.post(`/platform/feature-flags/${schoolId}/${featureName}`, { is_enabled: isEnabled }),
+  bulkToggleFeatureFlag: (featureName: string, isEnabled: boolean, schoolIds?: number[]) => 
+    axiosInstance.post(`/platform/feature-flags/bulk/${featureName}`, { is_enabled: isEnabled, school_ids: schoolIds }),
 };
 

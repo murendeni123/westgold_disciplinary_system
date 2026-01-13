@@ -877,5 +877,162 @@ router.delete('/users/:id', requirePlatformAdmin, async (req, res) => {
     }
 });
 
+// ==================== FEATURE FLAGS ====================
+
+// Get all feature flags for all schools
+router.get('/feature-flags', requirePlatformAdmin, async (req, res) => {
+    try {
+        const flags = await dbAll(`
+            SELECT sff.*, s.name as school_name, s.code as school_code
+            FROM school_feature_flags sff
+            INNER JOIN schools s ON sff.school_id = s.id
+            ORDER BY s.name, sff.feature_name
+        `);
+        res.json(flags);
+    } catch (error) {
+        console.error('Error fetching feature flags:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get feature flags for a specific school
+router.get('/feature-flags/:schoolId', requirePlatformAdmin, async (req, res) => {
+    try {
+        const flags = await dbAll(
+            'SELECT * FROM school_feature_flags WHERE school_id = ? ORDER BY feature_name',
+            [req.params.schoolId]
+        );
+        res.json(flags);
+    } catch (error) {
+        console.error('Error fetching feature flags:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get specific feature flag for a school
+router.get('/feature-flags/:schoolId/:featureName', requirePlatformAdmin, async (req, res) => {
+    try {
+        const flag = await dbGet(
+            'SELECT * FROM school_feature_flags WHERE school_id = ? AND feature_name = ?',
+            [req.params.schoolId, req.params.featureName]
+        );
+        
+        if (!flag) {
+            // Return default (disabled) if not found
+            return res.json({ 
+                school_id: parseInt(req.params.schoolId), 
+                feature_name: req.params.featureName, 
+                is_enabled: false 
+            });
+        }
+        
+        res.json(flag);
+    } catch (error) {
+        console.error('Error fetching feature flag:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Toggle feature flag for a school
+router.post('/feature-flags/:schoolId/:featureName', requirePlatformAdmin, async (req, res) => {
+    try {
+        const { is_enabled } = req.body;
+        const schoolId = req.params.schoolId;
+        const featureName = req.params.featureName;
+
+        if (is_enabled === undefined) {
+            return res.status(400).json({ error: 'is_enabled is required' });
+        }
+
+        // Check if school exists
+        const school = await dbGet('SELECT id FROM schools WHERE id = ?', [schoolId]);
+        if (!school) {
+            return res.status(404).json({ error: 'School not found' });
+        }
+
+        // Check if flag exists
+        const existingFlag = await dbGet(
+            'SELECT * FROM school_feature_flags WHERE school_id = ? AND feature_name = ?',
+            [schoolId, featureName]
+        );
+
+        if (existingFlag) {
+            // Update existing flag
+            await dbRun(
+                'UPDATE school_feature_flags SET is_enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                [is_enabled, existingFlag.id]
+            );
+        } else {
+            // Create new flag
+            await dbRun(
+                'INSERT INTO school_feature_flags (school_id, feature_name, is_enabled) VALUES (?, ?, ?)',
+                [schoolId, featureName, is_enabled]
+            );
+        }
+
+        const updatedFlag = await dbGet(
+            'SELECT * FROM school_feature_flags WHERE school_id = ? AND feature_name = ?',
+            [schoolId, featureName]
+        );
+
+        res.json(updatedFlag);
+    } catch (error) {
+        console.error('Error toggling feature flag:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Bulk toggle feature for all schools
+router.post('/feature-flags/bulk/:featureName', requirePlatformAdmin, async (req, res) => {
+    try {
+        const { is_enabled, school_ids } = req.body;
+        const featureName = req.params.featureName;
+
+        if (is_enabled === undefined) {
+            return res.status(400).json({ error: 'is_enabled is required' });
+        }
+
+        let schoolsToUpdate = [];
+        
+        if (school_ids && Array.isArray(school_ids)) {
+            // Update specific schools
+            schoolsToUpdate = school_ids;
+        } else {
+            // Update all schools
+            const schools = await dbAll('SELECT id FROM schools');
+            schoolsToUpdate = schools.map(s => s.id);
+        }
+
+        let updatedCount = 0;
+        for (const schoolId of schoolsToUpdate) {
+            const existingFlag = await dbGet(
+                'SELECT * FROM school_feature_flags WHERE school_id = ? AND feature_name = ?',
+                [schoolId, featureName]
+            );
+
+            if (existingFlag) {
+                await dbRun(
+                    'UPDATE school_feature_flags SET is_enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                    [is_enabled, existingFlag.id]
+                );
+            } else {
+                await dbRun(
+                    'INSERT INTO school_feature_flags (school_id, feature_name, is_enabled) VALUES (?, ?, ?)',
+                    [schoolId, featureName, is_enabled]
+                );
+            }
+            updatedCount++;
+        }
+
+        res.json({ 
+            message: `Feature ${featureName} ${is_enabled ? 'enabled' : 'disabled'} for ${updatedCount} schools`,
+            updated_count: updatedCount 
+        });
+    } catch (error) {
+        console.error('Error bulk toggling feature:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 module.exports = router;
 

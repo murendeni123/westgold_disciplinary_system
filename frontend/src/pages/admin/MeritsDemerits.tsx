@@ -4,9 +4,19 @@ import Table from '../../components/Table';
 import Button from '../../components/Button';
 import Select from '../../components/Select';
 import { motion } from 'framer-motion';
-import { Download, Award, AlertTriangle, TrendingUp, Sparkles } from 'lucide-react';
+import { Download, Award, AlertTriangle, TrendingUp, Sparkles, Trophy, Medal, Star } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from '../../hooks/useToast';
+
+interface StudentMeritStats {
+  student_id: number;
+  student_name: string;
+  photo_path: string | null;
+  total_merits: number;
+  total_demerits: number;
+  clean_points: number;
+  class_name: string;
+}
 
 const MeritsDemerits: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
@@ -23,11 +33,22 @@ const MeritsDemerits: React.FC = () => {
     end_date: '',
   });
 
+  // Goldy Badge feature flag
+  const [goldyBadgeEnabled, setGoldyBadgeEnabled] = useState(false);
+  const [goldyBadgeStudents, setGoldyBadgeStudents] = useState<StudentMeritStats[]>([]);
+
   useEffect(() => {
     fetchData();
     fetchStudents();
     fetchClasses();
+    fetchGoldyBadgeFeatureFlag();
   }, [viewType, filters]);
+
+  useEffect(() => {
+    if (goldyBadgeEnabled) {
+      calculateGoldyBadgeStudents();
+    }
+  }, [goldyBadgeEnabled, merits, demerits, students]);
 
   const fetchData = async () => {
     try {
@@ -70,6 +91,64 @@ const MeritsDemerits: React.FC = () => {
     } catch (error) {
       console.error('Error fetching classes:', error);
     }
+  };
+
+  const fetchGoldyBadgeFeatureFlag = async () => {
+    try {
+      const response = await api.getFeatureFlag('goldy_badge');
+      setGoldyBadgeEnabled(response.data.is_enabled || false);
+    } catch (error) {
+      console.error('Error fetching Goldy Badge feature flag:', error);
+      setGoldyBadgeEnabled(false);
+    }
+  };
+
+  const calculateGoldyBadgeStudents = () => {
+    // Calculate merit and demerit counts per student
+    const studentStats: { [key: number]: StudentMeritStats } = {};
+
+    // Count merits per student
+    merits.forEach((merit) => {
+      if (!studentStats[merit.student_id]) {
+        studentStats[merit.student_id] = {
+          student_id: merit.student_id,
+          student_name: merit.student_name || `${merit.first_name} ${merit.last_name}`,
+          photo_path: merit.photo_path || null,
+          total_merits: 0,
+          total_demerits: 0,
+          clean_points: 0,
+          class_name: merit.class_name || '',
+        };
+      }
+      studentStats[merit.student_id].total_merits += 1;
+    });
+
+    // Count demerits per student
+    demerits.forEach((demerit) => {
+      if (!studentStats[demerit.student_id]) {
+        studentStats[demerit.student_id] = {
+          student_id: demerit.student_id,
+          student_name: demerit.student_name || `${demerit.first_name} ${demerit.last_name}`,
+          photo_path: demerit.photo_path || null,
+          total_merits: 0,
+          total_demerits: 0,
+          clean_points: 0,
+          class_name: demerit.class_name || '',
+        };
+      }
+      studentStats[demerit.student_id].total_demerits += 1;
+    });
+
+    // Calculate clean points and filter students with 10+ merits
+    const eligibleStudents = Object.values(studentStats)
+      .map((student) => ({
+        ...student,
+        clean_points: student.total_merits - student.total_demerits,
+      }))
+      .filter((student) => student.total_merits >= 10)
+      .sort((a, b) => b.clean_points - a.clean_points);
+
+    setGoldyBadgeStudents(eligibleStudents);
   };
 
   const handleExport = async (studentId?: number, classId?: number) => {
@@ -212,11 +291,168 @@ const MeritsDemerits: React.FC = () => {
         </div>
       </motion.div>
 
+      {/* Goldy Badge Section - Only shown when feature is enabled */}
+      {goldyBadgeEnabled && goldyBadgeStudents.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="rounded-2xl bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50 border-2 border-yellow-300 shadow-xl p-6"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-xl shadow-lg">
+                <Trophy className="text-white" size={32} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  🏆 Goldy Badge - Clean Points Leaders
+                </h2>
+                <p className="text-gray-600 mt-1">
+                  Students with 10+ merits | Clean Points = Merits - Demerits
+                </p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold text-yellow-600">
+                {goldyBadgeStudents.length}
+              </div>
+              <div className="text-sm text-gray-600">Eligible Students</div>
+            </div>
+          </div>
+
+          {/* Top 10 Students */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {goldyBadgeStudents.slice(0, 10).map((student, index) => (
+              <motion.div
+                key={student.student_id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.2 + index * 0.05 }}
+                className={`relative bg-white rounded-xl p-4 border-2 ${
+                  index === 0
+                    ? 'border-yellow-400 shadow-lg'
+                    : index === 1
+                    ? 'border-gray-400 shadow-md'
+                    : index === 2
+                    ? 'border-orange-400 shadow-md'
+                    : 'border-gray-200 shadow-sm'
+                } hover:shadow-xl transition-all`}
+              >
+                {/* Rank Badge */}
+                <div className={`absolute -top-3 -left-3 w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-lg ${
+                  index === 0
+                    ? 'bg-gradient-to-br from-yellow-400 to-yellow-600'
+                    : index === 1
+                    ? 'bg-gradient-to-br from-gray-400 to-gray-600'
+                    : index === 2
+                    ? 'bg-gradient-to-br from-orange-400 to-orange-600'
+                    : 'bg-gradient-to-br from-blue-400 to-blue-600'
+                }`}>
+                  {index + 1}
+                </div>
+
+                {/* Student Info */}
+                <div className="text-center">
+                  <div className="relative inline-block mb-3">
+                    {student.photo_path ? (
+                      <img
+                        src={student.photo_path}
+                        alt={student.student_name}
+                        className={`w-16 h-16 rounded-full object-cover mx-auto border-4 ${
+                          index === 0
+                            ? 'border-yellow-400'
+                            : index === 1
+                            ? 'border-gray-400'
+                            : index === 2
+                            ? 'border-orange-400'
+                            : 'border-blue-400'
+                        }`}
+                      />
+                    ) : (
+                      <div className={`w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl font-bold mx-auto border-4 ${
+                        index === 0
+                          ? 'bg-gradient-to-br from-yellow-400 to-amber-500 border-yellow-400'
+                          : index === 1
+                          ? 'bg-gradient-to-br from-gray-400 to-gray-600 border-gray-400'
+                          : index === 2
+                          ? 'bg-gradient-to-br from-orange-400 to-orange-600 border-orange-400'
+                          : 'bg-gradient-to-br from-blue-400 to-blue-600 border-blue-400'
+                      }`}>
+                        {student.student_name.charAt(0)}
+                      </div>
+                    )}
+                    {index < 3 && (
+                      <div className="absolute -bottom-1 -right-1">
+                        {index === 0 ? (
+                          <Trophy className="text-yellow-500" size={20} />
+                        ) : index === 1 ? (
+                          <Medal className="text-gray-500" size={20} />
+                        ) : (
+                          <Medal className="text-orange-500" size={20} />
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <h3 className="font-bold text-gray-900 text-sm mb-1 truncate">
+                    {student.student_name}
+                  </h3>
+                  <p className="text-xs text-gray-500 mb-2 truncate">{student.class_name}</p>
+
+                  {/* Clean Points */}
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-2 mb-2">
+                    <div className="flex items-center justify-center gap-1">
+                      <Star className="text-green-600" size={16} />
+                      <span className="font-bold text-lg text-green-700">
+                        {student.clean_points}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-600">Clean Points</p>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-green-50 rounded-lg p-1">
+                      <div className="flex items-center justify-center gap-1">
+                        <Award size={12} className="text-green-600" />
+                        <span className="font-semibold text-green-700">
+                          {student.total_merits}
+                        </span>
+                      </div>
+                      <p className="text-gray-600 text-xs">Merits</p>
+                    </div>
+                    <div className="bg-red-50 rounded-lg p-1">
+                      <div className="flex items-center justify-center gap-1">
+                        <AlertTriangle size={12} className="text-red-600" />
+                        <span className="font-semibold text-red-700">
+                          {student.total_demerits}
+                        </span>
+                      </div>
+                      <p className="text-gray-600 text-xs">Demerits</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Show more button if there are more than 10 */}
+          {goldyBadgeStudents.length > 10 && (
+            <div className="text-center mt-4">
+              <p className="text-sm text-gray-600">
+                + {goldyBadgeStudents.length - 10} more students eligible for Goldy Badge
+              </p>
+            </div>
+          )}
+        </motion.div>
+      )}
+
       {/* Filters Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: goldyBadgeEnabled && goldyBadgeStudents.length > 0 ? 0.25 : 0.2 }}
         className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
       >
         <div className="flex items-center justify-between mb-6">
@@ -291,7 +527,7 @@ const MeritsDemerits: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: goldyBadgeEnabled && goldyBadgeStudents.length > 0 ? 0.35 : 0.3 }}
             className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
           >
             <div className="flex items-center justify-between mb-6">
@@ -333,7 +569,7 @@ const MeritsDemerits: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 }}
+            transition={{ delay: goldyBadgeEnabled && goldyBadgeStudents.length > 0 ? 0.4 : 0.35 }}
             className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
           >
             <div className="flex items-center justify-between mb-6">
@@ -420,7 +656,7 @@ const MeritsDemerits: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
+        transition={{ delay: goldyBadgeEnabled && goldyBadgeStudents.length > 0 ? 0.45 : 0.4 }}
         className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
       >
         <div className="flex items-center justify-between mb-6">

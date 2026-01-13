@@ -92,6 +92,7 @@ app.use('/api/school-customizations', require('./routes/schoolCustomizations'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/medical-info', require('./routes/medicalInfo'));
 app.use('/api/whatsapp', require('./routes/whatsapp'));
+app.use('/api/feature-flags', require('./routes/featureFlags'));
 
 // Health check
 app.get('/api/health', (req, res) => {

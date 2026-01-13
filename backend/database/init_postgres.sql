@@ -440,6 +440,18 @@ CREATE TABLE IF NOT EXISTS platform_settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- School Feature Flags table (for feature toggles per school)
+CREATE TABLE IF NOT EXISTS school_feature_flags (
+    id SERIAL PRIMARY KEY,
+    school_id INTEGER NOT NULL,
+    feature_name TEXT NOT NULL,
+    is_enabled BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE,
+    UNIQUE(school_id, feature_name)
+);
+
 -- Subscription Plans table
 CREATE TABLE IF NOT EXISTS subscription_plans (
     id SERIAL PRIMARY KEY,
