@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 const LinkSchool: React.FC = () => {
-  const _navigate = useNavigate();
+  const navigate = useNavigate();
   const { profile, refreshProfile } = useAuth();
   const [schoolCode, setSchoolCode] = useState('');
   const [loading, setLoading] = useState(false);
@@ -84,7 +84,8 @@ const LinkSchool: React.FC = () => {
   const handleContinue = () => {
     setSuccess(false);
     setLinkedSchool(null);
-    fetchLinkedSchools();
+    // Navigate to link-child page after successful school linking
+    navigate('/parent/link-child');
   };
 
   const getCurrentSchool = () => {

@@ -101,6 +101,13 @@ axiosInstance.interceptors.response.use(
     
     // Handle 401 - Unauthorized or 403 - Forbidden (invalid/expired token)
     if (error.response?.status === 401 || error.response?.status === 403) {
+      // Log the failing endpoint for debugging
+      console.error('🚨 AUTH ERROR - Endpoint:', error.config?.url, 'Status:', error.response?.status);
+      console.error('Response:', error.response?.data);
+      
+      // TEMPORARILY DISABLED AUTO-LOGOUT FOR DEBUGGING
+      // Uncomment below to re-enable auto-logout after fixing the issue
+      /*
       // Clear all auth-related storage
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -114,6 +121,7 @@ axiosInstance.interceptors.response.use(
         }
       }
       window.location.href = '/login';
+      */
     }
     
     return Promise.reject(error);
@@ -155,7 +163,7 @@ export const api = {
   getParentProfile: () => axiosInstance.get('/parents/profile/me'),
   updateParentProfile: (data: any) => axiosInstance.put('/parents/profile/me', data),
   linkChild: (linkCode: string) => axiosInstance.post('/parents/link-child', { link_code: linkCode }),
-  linkSchoolByCode: (code: string) => axiosInstance.post('/parents/link-school', { school_code: code }),
+  linkSchoolByCode: (code: string) => axiosInstance.post('/parents/link-school', { code }),
   getLinkedSchools: () => axiosInstance.get('/parents/linked-schools'),
   switchSchool: (schoolId: number) => axiosInstance.post('/parents/switch-school', { school_id: schoolId }),
 
