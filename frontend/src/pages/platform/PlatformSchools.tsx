@@ -317,11 +317,21 @@ const PlatformSchools: React.FC = () => {
           </motion.div>
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button
+              onClick={() => navigate('/platform/schools/onboard')}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0 shadow-lg hover:shadow-xl"
+            >
+              <Sparkles size={20} className="mr-2" />
+              Onboard School
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button
               onClick={handleCreate}
-              className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0 shadow-lg hover:shadow-xl"
+              variant="secondary"
+              className="shadow-lg hover:shadow-xl"
             >
               <Plus size={20} className="mr-2" />
-              Create School
+              Quick Add
             </Button>
           </motion.div>
         </div>
@@ -362,29 +372,24 @@ const PlatformSchools: React.FC = () => {
             type="date"
             value={filters.start_date}
             onChange={(e) => setFilters({ ...filters, start_date: e.target.value })}
-            className="rounded-xl"
           />
         </div>
-        {schools.length > 0 && (
+        {selectedSchools.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center space-x-4"
+            className="mt-4 flex items-center justify-between p-4 bg-purple-50 rounded-xl border border-purple-200"
           >
+            <span className="text-sm font-semibold text-gray-700">
+              {selectedSchools.length} school(s) selected
+            </span>
             <Button
               variant="secondary"
-              size="sm"
-              onClick={toggleSelectAll}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0"
+              onClick={() => setSelectedSchools([])}
+              className="text-sm"
             >
-              <CheckSquare size={16} className="mr-2" />
-              {selectedSchools.length === schools.length ? 'Deselect All' : 'Select All'}
+              Clear Selection
             </Button>
-            {selectedSchools.length > 0 && (
-              <span className="text-sm font-semibold text-gray-700 bg-purple-50 px-4 py-2 rounded-lg">
-                {selectedSchools.length} school(s) selected
-              </span>
-            )}
           </motion.div>
         )}
       </motion.div>

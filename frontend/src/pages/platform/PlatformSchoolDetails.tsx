@@ -6,7 +6,7 @@ import Button from '../../components/Button';
 import Select from '../../components/Select';
 import Input from '../../components/Input';
 import Modal from '../../components/Modal';
-import { ArrowLeft, Save, Palette, Edit, Trash2, Power, Building2, Users, GraduationCap, CreditCard } from 'lucide-react';
+import { ArrowLeft, Save, Palette, Edit, Trash2, Power, Building2, Users, GraduationCap, CreditCard, TrendingUp, Activity, Clock, BarChart3 } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 const PlatformSchoolDetails: React.FC = () => {
@@ -15,6 +15,9 @@ const PlatformSchoolDetails: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
   const [school, setSchool] = useState<any>(null);
   const [plans, setPlans] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<any>(null);
+  const [analyticsRange, setAnalyticsRange] = useState('30d');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -30,8 +33,16 @@ const PlatformSchoolDetails: React.FC = () => {
     if (id) {
       fetchSchool();
       fetchPlans();
+      fetchStats();
+      fetchAnalytics();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchAnalytics();
+    }
+  }, [analyticsRange]);
 
   const fetchSchool = async () => {
     try {
@@ -58,6 +69,24 @@ const PlatformSchoolDetails: React.FC = () => {
       setPlans(response.data);
     } catch (err: any) {
       error(err.response?.data?.error || 'Error fetching plans');
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const response = await api.getPlatformSchoolStats(Number(id));
+      setStats(response.data);
+    } catch (err: any) {
+      console.error('Error fetching stats:', err);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      const response = await api.getPlatformSchoolAnalytics(Number(id), analyticsRange);
+      setAnalytics(response.data);
+    } catch (err: any) {
+      console.error('Error fetching analytics:', err);
     }
   };
 
@@ -361,6 +390,166 @@ const PlatformSchoolDetails: React.FC = () => {
           </div>
         </motion.div>
       </div>
+
+      {/* Detailed Stats Cards */}
+      {stats && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">School Statistics</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <motion.div whileHover={{ y: -5 }} className="p-6 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg">
+              <div className="flex items-center justify-between mb-2">
+                <Users size={32} />
+                <TrendingUp size={20} className="opacity-75" />
+              </div>
+              <p className="text-3xl font-bold">{stats.total_users}</p>
+              <p className="text-sm opacity-90">Total Users</p>
+              <div className="mt-2 text-xs opacity-75">
+                {stats.total_teachers} Teachers • {stats.total_parents} Parents
+              </div>
+            </motion.div>
+
+            <motion.div whileHover={{ y: -5 }} className="p-6 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg">
+              <div className="flex items-center justify-between mb-2">
+                <GraduationCap size={32} />
+                <TrendingUp size={20} className="opacity-75" />
+              </div>
+              <p className="text-3xl font-bold">{stats.total_students}</p>
+              <p className="text-sm opacity-90">Total Students</p>
+              <div className="mt-2 text-xs opacity-75">
+                {stats.total_classes} Classes
+              </div>
+            </motion.div>
+
+            <motion.div whileHover={{ y: -5 }} className="p-6 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 text-white shadow-lg">
+              <div className="flex items-center justify-between mb-2">
+                <Activity size={32} />
+                <BarChart3 size={20} className="opacity-75" />
+              </div>
+              <p className="text-3xl font-bold">{stats.total_merits}</p>
+              <p className="text-sm opacity-90">Total Merits</p>
+              <div className="mt-2 text-xs opacity-75">
+                Positive reinforcement
+              </div>
+            </motion.div>
+
+            <motion.div whileHover={{ y: -5 }} className="p-6 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 text-white shadow-lg">
+              <div className="flex items-center justify-between mb-2">
+                <Activity size={32} />
+                <BarChart3 size={20} className="opacity-75" />
+              </div>
+              <p className="text-3xl font-bold">{stats.total_incidents}</p>
+              <p className="text-sm opacity-90">Total Incidents</p>
+              <div className="mt-2 text-xs opacity-75">
+                Behaviour tracking
+              </div>
+            </motion.div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Analytics Section */}
+      {analytics && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Engagement Analytics</h2>
+            <Select
+              label=""
+              value={analyticsRange}
+              onChange={(e) => setAnalyticsRange(e.target.value)}
+              options={[
+                { value: '7d', label: 'Last 7 Days' },
+                { value: '30d', label: 'Last 30 Days' },
+                { value: '90d', label: 'Last 90 Days' },
+              ]}
+              className="w-40"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200">
+              <div className="flex items-center space-x-2 mb-2">
+                <Clock className="text-blue-600" size={20} />
+                <p className="text-sm font-medium text-gray-600">Last Activity</p>
+              </div>
+              <p className="text-lg font-semibold text-gray-900">
+                {analytics.last_activity 
+                  ? new Date(analytics.last_activity).toLocaleString()
+                  : 'No activity yet'}
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200">
+              <div className="flex items-center space-x-2 mb-2">
+                <Users className="text-purple-600" size={20} />
+                <p className="text-sm font-medium text-gray-600">Active Users</p>
+              </div>
+              <p className="text-3xl font-bold text-gray-900">{analytics.engagement?.active_users || 0}</p>
+              <p className="text-xs text-gray-500 mt-1">
+                of {analytics.engagement?.total_users || 0} total users
+              </p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200">
+              <div className="flex items-center space-x-2 mb-2">
+                <TrendingUp className="text-green-600" size={20} />
+                <p className="text-sm font-medium text-gray-600">Engagement Score</p>
+              </div>
+              <div className="flex items-baseline space-x-2">
+                <p className="text-3xl font-bold text-gray-900">{analytics.engagement?.score || 0}%</p>
+                <div className="flex-1 bg-gray-200 rounded-full h-2 mt-2">
+                  <div 
+                    className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${analytics.engagement?.score || 0}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="p-4 rounded-xl bg-gray-50">
+              <h3 className="font-semibold text-gray-900 mb-3">Login Activity</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Last 7 days</span>
+                  <span className="text-lg font-bold text-blue-600">{analytics.logins?.last_7_days || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Last 30 days</span>
+                  <span className="text-lg font-bold text-purple-600">{analytics.logins?.last_30_days || 0}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-gray-50">
+              <h3 className="font-semibold text-gray-900 mb-3">Activity Summary</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Incidents</span>
+                  <span className="text-lg font-bold text-orange-600">{analytics.activity?.incidents || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Merits</span>
+                  <span className="text-lg font-bold text-green-600">{analytics.activity?.merits || 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Attendance</span>
+                  <span className="text-lg font-bold text-blue-600">{analytics.activity?.attendance_records || 0}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Edit Modal */}
       <AnimatePresence>

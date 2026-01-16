@@ -186,14 +186,23 @@ router.get('/student/:studentId', authenticateToken, async (req, res) => {
   }
 });
 
-// Assign consequence to student (admin only)
-router.post('/assign', authenticateToken, requireRole('admin'), async (req, res) => {
+// Assign consequence to student (admin and teacher)
+router.post('/assign', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
   try {
     const { student_id, consequence_id, incident_id, assigned_date, due_date, notes } = req.body;
     const schoolId = getSchoolId(req);
 
     if (!student_id || !assigned_date) {
       return res.status(400).json({ error: 'Student ID and assigned date are required' });
+    }
+
+    // Verify student is in the same school
+    const student = await dbGet('SELECT id, school_id FROM students WHERE id = ?', [student_id]);
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+    if (student.school_id !== schoolId) {
+      return res.status(403).json({ error: 'You can only assign consequences to students in your school' });
     }
 
     const result = await dbRun(

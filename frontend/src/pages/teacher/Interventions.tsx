@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import Table from '../../components/Table';
 import Select from '../../components/Select';
+import SearchableSelect from '../../components/SearchableSelect';
 import Input from '../../components/Input';
 import Textarea from '../../components/Textarea';
 import Button from '../../components/Button';
+import ModernFilter from '../../components/ModernFilter';
 import { motion } from 'framer-motion';
 import { Filter, Sparkles } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
@@ -12,22 +14,12 @@ import { useToast } from '../../hooks/useToast';
 const TeacherInterventions: React.FC = () => {
   const { ToastContainer, success, error } = useToast();
   const [interventions, setInterventions] = useState<any[]>([]);
-  const [myClasses, setMyClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     student_id: '',
     status: '',
     type: '',
   });
-
-  useEffect(() => {
-    fetchMyClasses();
-    fetchInterventions();
-  }, []);
-
-  useEffect(() => {
-    fetchInterventions();
-  }, [filters]);
 
   const [students, setStudents] = useState<any[]>([]);
   const [interventionTypes, setInterventionTypes] = useState<any[]>([]);
@@ -41,15 +33,6 @@ const TeacherInterventions: React.FC = () => {
     notes: '',
   });
 
-  const fetchMyClasses = async () => {
-    try {
-      const response = await api.getClasses();
-      setMyClasses(response.data);
-    } catch (error) {
-      console.error('Error fetching classes:', error);
-    }
-  };
-
   const fetchInterventionTypes = async () => {
     try {
       const response = await api.getInterventionTypes();
@@ -58,6 +41,30 @@ const TeacherInterventions: React.FC = () => {
       console.error('Error fetching intervention types:', err);
     }
   };
+
+  const fetchAllStudents = async () => {
+    try {
+      const response = await api.getStudents();
+      setStudents(response.data || []);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    }
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      await Promise.all([
+        fetchInterventionTypes(),
+        fetchAllStudents(),
+        fetchInterventions(),
+      ]);
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    fetchInterventions();
+  }, [filters]);
 
   const fetchInterventions = async () => {
     try {
@@ -68,59 +75,13 @@ const TeacherInterventions: React.FC = () => {
       if (filters.type) params.type = filters.type;
 
       const response = await api.getInterventions(params);
-      
-      // Get all students from teacher's classes
-      const allStudentIds = await getAllStudentIdsFromMyClasses();
-      
-      // Filter to only show interventions for students in teacher's classes
-      const filtered = response.data.filter((intervention: any) => {
-        return allStudentIds.includes(intervention.student_id);
-      });
-      
-      setInterventions(filtered);
+      // Show all interventions for students in the same school (backend handles school_id filtering)
+      setInterventions(response.data || []);
     } catch (error) {
       console.error('Error fetching interventions:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const getAllStudentIdsFromMyClasses = async () => {
-    const studentIds: number[] = [];
-    try {
-      for (const classItem of myClasses) {
-        const classResponse = await api.getClass(classItem.id);
-        if (classResponse.data.students) {
-          classResponse.data.students.forEach((student: any) => {
-            if (!studentIds.includes(student.id)) {
-              studentIds.push(student.id);
-            }
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching students from classes:', error);
-    }
-    return studentIds;
-  };
-
-  const getStudentsFromMyClasses = async () => {
-    const students: any[] = [];
-    try {
-      for (const classItem of myClasses) {
-        const classResponse = await api.getClass(classItem.id);
-        if (classResponse.data.students) {
-          classResponse.data.students.forEach((student: any) => {
-            if (!students.find(s => s.id === student.id)) {
-              students.push(student);
-            }
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching students from classes:', error);
-    }
-    return students;
   };
 
   const columns = [
@@ -146,20 +107,6 @@ const TeacherInterventions: React.FC = () => {
       </span>
     ),
   }));
-
-  useEffect(() => {
-    const loadStudents = async () => {
-      const studentList = await getStudentsFromMyClasses();
-      setStudents(studentList);
-    };
-    if (myClasses.length > 0) {
-      loadStudents();
-    }
-  }, [myClasses]);
-
-  useEffect(() => {
-    fetchInterventionTypes();
-  }, []);
 
   const handleAssignIntervention = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -236,34 +183,32 @@ const TeacherInterventions: React.FC = () => {
           <Sparkles className="text-emerald-600" size={24} />
         </div>
         <form onSubmit={handleAssignIntervention} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Select
+          <SearchableSelect
             label="Student"
             value={newIntervention.student_id}
-            onChange={(e) => setNewIntervention({ ...newIntervention, student_id: e.target.value })}
-            className="rounded-xl"
+            onChange={(value) => setNewIntervention({ ...newIntervention, student_id: value.toString() })}
+            options={students.map((student: any) => ({
+              value: student.id.toString(),
+              label: `${student.first_name} ${student.last_name}`,
+            }))}
+            placeholder="Search and select a student..."
             required
-          >
-            <option value="">Select a student</option>
-            {students.map((student: any) => (
-              <option key={student.id} value={student.id}>
-                {student.first_name} {student.last_name}
-              </option>
-            ))}
-          </Select>
-          <Select
+            showClear={!!newIntervention.student_id}
+            onClear={() => setNewIntervention({ ...newIntervention, student_id: '' })}
+          />
+          <SearchableSelect
             label="Intervention Type"
             value={newIntervention.type}
-            onChange={(e) => setNewIntervention({ ...newIntervention, type: e.target.value })}
-            className="rounded-xl"
+            onChange={(value) => setNewIntervention({ ...newIntervention, type: value.toString() })}
+            options={interventionTypes.map((type: any) => ({
+              value: type.name,
+              label: type.name,
+            }))}
+            placeholder="Search and select intervention type..."
             required
-          >
-            <option value="">Select a type</option>
-            {interventionTypes.map((type: any) => (
-              <option key={type.id} value={type.name}>
-                {type.name}
-              </option>
-            ))}
-          </Select>
+            showClear={!!newIntervention.type}
+            onClear={() => setNewIntervention({ ...newIntervention, type: '' })}
+          />
           <Input
             label="Start Date"
             type="date"
@@ -308,55 +253,43 @@ const TeacherInterventions: React.FC = () => {
         </form>
       </motion.div>
 
-      {/* Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Filters</h2>
-          <Filter className="text-emerald-600" size={24} />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Select
-            label="Student"
-            value={filters.student_id}
-            onChange={(e) => setFilters({ ...filters, student_id: e.target.value })}
-            className="rounded-xl"
-          >
-            <option value="">All Students</option>
-            {students.map((student: any) => (
-              <option key={student.id} value={student.id}>
-                {student.first_name} {student.last_name}
-              </option>
-            ))}
-          </Select>
-          <Select
-            label="Status"
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            className="rounded-xl"
-          >
-            <option value="">All Statuses</option>
-            <option value="active">Active</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </Select>
-          <Select
-            label="Type"
-            value={filters.type}
-            onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-            className="rounded-xl"
-          >
-            <option value="">All Types</option>
-            {Array.from(new Set(interventions.map(i => i.type))).map((type: string) => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </Select>
-        </div>
-      </motion.div>
+      {/* Modern Filters */}
+      <ModernFilter
+        fields={[
+          {
+            type: 'searchable-select',
+            name: 'student_id',
+            label: 'Student',
+            placeholder: 'Search and select a student...',
+            options: students.map((student: any) => ({
+              value: student.id.toString(),
+              label: `${student.first_name} ${student.last_name}`,
+            })),
+          },
+          {
+            type: 'select',
+            name: 'status',
+            label: 'Status',
+            options: [
+              { value: 'active', label: 'Active' },
+              { value: 'completed', label: 'Completed' },
+              { value: 'cancelled', label: 'Cancelled' },
+            ],
+          },
+          {
+            type: 'select',
+            name: 'type',
+            label: 'Type',
+            options: Array.from(new Set(interventions.map(i => i.type))).map((type: string) => ({
+              value: type,
+              label: type,
+            })),
+          },
+        ]}
+        values={filters}
+        onChange={(name, value) => setFilters({ ...filters, [name]: value })}
+        onClear={() => setFilters({ student_id: '', status: '', type: '' })}
+      />
 
       {/* Table */}
       {interventions.length === 0 ? (

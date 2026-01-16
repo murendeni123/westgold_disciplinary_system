@@ -17,7 +17,8 @@ const pool = new Pool({
     } : false,
     max: 20, // Maximum number of clients in the pool
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 10000, // Increased to 10 seconds
+    query_timeout: 10000, // Query timeout
 });
 
 // Test connection

@@ -19,6 +19,16 @@ const ParentSettings: React.FC = () => {
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
+    phone: '',
+    work_phone: '',
+    relationship_to_child: '',
+    emergency_contact_1_name: '',
+    emergency_contact_1_phone: '',
+    emergency_contact_2_name: '',
+    emergency_contact_2_phone: '',
+    home_address: '',
+    city: '',
+    postal_code: '',
   });
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
@@ -31,13 +41,41 @@ const ParentSettings: React.FC = () => {
   const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      setProfileData({
-        name: user.name || '',
-        email: user.email || '',
-      });
-    }
+    fetchProfile();
   }, [user]);
+
+  const fetchProfile = async () => {
+    try {
+      console.log('Fetching parent profile...');
+      const response = await api.getParentProfile();
+      console.log('Profile response:', response);
+      console.log('Profile data:', response.data);
+      
+      const profile = response.data;
+      
+      const newProfileData = {
+        name: profile.name || user?.name || '',
+        email: profile.email || user?.email || '',
+        phone: profile.phone || '',
+        work_phone: profile.work_phone || '',
+        relationship_to_child: profile.relationship_to_child || '',
+        emergency_contact_1_name: profile.emergency_contact_1_name || '',
+        emergency_contact_1_phone: profile.emergency_contact_1_phone || '',
+        emergency_contact_2_name: profile.emergency_contact_2_name || '',
+        emergency_contact_2_phone: profile.emergency_contact_2_phone || '',
+        home_address: profile.home_address || '',
+        city: profile.city || '',
+        postal_code: profile.postal_code || '',
+      };
+      
+      console.log('Setting profile data:', newProfileData);
+      setProfileData(newProfileData);
+    } catch (error: any) {
+      console.error('Error fetching profile:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+    }
+  };
 
   useEffect(() => {
     if ('Notification' in window) {
@@ -60,10 +98,7 @@ const ParentSettings: React.FC = () => {
 
     setUpdatingProfile(true);
     try {
-      const response = await api.updateProfile({
-        name: profileData.name.trim(),
-        email: profileData.email.trim().toLowerCase(),
-      });
+      const response = await api.updateParentProfile(profileData);
       success('Profile updated successfully!');
       if (updateUser && response.data.user) {
         updateUser(response.data.user);
@@ -187,7 +222,109 @@ const ParentSettings: React.FC = () => {
                 placeholder="Enter your email"
                 className="rounded-xl"
               />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
+                <div className="space-y-4">
+                  <Input
+                    label="Phone Number"
+                    type="tel"
+                    value={profileData.phone}
+                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                    required
+                    placeholder="Enter your phone number"
+                    className="rounded-xl"
+                  />
+                  <Input
+                    label="Work Phone (Optional)"
+                    type="tel"
+                    value={profileData.work_phone}
+                    onChange={(e) => setProfileData({ ...profileData, work_phone: e.target.value })}
+                    placeholder="Enter your work phone"
+                    className="rounded-xl"
+                  />
+                  <Input
+                    label="Relationship to Child"
+                    value={profileData.relationship_to_child}
+                    onChange={(e) => setProfileData({ ...profileData, relationship_to_child: e.target.value })}
+                    required
+                    placeholder="e.g., Mother, Father, Guardian"
+                    className="rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Emergency Contacts</h3>
+                <div className="space-y-4">
+                  <Input
+                    label="Emergency Contact 1 Name"
+                    value={profileData.emergency_contact_1_name}
+                    onChange={(e) => setProfileData({ ...profileData, emergency_contact_1_name: e.target.value })}
+                    required
+                    placeholder="Enter emergency contact name"
+                    className="rounded-xl"
+                  />
+                  <Input
+                    label="Emergency Contact 1 Phone"
+                    type="tel"
+                    value={profileData.emergency_contact_1_phone}
+                    onChange={(e) => setProfileData({ ...profileData, emergency_contact_1_phone: e.target.value })}
+                    required
+                    placeholder="Enter emergency contact phone"
+                    className="rounded-xl"
+                  />
+                  <Input
+                    label="Emergency Contact 2 Name"
+                    value={profileData.emergency_contact_2_name}
+                    onChange={(e) => setProfileData({ ...profileData, emergency_contact_2_name: e.target.value })}
+                    required
+                    placeholder="Enter emergency contact name"
+                    className="rounded-xl"
+                  />
+                  <Input
+                    label="Emergency Contact 2 Phone"
+                    type="tel"
+                    value={profileData.emergency_contact_2_phone}
+                    onChange={(e) => setProfileData({ ...profileData, emergency_contact_2_phone: e.target.value })}
+                    required
+                    placeholder="Enter emergency contact phone"
+                    className="rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Address</h3>
+                <div className="space-y-4">
+                  <Input
+                    label="Home Address"
+                    value={profileData.home_address}
+                    onChange={(e) => setProfileData({ ...profileData, home_address: e.target.value })}
+                    required
+                    placeholder="Enter your home address"
+                    className="rounded-xl"
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      label="City"
+                      value={profileData.city}
+                      onChange={(e) => setProfileData({ ...profileData, city: e.target.value })}
+                      placeholder="Enter city"
+                      className="rounded-xl"
+                    />
+                    <Input
+                      label="Postal Code"
+                      value={profileData.postal_code}
+                      onChange={(e) => setProfileData({ ...profileData, postal_code: e.target.value })}
+                      placeholder="Enter postal code"
+                      className="rounded-xl"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                 <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
                   <p className="text-sm text-gray-600 mb-1">Role</p>
                   <p className="text-lg font-semibold capitalize text-blue-700">{user?.role}</p>

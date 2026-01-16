@@ -6,6 +6,7 @@ import Input from '../../components/Input';
 import Button from '../../components/Button';
 import Textarea from '../../components/Textarea';
 import AssignConsequenceModal from '../../components/AssignConsequenceModal';
+import ModernFilter from '../../components/ModernFilter';
 import { motion } from 'framer-motion';
 import { Filter, Download, AlertTriangle, Check, X, Eye, Edit2, Save, Scale, TrendingUp, Sparkles } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
@@ -309,58 +310,45 @@ const BehaviourDashboard: React.FC = () => {
         </motion.div>
       </motion.div>
 
-      {/* Filters Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Filters</h2>
-          <Filter className="text-amber-600" size={24} />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Select
-            label="Status"
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            options={[
-              { value: '', label: 'All' },
+      {/* Modern Filters */}
+      <ModernFilter
+        fields={[
+          {
+            type: 'select',
+            name: 'status',
+            label: 'Status',
+            options: [
               { value: 'pending', label: 'Pending' },
               { value: 'approved', label: 'Approved' },
               { value: 'resolved', label: 'Resolved' },
-            ]}
-            className="rounded-xl"
-          />
-          <Select
-            label="Severity"
-            value={filters.severity}
-            onChange={(e) => setFilters({ ...filters, severity: e.target.value })}
-            options={[
-              { value: '', label: 'All' },
+              { value: 'rejected', label: 'Rejected' },
+            ],
+          },
+          {
+            type: 'select',
+            name: 'severity',
+            label: 'Severity',
+            options: [
               { value: 'low', label: 'Low' },
               { value: 'medium', label: 'Medium' },
               { value: 'high', label: 'High' },
-            ]}
-            className="rounded-xl"
-          />
-          <Input
-            label="Start Date"
-            type="date"
-            value={filters.start_date}
-            onChange={(e) => setFilters({ ...filters, start_date: e.target.value })}
-            className="rounded-xl"
-          />
-          <Input
-            label="End Date"
-            type="date"
-            value={filters.end_date}
-            onChange={(e) => setFilters({ ...filters, end_date: e.target.value })}
-            className="rounded-xl"
-          />
-        </div>
-      </motion.div>
+            ],
+          },
+          {
+            type: 'date',
+            name: 'start_date',
+            label: 'Start Date',
+          },
+          {
+            type: 'date',
+            name: 'end_date',
+            label: 'End Date',
+          },
+        ]}
+        values={filters}
+        onChange={(name, value) => setFilters({ ...filters, [name]: value })}
+        onClear={() => setFilters({ status: '', severity: '', start_date: '', end_date: '' })}
+      />
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -97,17 +97,13 @@ router.post('/', authenticateToken, requireRole('admin', 'teacher'), async (req,
       return res.status(400).json({ error: 'Student ID and type are required' });
     }
 
-    // Teachers can only assign interventions to students in their classes
-    if (req.user.role === 'teacher') {
-      const studentInClass = await dbGet(
-        `SELECT cs.id FROM class_students cs
-         JOIN classes c ON cs.class_id = c.id
-         WHERE cs.student_id = ? AND c.teacher_id = ?`,
-        [student_id, req.user.id]
-      );
-      if (!studentInClass) {
-        return res.status(403).json({ error: 'You can only assign interventions to students in your classes' });
-      }
+    // Verify student is in the same school as the teacher
+    const student = await dbGet('SELECT id, school_id FROM students WHERE id = ?', [student_id]);
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+    if (student.school_id !== schoolId) {
+      return res.status(403).json({ error: 'You can only assign interventions to students in your school' });
     }
 
     const result = await dbRun(

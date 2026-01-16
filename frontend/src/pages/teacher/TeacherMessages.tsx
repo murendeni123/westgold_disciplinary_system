@@ -7,6 +7,7 @@ import Button from '../../components/Button';
 import Textarea from '../../components/Textarea';
 import Input from '../../components/Input';
 import Select from '../../components/Select';
+import SearchableSelect from '../../components/SearchableSelect';
 import { Plus } from 'lucide-react';
 
 const TeacherMessages: React.FC = () => {
@@ -137,12 +138,15 @@ const TeacherMessages: React.FC = () => {
         title="Send Message"
       >
         <form onSubmit={handleSendMessage} className="space-y-4">
-          <Select
+          <SearchableSelect
             label="To"
             value={formData.receiver_id}
-            onChange={(e) => setFormData({ ...formData, receiver_id: e.target.value })}
-            options={users.map((u) => ({ value: u.id, label: `${u.name} (${u.email})` }))}
+            onChange={(value) => setFormData({ ...formData, receiver_id: value.toString() })}
+            options={users.map((u) => ({ value: u.id.toString(), label: `${u.name} (${u.email})` }))}
+            placeholder="Search and select a recipient..."
             required
+            showClear={!!formData.receiver_id}
+            onClear={() => setFormData({ ...formData, receiver_id: '' })}
           />
           <Input
             label="Subject"

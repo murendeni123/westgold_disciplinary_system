@@ -1,6 +1,6 @@
 const express = require('express');
 const { dbAll, dbGet, dbRun } = require('../database/db');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, getSchoolId } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -8,6 +8,7 @@ const router = express.Router();
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { student_id, teacher_id, start_date, end_date } = req.query;
+    const schoolId = getSchoolId(req);
     
     let query = `
       SELECT m.*, 
@@ -22,6 +23,15 @@ router.get('/', authenticateToken, async (req, res) => {
       WHERE 1=1
     `;
     const params = [];
+
+    // Platform admin can view across schools
+    if (req.user?.role !== 'platform_admin') {
+      if (!schoolId) {
+        return res.status(403).json({ error: 'School context required' });
+      }
+      query += ' AND m.school_id = ?';
+      params.push(schoolId);
+    }
 
     if (student_id) {
       query += ' AND m.student_id = ?';
@@ -54,6 +64,7 @@ router.get('/', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const { student_id, merit_date, merit_type, description, points } = req.body;
+    const schoolId = getSchoolId(req);
 
     if (!student_id || !merit_date || !merit_type) {
       return res.status(400).json({ error: 'Student ID, date, and type are required' });
@@ -63,10 +74,14 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Description is required' });
     }
 
+    if (!schoolId) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+
     const result = await dbRun(
-      `INSERT INTO merits (student_id, teacher_id, merit_date, merit_type, description, points)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [student_id, req.user.id, merit_date, merit_type, String(description).trim(), points || 0]
+      `INSERT INTO merits (student_id, teacher_id, merit_date, merit_type, description, points, school_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [student_id, req.user.id, merit_date, merit_type, String(description).trim(), points || 0, schoolId]
     );
 
     const merit = await dbGet('SELECT * FROM merits WHERE id = ?', [result.id]);
@@ -81,11 +96,21 @@ router.post('/', authenticateToken, async (req, res) => {
 router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { merit_date, merit_type, description, points } = req.body;
+    const schoolId = getSchoolId(req);
 
     // Only admin or the teacher who created it can update
     const merit = await dbGet('SELECT * FROM merits WHERE id = ?', [req.params.id]);
     if (!merit) {
       return res.status(404).json({ error: 'Merit not found' });
+    }
+
+    if (req.user?.role !== 'platform_admin') {
+      if (!schoolId) {
+        return res.status(403).json({ error: 'School context required' });
+      }
+      if (merit.school_id !== schoolId) {
+        return res.status(404).json({ error: 'Merit not found' });
+      }
     }
 
     if (req.user.role !== 'admin' && merit.teacher_id !== req.user.id) {

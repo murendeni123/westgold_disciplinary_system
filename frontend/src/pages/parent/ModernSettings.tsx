@@ -15,6 +15,16 @@ const ModernSettings: React.FC = () => {
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
+    phone: '',
+    work_phone: '',
+    relationship_to_child: '',
+    emergency_contact_1_name: '',
+    emergency_contact_1_phone: '',
+    emergency_contact_2_name: '',
+    emergency_contact_2_phone: '',
+    home_address: '',
+    city: '',
+    postal_code: '',
   });
 
   // School & Children state
@@ -35,13 +45,35 @@ const ModernSettings: React.FC = () => {
   const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      setProfileData({
-        name: user.name || '',
-        email: user.email || '',
-      });
-    }
+    fetchProfile();
   }, [user]);
+
+  const fetchProfile = async () => {
+    try {
+      console.log('Fetching parent profile...');
+      const response = await api.getParentProfile();
+      console.log('Profile response:', response.data);
+      
+      const profile = response.data;
+      setProfileData({
+        name: profile.name || user?.name || '',
+        email: profile.email || user?.email || '',
+        phone: profile.phone || '',
+        work_phone: profile.work_phone || '',
+        relationship_to_child: profile.relationship_to_child || '',
+        emergency_contact_1_name: profile.emergency_contact_1_name || '',
+        emergency_contact_1_phone: profile.emergency_contact_1_phone || '',
+        emergency_contact_2_name: profile.emergency_contact_2_name || '',
+        emergency_contact_2_phone: profile.emergency_contact_2_phone || '',
+        home_address: profile.home_address || '',
+        city: profile.city || '',
+        postal_code: profile.postal_code || '',
+      });
+    } catch (error: any) {
+      console.error('Error fetching profile:', error);
+      console.error('Error response:', error.response?.data);
+    }
+  };
 
   // Fetch linked schools and children when school tab is active
   useEffect(() => {
@@ -89,10 +121,7 @@ const ModernSettings: React.FC = () => {
 
     setUpdatingProfile(true);
     try {
-      const response = await api.updateProfile({
-        name: profileData.name.trim(),
-        email: profileData.email.trim().toLowerCase(),
-      });
+      const response = await api.updateParentProfile(profileData);
       setProfileSuccess('Profile updated successfully!');
       if (updateUser && response.data.user) {
         updateUser(response.data.user);
@@ -255,6 +284,92 @@ const ModernSettings: React.FC = () => {
                   required
                   placeholder="Enter your email"
                 />
+                
+                <div className="mt-6 space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
+                  <Input
+                    label="Phone Number"
+                    type="tel"
+                    value={profileData.phone}
+                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                    required
+                    placeholder="Enter your phone number"
+                  />
+                  <Input
+                    label="Work Phone (Optional)"
+                    type="tel"
+                    value={profileData.work_phone}
+                    onChange={(e) => setProfileData({ ...profileData, work_phone: e.target.value })}
+                    placeholder="Enter your work phone"
+                  />
+                  <Input
+                    label="Relationship to Child"
+                    value={profileData.relationship_to_child}
+                    onChange={(e) => setProfileData({ ...profileData, relationship_to_child: e.target.value })}
+                    required
+                    placeholder="e.g., Mother, Father, Guardian"
+                  />
+                </div>
+
+                <div className="mt-6 space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Emergency Contacts</h3>
+                  <Input
+                    label="Emergency Contact 1 Name"
+                    value={profileData.emergency_contact_1_name}
+                    onChange={(e) => setProfileData({ ...profileData, emergency_contact_1_name: e.target.value })}
+                    required
+                    placeholder="Enter emergency contact name"
+                  />
+                  <Input
+                    label="Emergency Contact 1 Phone"
+                    type="tel"
+                    value={profileData.emergency_contact_1_phone}
+                    onChange={(e) => setProfileData({ ...profileData, emergency_contact_1_phone: e.target.value })}
+                    required
+                    placeholder="Enter emergency contact phone"
+                  />
+                  <Input
+                    label="Emergency Contact 2 Name"
+                    value={profileData.emergency_contact_2_name}
+                    onChange={(e) => setProfileData({ ...profileData, emergency_contact_2_name: e.target.value })}
+                    required
+                    placeholder="Enter emergency contact name"
+                  />
+                  <Input
+                    label="Emergency Contact 2 Phone"
+                    type="tel"
+                    value={profileData.emergency_contact_2_phone}
+                    onChange={(e) => setProfileData({ ...profileData, emergency_contact_2_phone: e.target.value })}
+                    required
+                    placeholder="Enter emergency contact phone"
+                  />
+                </div>
+
+                <div className="mt-6 space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Address</h3>
+                  <Input
+                    label="Home Address"
+                    value={profileData.home_address}
+                    onChange={(e) => setProfileData({ ...profileData, home_address: e.target.value })}
+                    required
+                    placeholder="Enter your home address"
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      label="City"
+                      value={profileData.city}
+                      onChange={(e) => setProfileData({ ...profileData, city: e.target.value })}
+                      placeholder="Enter city"
+                    />
+                    <Input
+                      label="Postal Code"
+                      value={profileData.postal_code}
+                      onChange={(e) => setProfileData({ ...profileData, postal_code: e.target.value })}
+                      placeholder="Enter postal code"
+                    />
+                  </div>
+                </div>
+
                 <div className="p-4 bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-200">
                   <p className="text-sm font-medium text-gray-600 mb-2">Role</p>
                   <p className="text-lg font-bold capitalize text-gray-900">{user?.role}</p>

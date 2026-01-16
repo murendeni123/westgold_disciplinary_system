@@ -205,23 +205,29 @@ const LogIncident: React.FC = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <Select
+              <SearchableSelect
                 label="Class (Optional - filter students by class)"
                 value={selectedClassId}
-                onChange={(e) => {
-                  if (e.target.value === '') {
+                onChange={(value) => {
+                  if (value === '') {
                     setSelectedClassId('');
                     setClassStudents([]);
                     setFormData({ ...formData, student_id: '' });
                   } else {
-                    handleClassChange(e.target.value);
+                    handleClassChange(value.toString());
                   }
                 }}
                 options={[
                   { value: '', label: 'All Classes' },
-                  ...classes.map((c) => ({ value: c.id, label: c.class_name })),
+                  ...classes.map((c) => ({ value: c.id.toString(), label: c.class_name })),
                 ]}
-                className="rounded-xl"
+                placeholder="Search and select a class..."
+                showClear={!!selectedClassId}
+                onClear={() => {
+                  setSelectedClassId('');
+                  setClassStudents([]);
+                  setFormData({ ...formData, student_id: '' });
+                }}
               />
             </motion.div>
             <motion.div
@@ -277,19 +283,18 @@ const LogIncident: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
           >
-            <Select
+            <SearchableSelect
               label="Incident Type"
               value={incidentTypes.find((t) => t.name === formData.incident_type)?.id || ''}
-              onChange={(e) => handleIncidentTypeChange(e.target.value)}
-              options={[
-                { value: '', label: 'Select an incident type...' },
-                ...incidentTypes.map((t) => ({
-                  value: t.id,
-                  label: `${t.name} (${t.default_points} pts, ${t.default_severity})`,
-                })),
-              ]}
+              onChange={(value) => handleIncidentTypeChange(value.toString())}
+              options={incidentTypes.map((t) => ({
+                value: t.id.toString(),
+                label: `${t.name} (${t.default_points} pts, ${t.default_severity})`,
+              }))}
+              placeholder="Search and select incident type..."
               required
-              className="rounded-xl"
+              showClear={!!formData.incident_type}
+              onClear={() => handleIncidentTypeChange('')}
             />
           </motion.div>
 
@@ -311,17 +316,18 @@ const LogIncident: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 }}
             >
-              <Select
+              <SearchableSelect
                 label="Severity"
                 value={formData.severity}
-                onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, severity: value.toString() })}
                 options={[
                   { value: 'low', label: 'Low' },
                   { value: 'medium', label: 'Medium' },
                   { value: 'high', label: 'High' },
                 ]}
+                placeholder="Select severity..."
                 required
-                className="rounded-xl"
+                showClear={false}
               />
             </motion.div>
             <motion.div

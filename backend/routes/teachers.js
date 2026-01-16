@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { dbAll, dbGet, dbRun } = require('../database/db');
-const { authenticateToken, requireRole } = require('../middleware/auth');
+const { authenticateToken, requireRole, getSchoolId } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
 const router = express.Router();
@@ -37,14 +37,30 @@ router.post('/:id/photo', authenticateToken, upload.single('photo'), async (req,
 // Get all teachers
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const teachers = await dbAll(`
+        const schoolId = getSchoolId(req);
+
+        let query = `
             SELECT u.id, u.email, u.name, u.role, u.created_at,
                    t.employee_id, t.phone, t.photo_path,
                    (SELECT COUNT(*) FROM classes WHERE teacher_id = u.id) as class_count
             FROM users u
             INNER JOIN teachers t ON u.id = t.user_id
-            ORDER BY u.name
-        `);
+            WHERE 1=1
+        `;
+        const params = [];
+
+        // Platform admin can view across schools
+        if (req.user?.role !== 'platform_admin') {
+            if (!schoolId) {
+                return res.status(403).json({ error: 'School context required' });
+            }
+            query += ' AND t.school_id = ?';
+            params.push(schoolId);
+        }
+
+        query += ' ORDER BY u.name';
+
+        const teachers = await dbAll(query, params);
         res.json(teachers);
     } catch (error) {
         console.error('Error fetching teachers:', error);
@@ -55,6 +71,7 @@ router.get('/', authenticateToken, async (req, res) => {
 // Get teacher by ID
 router.get('/:id', authenticateToken, async (req, res) => {
     try {
+        const schoolId = getSchoolId(req);
         const teacher = await dbGet(`
             SELECT u.id, u.email, u.name, u.role, u.created_at, u.school_id,
                    t.employee_id, t.phone, t.photo_path,
@@ -67,6 +84,15 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
         if (!teacher) {
             return res.status(404).json({ error: 'Teacher not found' });
+        }
+
+        if (req.user?.role !== 'platform_admin') {
+            if (!schoolId) {
+                return res.status(403).json({ error: 'School context required' });
+            }
+            if (teacher.school_id !== schoolId) {
+                return res.status(404).json({ error: 'Teacher not found' });
+            }
         }
 
         // Get classes assigned to this teacher
@@ -90,7 +116,11 @@ router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
         console.log('User:', req.user);
         
         const { email, password, name, employee_id, phone } = req.body;
-        const schoolId = req.user.school_id || null;
+        const schoolId = getSchoolId(req);
+
+        if (!schoolId) {
+            return res.status(403).json({ error: 'School context required' });
+        }
 
         console.log('Extracted values:', { email, name, employee_id, phone, schoolId });
 
@@ -243,6 +273,16 @@ router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
 router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
         const { name, email, phone, password } = req.body;
+        const schoolId = getSchoolId(req);
+
+        if (!schoolId) {
+            return res.status(403).json({ error: 'School context required' });
+        }
+
+        const existing = await dbGet('SELECT t.user_id, t.school_id FROM teachers t WHERE t.user_id = ?', [req.params.id]);
+        if (!existing || existing.school_id !== schoolId) {
+            return res.status(404).json({ error: 'Teacher not found' });
+        }
 
         if (name) {
             await dbRun('UPDATE users SET name = ? WHERE id = ?', [name, req.params.id]);
@@ -278,6 +318,17 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
 // Delete teacher
 router.delete('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
+        const schoolId = getSchoolId(req);
+
+        if (!schoolId) {
+            return res.status(403).json({ error: 'School context required' });
+        }
+
+        const existing = await dbGet('SELECT user_id, school_id FROM teachers WHERE user_id = ?', [req.params.id]);
+        if (!existing || existing.school_id !== schoolId) {
+            return res.status(404).json({ error: 'Teacher not found' });
+        }
+
         await dbRun('DELETE FROM teachers WHERE user_id = ?', [req.params.id]);
         await dbRun('DELETE FROM users WHERE id = ?', [req.params.id]);
         res.json({ message: 'Teacher deleted successfully' });

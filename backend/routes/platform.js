@@ -269,7 +269,200 @@ router.get('/schools/:id', requirePlatformAdmin, async (req, res) => {
     }
 });
 
-// Create school
+// Get school statistics
+router.get('/schools/:id/stats', requirePlatformAdmin, async (req, res) => {
+    try {
+        const school = await dbGet('SELECT * FROM schools WHERE id = ?', [req.params.id]);
+        
+        if (!school) {
+            return res.status(404).json({ error: 'School not found' });
+        }
+
+        // Get detailed counts
+        const userCount = await dbGet('SELECT COUNT(*) as count FROM users WHERE school_id = ?', [req.params.id]);
+        const studentCount = await dbGet('SELECT COUNT(*) as count FROM students WHERE school_id = ?', [req.params.id]);
+        const classCount = await dbGet('SELECT COUNT(*) as count FROM classes WHERE school_id = ?', [req.params.id]);
+        const teacherCount = await dbGet('SELECT COUNT(*) as count FROM users WHERE school_id = ? AND role = ?', [req.params.id, 'teacher']);
+        const adminCount = await dbGet('SELECT COUNT(*) as count FROM users WHERE school_id = ? AND role = ?', [req.params.id, 'admin']);
+        const parentCount = await dbGet('SELECT COUNT(*) as count FROM users WHERE school_id = ? AND role = ?', [req.params.id, 'parent']);
+        
+        // Get activity metrics
+        const incidentCount = await dbGet('SELECT COUNT(*) as count FROM behaviour_incidents WHERE school_id = ?', [req.params.id]);
+        const meritCount = await dbGet('SELECT COUNT(*) as count FROM merits WHERE school_id = ?', [req.params.id]);
+        
+        // Get last activity
+        const lastUserLogin = await dbGet(
+            'SELECT MAX(last_login) as last_login FROM users WHERE school_id = ?',
+            [req.params.id]
+        );
+
+        res.json({
+            school_id: school.id,
+            school_name: school.name,
+            total_users: parseInt(userCount?.count || 0),
+            total_students: parseInt(studentCount?.count || 0),
+            total_classes: parseInt(classCount?.count || 0),
+            total_teachers: parseInt(teacherCount?.count || 0),
+            total_admins: parseInt(adminCount?.count || 0),
+            total_parents: parseInt(parentCount?.count || 0),
+            total_incidents: parseInt(incidentCount?.count || 0),
+            total_merits: parseInt(meritCount?.count || 0),
+            last_activity: lastUserLogin?.last_login || null,
+            status: school.status,
+            created_at: school.created_at
+        });
+    } catch (error) {
+        console.error('Error fetching school stats:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// School Onboarding Wizard - Complete setup in one transaction
+router.post('/schools/onboard', requirePlatformAdmin, async (req, res) => {
+    try {
+        const {
+            // Step 1: School details
+            school_name,
+            school_email,
+            school_phone,
+            school_address,
+            school_city,
+            school_postal_code,
+            
+            // Step 2: Initial admin
+            admin_name,
+            admin_email,
+            admin_password,
+            
+            // Step 3: Trial/Subscription
+            trial_days = 30,
+            plan_id,
+            
+            // Step 4: Branding
+            primary_color,
+            secondary_color,
+            logo_url
+        } = req.body;
+
+        // Validation
+        if (!school_name || !school_email) {
+            return res.status(400).json({ error: 'School name and email are required' });
+        }
+        if (!admin_name || !admin_email || !admin_password) {
+            return res.status(400).json({ error: 'Admin name, email, and password are required' });
+        }
+
+        // Check if school email already exists
+        const existingSchool = await dbGet('SELECT id FROM schools WHERE email = ?', [school_email]);
+        if (existingSchool) {
+            return res.status(400).json({ error: 'School with this email already exists' });
+        }
+
+        // Check if admin email already exists
+        const existingAdmin = await dbGet('SELECT id FROM users WHERE email = ?', [admin_email]);
+        if (existingAdmin) {
+            return res.status(400).json({ error: 'Admin email already in use' });
+        }
+
+        // Generate unique school code (e.g., WEST-4831)
+        const generateSchoolCode = () => {
+            const prefix = school_name.substring(0, 4).toUpperCase().replace(/[^A-Z]/g, 'X');
+            const suffix = Math.floor(1000 + Math.random() * 9000);
+            return `${prefix}-${suffix}`;
+        };
+        
+        let school_code = generateSchoolCode();
+        let codeExists = await dbGet('SELECT id FROM schools WHERE school_code = ?', [school_code]);
+        while (codeExists) {
+            school_code = generateSchoolCode();
+            codeExists = await dbGet('SELECT id FROM schools WHERE school_code = ?', [school_code]);
+        }
+
+        // 1. Create school
+        const schoolResult = await dbRun(
+            `INSERT INTO schools (name, email, phone, address, city, postal_code, code, school_code, status, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'trial', CURRENT_TIMESTAMP)`,
+            [school_name, school_email, school_phone || null, school_address || null, school_city || null, school_postal_code || null, school_code, school_code]
+        );
+        const school_id = schoolResult.id;
+
+        // 2. Create initial admin account
+        const hashedPassword = await bcrypt.hash(admin_password, 10);
+        const adminResult = await dbRun(
+            `INSERT INTO users (email, password, name, role, school_id, created_at)
+             VALUES (?, ?, ?, 'admin', ?, CURRENT_TIMESTAMP)`,
+            [admin_email, hashedPassword, admin_name, school_id]
+        );
+
+        // 3. Set trial/subscription
+        const trial_end_date = new Date();
+        trial_end_date.setDate(trial_end_date.getDate() + trial_days);
+        
+        if (plan_id) {
+            await dbRun(
+                `INSERT INTO school_subscriptions (school_id, plan_id, start_date, end_date, status, created_at)
+                 VALUES (?, ?, CURRENT_TIMESTAMP, ?, 'trial', CURRENT_TIMESTAMP)`,
+                [school_id, plan_id, trial_end_date.toISOString()]
+            );
+        }
+
+        // 4. Apply default branding
+        await dbRun(
+            `INSERT INTO school_branding (school_id, primary_color, secondary_color, logo_url, updated_at, updated_by)
+             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
+            [
+                school_id,
+                primary_color || '#3B82F6',
+                secondary_color || '#8B5CF6',
+                logo_url || null,
+                req.platformAdmin.userId
+            ]
+        );
+
+        // 5. Create activity log
+        await dbRun(
+            `INSERT INTO activity_logs (school_id, user_id, action, details, created_at)
+             VALUES (?, ?, 'school_onboarded', ?, CURRENT_TIMESTAMP)`,
+            [
+                school_id,
+                adminResult.id,
+                JSON.stringify({
+                    school_name,
+                    admin_email,
+                    school_code,
+                    trial_days,
+                    onboarded_by: req.platformAdmin.userId
+                })
+            ]
+        );
+
+        // Fetch complete school data
+        const school = await dbGet('SELECT * FROM schools WHERE id = ?', [school_id]);
+        const admin = await dbGet('SELECT id, name, email, role FROM users WHERE id = ?', [adminResult.id]);
+
+        res.status(201).json({
+            success: true,
+            message: 'School onboarded successfully',
+            school: {
+                ...school,
+                school_code
+            },
+            admin,
+            next_steps: [
+                'Share school code with teachers and parents for registration',
+                'Admin should login and customize school settings',
+                'Import students and create classes',
+                'Set up behaviour policies and merit systems',
+                `Trial expires in ${trial_days} days`
+            ]
+        });
+    } catch (error) {
+        console.error('Error onboarding school:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+});
+
+// Create school (simple version - kept for backward compatibility)
 router.post('/schools', requirePlatformAdmin, async (req, res) => {
     try {
         const { name, email, status = 'active' } = req.body;
@@ -376,6 +569,112 @@ router.delete('/schools/:id', requirePlatformAdmin, async (req, res) => {
     }
 });
 
+// Get school analytics with engagement metrics
+router.get('/schools/:id/analytics', requirePlatformAdmin, async (req, res) => {
+    try {
+        const { range = '30d' } = req.query;
+        const school = await dbGet('SELECT * FROM schools WHERE id = ?', [req.params.id]);
+        
+        if (!school) {
+            return res.status(404).json({ error: 'School not found' });
+        }
+
+        // Calculate date range
+        const daysMap = { '7d': 7, '30d': 30, '90d': 90 };
+        const days = daysMap[range] || 30;
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
+
+        // Get login activity
+        const loginLast7Days = await dbGet(
+            `SELECT COUNT(DISTINCT user_id) as count FROM activity_logs 
+             WHERE school_id = ? AND action = 'login' AND created_at >= ?`,
+            [req.params.id, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()]
+        );
+
+        const loginLast30Days = await dbGet(
+            `SELECT COUNT(DISTINCT user_id) as count FROM activity_logs 
+             WHERE school_id = ? AND action = 'login' AND created_at >= ?`,
+            [req.params.id, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()]
+        );
+
+        // Get last activity timestamp
+        const lastActivity = await dbGet(
+            `SELECT MAX(created_at) as last_activity FROM activity_logs WHERE school_id = ?`,
+            [req.params.id]
+        );
+
+        // Get engagement metrics for the range
+        const incidentsInRange = await dbGet(
+            `SELECT COUNT(*) as count FROM behaviour_incidents 
+             WHERE school_id = ? AND created_at >= ?`,
+            [req.params.id, startDate.toISOString()]
+        );
+
+        const meritsInRange = await dbGet(
+            `SELECT COUNT(*) as count FROM merits 
+             WHERE school_id = ? AND created_at >= ?`,
+            [req.params.id, startDate.toISOString()]
+        );
+
+        const attendanceInRange = await dbGet(
+            `SELECT COUNT(*) as count FROM attendance 
+             WHERE school_id = ? AND date >= ?`,
+            [req.params.id, startDate.toISOString()]
+        );
+
+        // Get active users (logged in within range)
+        const activeUsers = await dbGet(
+            `SELECT COUNT(DISTINCT user_id) as count FROM activity_logs 
+             WHERE school_id = ? AND created_at >= ?`,
+            [req.params.id, startDate.toISOString()]
+        );
+
+        // Calculate engagement score (0-100)
+        const totalUsers = await dbGet('SELECT COUNT(*) as count FROM users WHERE school_id = ?', [req.params.id]);
+        const engagementRate = totalUsers?.count > 0 
+            ? Math.round((activeUsers?.count || 0) / totalUsers.count * 100) 
+            : 0;
+
+        // Get daily activity trend
+        const dailyActivity = await dbAll(
+            `SELECT DATE(created_at) as date, COUNT(*) as count 
+             FROM activity_logs 
+             WHERE school_id = ? AND created_at >= ?
+             GROUP BY DATE(created_at)
+             ORDER BY date DESC
+             LIMIT 30`,
+            [req.params.id, startDate.toISOString()]
+        );
+
+        res.json({
+            school_id: school.id,
+            school_name: school.name,
+            range,
+            last_activity: lastActivity?.last_activity || null,
+            logins: {
+                last_7_days: parseInt(loginLast7Days?.count || 0),
+                last_30_days: parseInt(loginLast30Days?.count || 0)
+            },
+            engagement: {
+                active_users: parseInt(activeUsers?.count || 0),
+                total_users: parseInt(totalUsers?.count || 0),
+                engagement_rate: engagementRate,
+                score: engagementRate
+            },
+            activity: {
+                incidents: parseInt(incidentsInRange?.count || 0),
+                merits: parseInt(meritsInRange?.count || 0),
+                attendance_records: parseInt(attendanceInRange?.count || 0)
+            },
+            daily_trend: dailyActivity || []
+        });
+    } catch (error) {
+        console.error('Error fetching school analytics:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Bulk update school status
 router.put('/schools/bulk/status', requirePlatformAdmin, async (req, res) => {
     try {
@@ -425,6 +724,170 @@ router.put('/schools/:id/subscription', requirePlatformAdmin, async (req, res) =
         res.json(subscription);
     } catch (error) {
         console.error('Error updating subscription:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get school branding
+router.get('/schools/:id/branding', requirePlatformAdmin, async (req, res) => {
+    try {
+        const branding = await dbGet(
+            'SELECT * FROM school_branding WHERE school_id = ? ORDER BY updated_at DESC LIMIT 1',
+            [req.params.id]
+        );
+
+        if (!branding) {
+            return res.json({
+                school_id: req.params.id,
+                primary_color: '#3B82F6',
+                secondary_color: '#8B5CF6',
+                logo_url: null,
+                is_default: true
+            });
+        }
+
+        res.json(branding);
+    } catch (error) {
+        console.error('Error fetching branding:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Update school branding with versioning
+router.put('/schools/:id/branding', requirePlatformAdmin, async (req, res) => {
+    try {
+        const { primary_color, secondary_color, logo_url } = req.body;
+
+        // Get current branding for history
+        const currentBranding = await dbGet(
+            'SELECT * FROM school_branding WHERE school_id = ? ORDER BY updated_at DESC LIMIT 1',
+            [req.params.id]
+        );
+
+        // Save current branding to history if it exists
+        if (currentBranding) {
+            await dbRun(
+                `INSERT INTO school_branding_history (school_id, primary_color, secondary_color, logo_url, updated_by, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [
+                    req.params.id,
+                    currentBranding.primary_color,
+                    currentBranding.secondary_color,
+                    currentBranding.logo_url,
+                    currentBranding.updated_by,
+                    currentBranding.updated_at
+                ]
+            );
+        }
+
+        // Update or insert new branding
+        if (currentBranding) {
+            await dbRun(
+                `UPDATE school_branding 
+                 SET primary_color = ?, secondary_color = ?, logo_url = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+                 WHERE school_id = ?`,
+                [primary_color, secondary_color, logo_url, req.platformAdmin.userId, req.params.id]
+            );
+        } else {
+            await dbRun(
+                `INSERT INTO school_branding (school_id, primary_color, secondary_color, logo_url, updated_by, updated_at)
+                 VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+                [req.params.id, primary_color, secondary_color, logo_url, req.platformAdmin.userId]
+            );
+        }
+
+        // Log the change
+        await dbRun(
+            `INSERT INTO activity_logs (school_id, user_id, action, details, created_at)
+             VALUES (?, ?, 'branding_updated', ?, CURRENT_TIMESTAMP)`,
+            [
+                req.params.id,
+                req.platformAdmin.userId,
+                JSON.stringify({ primary_color, secondary_color, logo_url })
+            ]
+        );
+
+        const updatedBranding = await dbGet(
+            'SELECT * FROM school_branding WHERE school_id = ?',
+            [req.params.id]
+        );
+
+        res.json(updatedBranding);
+    } catch (error) {
+        console.error('Error updating branding:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Get branding history
+router.get('/schools/:id/branding/history', requirePlatformAdmin, async (req, res) => {
+    try {
+        const history = await dbAll(
+            `SELECT h.*, u.name as updated_by_name 
+             FROM school_branding_history h
+             LEFT JOIN platform_users u ON h.updated_by = u.id
+             WHERE h.school_id = ?
+             ORDER BY h.updated_at DESC
+             LIMIT 20`,
+            [req.params.id]
+        );
+
+        res.json(history || []);
+    } catch (error) {
+        console.error('Error fetching branding history:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Revert to default branding
+router.post('/schools/:id/branding/revert', requirePlatformAdmin, async (req, res) => {
+    try {
+        const defaultBranding = {
+            primary_color: '#3B82F6',
+            secondary_color: '#8B5CF6',
+            logo_url: null
+        };
+
+        // Get current branding for history
+        const currentBranding = await dbGet(
+            'SELECT * FROM school_branding WHERE school_id = ?',
+            [req.params.id]
+        );
+
+        if (currentBranding) {
+            // Save to history
+            await dbRun(
+                `INSERT INTO school_branding_history (school_id, primary_color, secondary_color, logo_url, updated_by, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [
+                    req.params.id,
+                    currentBranding.primary_color,
+                    currentBranding.secondary_color,
+                    currentBranding.logo_url,
+                    currentBranding.updated_by,
+                    currentBranding.updated_at
+                ]
+            );
+
+            // Update to default
+            await dbRun(
+                `UPDATE school_branding 
+                 SET primary_color = ?, secondary_color = ?, logo_url = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
+                 WHERE school_id = ?`,
+                [defaultBranding.primary_color, defaultBranding.secondary_color, defaultBranding.logo_url, req.platformAdmin.userId, req.params.id]
+            );
+        }
+
+        // Log the change
+        await dbRun(
+            `INSERT INTO activity_logs (school_id, user_id, action, details, created_at)
+             VALUES (?, ?, 'branding_reverted', ?, CURRENT_TIMESTAMP)`,
+            [req.params.id, req.platformAdmin.userId, JSON.stringify(defaultBranding)]
+        );
+
+        res.json({ ...defaultBranding, school_id: req.params.id, is_default: true });
+    } catch (error) {
+        console.error('Error reverting branding:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

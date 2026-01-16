@@ -1,17 +1,29 @@
 const express = require('express');
 const { dbGet, dbAll, dbRun } = require('../database/db');
-const { authenticateToken, requireRole } = require('../middleware/auth');
+const { authenticateToken, requireRole, getSchoolId } = require('../middleware/auth');
 
 const router = express.Router();
 
 // Get all users (admin only)
 router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
-        const users = await dbAll(
-            `SELECT id, name, email, role, school_id, created_at 
-             FROM users 
-             ORDER BY created_at DESC`
-        );
+        const schoolId = getSchoolId(req);
+
+        let query = `SELECT id, name, email, role, school_id, created_at FROM users WHERE 1=1`;
+        const params = [];
+
+        // Platform admin can view across schools
+        if (req.user?.role !== 'platform_admin') {
+            if (!schoolId) {
+                return res.status(403).json({ error: 'School context required' });
+            }
+            query += ' AND school_id = ?';
+            params.push(schoolId);
+        }
+
+        query += ' ORDER BY created_at DESC';
+
+        const users = await dbAll(query, params);
         res.json(users);
     } catch (error) {
         console.error('Error fetching users:', error);
@@ -22,6 +34,7 @@ router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
 // Get single user (admin only)
 router.get('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
+        const schoolId = getSchoolId(req);
         const user = await dbGet(
             `SELECT id, name, email, role, school_id, created_at 
              FROM users 
@@ -31,6 +44,15 @@ router.get('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
         
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (req.user?.role !== 'platform_admin') {
+            if (!schoolId) {
+                return res.status(403).json({ error: 'School context required' });
+            }
+            if (user.school_id !== schoolId) {
+                return res.status(404).json({ error: 'User not found' });
+            }
         }
         
         res.json(user);
@@ -45,6 +67,7 @@ router.put('/:id/role', authenticateToken, requireRole('admin'), async (req, res
     try {
         const { role } = req.body;
         const userId = req.params.id;
+        const schoolId = getSchoolId(req);
         
         // Validate role
         const validRoles = ['admin', 'teacher', 'parent'];
@@ -56,6 +79,15 @@ router.put('/:id/role', authenticateToken, requireRole('admin'), async (req, res
         const user = await dbGet('SELECT * FROM users WHERE id = ?', [userId]);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (req.user?.role !== 'platform_admin') {
+            if (!schoolId) {
+                return res.status(403).json({ error: 'School context required' });
+            }
+            if (user.school_id !== schoolId) {
+                return res.status(404).json({ error: 'User not found' });
+            }
         }
         
         // Prevent changing own role (safety measure)
@@ -88,11 +120,21 @@ router.put('/:id/role', authenticateToken, requireRole('admin'), async (req, res
 router.delete('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
         const userId = req.params.id;
+        const schoolId = getSchoolId(req);
         
         // Check if user exists
         const user = await dbGet('SELECT * FROM users WHERE id = ?', [userId]);
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (req.user?.role !== 'platform_admin') {
+            if (!schoolId) {
+                return res.status(403).json({ error: 'School context required' });
+            }
+            if (user.school_id !== schoolId) {
+                return res.status(404).json({ error: 'User not found' });
+            }
         }
         
         // Prevent deleting own account

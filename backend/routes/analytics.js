@@ -1,6 +1,6 @@
 const express = require('express');
 const { dbGet, dbAll } = require('../database/db');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, getSchoolId } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -8,14 +8,27 @@ const router = express.Router();
 router.get('/dashboard', authenticateToken, async (req, res) => {
     try {
         const role = req.user.role;
+        const schoolId = getSchoolId(req);
         let stats = {};
 
         if (role === 'admin') {
-            const totalStudents = await dbGet('SELECT COUNT(*) as count FROM students');
-            const totalIncidents = await dbGet('SELECT COUNT(*) as count FROM behaviour_incidents');
-            const totalMerits = await dbGet('SELECT COUNT(*) as count FROM merits');
-            const pendingApprovals = await dbGet("SELECT COUNT(*) as count FROM behaviour_incidents WHERE status = 'pending'");
-            const scheduledDetentions = await dbGet("SELECT COUNT(*) as count FROM detentions WHERE status = 'scheduled'");
+            let whereClause = '';
+            const params = [];
+
+            // Platform admin can view across schools
+            if (req.user?.role !== 'platform_admin') {
+                if (!schoolId) {
+                    return res.status(403).json({ error: 'School context required' });
+                }
+                whereClause = ' WHERE school_id = ?';
+                params.push(schoolId);
+            }
+
+            const totalStudents = await dbGet(`SELECT COUNT(*) as count FROM students${whereClause}`, params);
+            const totalIncidents = await dbGet(`SELECT COUNT(*) as count FROM behaviour_incidents${whereClause}`, params);
+            const totalMerits = await dbGet(`SELECT COUNT(*) as count FROM merits${whereClause}`, params);
+            const pendingApprovals = await dbGet(`SELECT COUNT(*) as count FROM behaviour_incidents${whereClause ? whereClause + ' AND' : ' WHERE'} status = 'pending'`, whereClause ? [...params, ...params] : []);
+            const scheduledDetentions = await dbGet(`SELECT COUNT(*) as count FROM detentions${whereClause ? whereClause + ' AND' : ' WHERE'} status = 'scheduled'`, whereClause ? [...params, ...params] : []);
             const todayAttendance = await dbGet(`
                 SELECT 
                     COUNT(*) as total,
@@ -33,10 +46,11 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                        COUNT(bi.id) as incident_count
                 FROM students s
                 LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id AND bi.status = 'approved'
+                ${whereClause ? 'WHERE s.school_id = ?' : ''}
                 GROUP BY s.id
                 ORDER BY demerit_points DESC, incident_count DESC
                 LIMIT 10
-            `);
+            `, params);
 
             // Worst behaving classes
             const worstClasses = await dbAll(`
@@ -46,10 +60,11 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 FROM classes c
                 LEFT JOIN students s ON c.id = s.class_id
                 LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id AND bi.status = 'approved'
+                ${whereClause ? 'WHERE c.school_id = ?' : ''}
                 GROUP BY c.id
                 ORDER BY total_demerit_points DESC
                 LIMIT 10
-            `);
+            `, params);
 
             // Teachers logging most incidents
             const topTeachers = await dbAll(`
@@ -59,11 +74,11 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 FROM users u
                 LEFT JOIN behaviour_incidents bi ON u.id = bi.teacher_id
                 LEFT JOIN merits m ON u.id = m.teacher_id
-                WHERE u.role = 'teacher'
+                WHERE u.role = 'teacher'${whereClause ? ' AND u.school_id = ?' : ''}
                 GROUP BY u.id
                 ORDER BY incident_count DESC, merit_count DESC
                 LIMIT 10
-            `);
+            `, params);
 
             stats = {
                 totalStudents: totalStudents.count,

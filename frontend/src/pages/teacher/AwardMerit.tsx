@@ -200,23 +200,29 @@ const AwardMerit: React.FC = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <Select
+              <SearchableSelect
                 label="Class (Optional - filter students by class)"
                 value={selectedClassId}
-                onChange={(e) => {
-                  if (e.target.value === '') {
+                onChange={(value) => {
+                  if (value === '') {
                     setSelectedClassId('');
                     setClassStudents([]);
                     setFormData({ ...formData, student_id: '' });
                   } else {
-                    handleClassChange(e.target.value);
+                    handleClassChange(value.toString());
                   }
                 }}
                 options={[
                   { value: '', label: 'All Classes' },
-                  ...classes.map((c) => ({ value: c.id, label: c.class_name })),
+                  ...classes.map((c) => ({ value: c.id.toString(), label: c.class_name })),
                 ]}
-                className="rounded-xl"
+                placeholder="Search and select a class..."
+                showClear={!!selectedClassId}
+                onClear={() => {
+                  setSelectedClassId('');
+                  setClassStudents([]);
+                  setFormData({ ...formData, student_id: '' });
+                }}
               />
             </motion.div>
             <motion.div
@@ -275,19 +281,18 @@ const AwardMerit: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
           >
-            <Select
+            <SearchableSelect
               label="Merit Type"
               value={meritTypes.find((t) => t.name === formData.merit_type)?.id || ''}
-              onChange={(e) => handleMeritTypeChange(e.target.value)}
-              options={[
-                { value: '', label: 'Select a merit type...' },
-                ...meritTypes.map((t) => ({
-                  value: t.id,
-                  label: `${t.name} (${t.default_points} pts)`,
-                })),
-              ]}
+              onChange={(value) => handleMeritTypeChange(value.toString())}
+              options={meritTypes.map((t) => ({
+                value: t.id.toString(),
+                label: `${t.name} (${t.default_points} pts)`,
+              }))}
+              placeholder="Search and select merit type..."
               required
-              className="rounded-xl"
+              showClear={!!formData.merit_type}
+              onClear={() => handleMeritTypeChange('')}
             />
           </motion.div>
 

@@ -5,6 +5,7 @@ import Button from '../../components/Button';
 import Modal from '../../components/Modal';
 import Input from '../../components/Input';
 import Select from '../../components/Select';
+import ModernFilter from '../../components/ModernFilter';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Edit, Trash2, Copy, Users, Search, Filter, UserCircle2, GraduationCap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -301,63 +302,48 @@ const Students: React.FC = () => {
         </motion.div>
       </motion.div>
 
-      {/* Search and Filter Bar */}
+      {/* Modern Filters */}
+      <ModernFilter
+        fields={[
+          {
+            type: 'search',
+            name: 'search',
+            label: 'Search',
+            placeholder: 'Search by name, student ID, or link code...',
+          },
+          {
+            type: 'select',
+            name: 'class',
+            label: 'Class',
+            placeholder: 'All Classes',
+            options: classes.map((c) => ({
+              value: c.id.toString(),
+              label: c.class_name,
+            })),
+          },
+        ]}
+        values={{
+          search: searchTerm,
+          class: selectedClass,
+        }}
+        onChange={(name, value) => {
+          if (name === 'search') setSearchTerm(value);
+          if (name === 'class') setSelectedClass(value);
+        }}
+        onClear={() => {
+          setSearchTerm('');
+          setSelectedClass('');
+        }}
+      />
+      
+      {/* Results Summary */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-lg border border-white/20 p-6"
+        className="text-sm text-gray-600"
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Search */}
-          <div className="md:col-span-2">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Search by name, student ID, or link code..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
-              />
-            </div>
-          </div>
-          
-          {/* Class Filter */}
-          <div className="relative">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
-            <select
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all appearance-none cursor-pointer"
-            >
-              <option value="">All Classes</option>
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.class_name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Results Summary */}
-        <div className="mt-4 flex items-center justify-between text-sm">
-          <p className="text-gray-600">
-            Showing <span className="font-semibold text-amber-600">{filteredStudents.length}</span> of <span className="font-semibold">{students.length}</span> students
-          </p>
-          {(searchTerm || selectedClass) && (
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedClass('');
-              }}
-              className="text-amber-600 hover:text-amber-700 font-medium"
-            >
-              Clear filters
-            </button>
-          )}
-        </div>
+        Showing <span className="font-semibold text-amber-600">{filteredStudents.length}</span> of <span className="font-semibold">{students.length}</span> students
       </motion.div>
 
       {/* Table Card */}

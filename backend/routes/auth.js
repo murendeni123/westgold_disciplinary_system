@@ -231,6 +231,20 @@ router.post('/signup', async (req, res) => {
         );
 
         // Create parent profile record
+        console.log('Creating parent record for user ID:', user.id);
+        console.log('Parent data:', {
+            phone,
+            work_phone,
+            relationship_to_child,
+            emergency_contact_1_name,
+            emergency_contact_1_phone,
+            emergency_contact_2_name,
+            emergency_contact_2_phone,
+            home_address,
+            city,
+            postal_code
+        });
+        
         await dbRun(
             `INSERT INTO parents (
                 user_id,
@@ -262,6 +276,8 @@ router.post('/signup', async (req, res) => {
                 user.school_id || null,
             ]
         );
+        
+        console.log('Parent record created successfully');
 
         // Generate token
         const token = jwt.sign(
@@ -277,6 +293,108 @@ router.post('/signup', async (req, res) => {
         });
     } catch (error) {
         console.error('Signup error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Supabase user sync endpoint - handles OAuth users from Supabase Auth
+router.post('/supabase-sync', async (req, res) => {
+    try {
+        const { supabase_user_id, email, name, auth_provider } = req.body;
+
+        console.log('Supabase sync request:', { supabase_user_id, email, name, auth_provider });
+
+        if (!supabase_user_id || !email) {
+            return res.status(400).json({ error: 'Supabase user ID and email required' });
+        }
+
+        // Check if user already exists by supabase_user_id
+        let user = await dbGet(
+            'SELECT * FROM users WHERE supabase_user_id = ?',
+            [supabase_user_id]
+        );
+
+        console.log('User by supabase_user_id:', user);
+
+        if (!user) {
+            // Check if user exists by email (for linking existing accounts)
+            user = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
+            console.log('User by email:', user);
+            
+            if (user) {
+                // Link existing account to Supabase
+                await dbRun(
+                    'UPDATE users SET supabase_user_id = ?, auth_provider = ?, last_sign_in = CURRENT_TIMESTAMP WHERE id = ?',
+                    [supabase_user_id, auth_provider || 'google', user.id]
+                );
+                // Refresh user data
+                user = await dbGet('SELECT * FROM users WHERE id = ?', [user.id]);
+            } else {
+                // Create new parent user (password is NULL for OAuth users)
+                const result = await dbRun(
+                    `INSERT INTO users (email, name, role, supabase_user_id, auth_provider, password, created_at, last_sign_in)
+                     VALUES (?, ?, 'parent', ?, ?, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                     RETURNING id`,
+                    [email, name || email.split('@')[0], supabase_user_id, auth_provider || 'google']
+                );
+                
+                console.log('Insert result:', result);
+                
+                if (!result.id) {
+                    console.error('Failed to get user ID from insert');
+                    return res.status(500).json({ error: 'Failed to create user account' });
+                }
+                
+                user = await dbGet('SELECT * FROM users WHERE id = ?', [result.id]);
+            }
+        } else {
+            // Update last sign in
+            await dbRun(
+                'UPDATE users SET last_sign_in = CURRENT_TIMESTAMP WHERE id = ?',
+                [user.id]
+            );
+        }
+
+        if (!user) {
+            console.error('Failed to create or find user');
+            return res.status(500).json({ error: 'Failed to create user account' });
+        }
+
+        // Generate JWT token for the user
+        const token = jwt.sign(
+            { userId: user.id, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        // Get additional user info based on role
+        let userInfo = { ...user };
+        delete userInfo.password;
+
+        if (user.role === 'teacher') {
+            const teacher = await dbGet('SELECT * FROM teachers WHERE user_id = ?', [user.id]);
+            userInfo.teacher = teacher;
+        }
+
+        if (user.role === 'parent') {
+            const children = await dbAll(
+                `SELECT s.*, c.class_name 
+                 FROM students s 
+                 LEFT JOIN classes c ON s.class_id = c.id 
+                 WHERE s.parent_id = ?`,
+                [user.id]
+            );
+            userInfo.children = children;
+        }
+
+        console.log('Supabase sync successful, returning user:', userInfo.email);
+
+        res.json({
+            token,
+            user: userInfo
+        });
+    } catch (error) {
+        console.error('Supabase sync error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

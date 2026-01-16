@@ -1,12 +1,14 @@
 const express = require('express');
 const { dbGet, dbRun, dbAll } = require('../database/db');
-const { authenticateToken, requireRole } = require('../middleware/auth');
+const { authenticateToken, requireRole, getSchoolId } = require('../middleware/auth');
 
 const router = express.Router();
 
 // Get parent profile (current user)
 router.get('/profile/me', authenticateToken, requireRole('parent'), async (req, res) => {
     try {
+        console.log('Fetching parent profile for user ID:', req.user.id);
+        
         const profile = await dbGet(
             `SELECT u.id, u.email, u.name,
                     p.phone, p.work_phone, p.relationship_to_child,
@@ -18,6 +20,8 @@ router.get('/profile/me', authenticateToken, requireRole('parent'), async (req, 
              WHERE u.id = ? AND u.role = 'parent'`,
             [req.user.id]
         );
+
+        console.log('Parent profile data:', profile);
 
         if (!profile) {
             return res.status(404).json({ error: 'Parent not found' });
@@ -148,13 +152,28 @@ router.put('/profile/me', authenticateToken, requireRole('parent'), async (req, 
 // Get all parents (admin only)
 router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
-        const parents = await dbAll(`
+        const schoolId = getSchoolId(req);
+
+        let query = `
             SELECT u.id, u.email, u.name, u.role, u.created_at,
                    (SELECT COUNT(*) FROM students WHERE parent_id = u.id) as children_count
             FROM users u
             WHERE u.role = 'parent'
-            ORDER BY u.name
-        `);
+        `;
+        const params = [];
+
+        // Platform admin can view across schools
+        if (req.user?.role !== 'platform_admin') {
+            if (!schoolId) {
+                return res.status(403).json({ error: 'School context required' });
+            }
+            query += ' AND u.school_id = ?';
+            params.push(schoolId);
+        }
+
+        query += ' ORDER BY u.name';
+
+        const parents = await dbAll(query, params);
         
         // Get children for each parent
         for (const parent of parents) {
@@ -177,10 +196,20 @@ router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
 // Get parent by ID (admin only)
 router.get('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
+        const schoolId = getSchoolId(req);
         const parent = await dbGet('SELECT * FROM users WHERE id = ? AND role = ?', [req.params.id, 'parent']);
         
         if (!parent) {
             return res.status(404).json({ error: 'Parent not found' });
+        }
+
+        if (req.user?.role !== 'platform_admin') {
+            if (!schoolId) {
+                return res.status(403).json({ error: 'School context required' });
+            }
+            if (parent.school_id !== schoolId) {
+                return res.status(404).json({ error: 'Parent not found' });
+            }
         }
         
         const children = await dbAll(`

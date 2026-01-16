@@ -5,6 +5,7 @@ import { PlatformAuthProvider } from './contexts/PlatformAuthContext';
 import { SchoolThemeProvider } from './contexts/SchoolThemeContext';
 import Login from './pages/Login';
 import ParentSignup from './pages/ParentSignup';
+import AuthCallback from './pages/AuthCallback';
 import AdminLayout from './layouts/AdminLayout';
 import TeacherLayout from './layouts/TeacherLayout';
 import ModernParentLayout from './layouts/ModernParentLayout';
@@ -42,6 +43,7 @@ import PlatformAnalytics from './pages/platform/PlatformAnalytics';
 import PlatformBilling from './pages/platform/PlatformBilling';
 import PlatformLogs from './pages/platform/PlatformLogs';
 import PlatformUsers from './pages/platform/PlatformUsers';
+import SchoolOnboardingWizard from './pages/platform/SchoolOnboardingWizard';
 
 // Teacher pages
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
@@ -88,6 +90,7 @@ function App() {
             <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<ParentSignup />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           
           <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>}>
             <Route index element={<AdminDashboard />} />
@@ -150,6 +153,7 @@ function App() {
             <Route index element={<PlatformDashboard />} />
             <Route path="settings" element={<PlatformSettings />} />
             <Route path="schools" element={<PlatformSchools />} />
+            <Route path="schools/onboard" element={<SchoolOnboardingWizard />} />
             <Route path="schools/:id" element={<PlatformSchoolDetails />} />
             <Route path="schools/:schoolId/customizations" element={<SchoolCustomizations />} />
             <Route path="users" element={<PlatformUsers />} />

@@ -1,6 +1,6 @@
 const express = require('express');
 const { dbAll, dbGet, dbRun } = require('../database/db');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, getSchoolId } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -8,6 +8,7 @@ const router = express.Router();
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const { student_id, teacher_id, status, severity, start_date, end_date } = req.query;
+        const schoolId = getSchoolId(req);
         
         let query = `
             SELECT bi.*, 
@@ -22,6 +23,15 @@ router.get('/', authenticateToken, async (req, res) => {
             WHERE 1=1
         `;
         const params = [];
+
+        // Platform admin can view across schools
+        if (req.user?.role !== 'platform_admin') {
+            if (!schoolId) {
+                return res.status(403).json({ error: 'School context required' });
+            }
+            query += ' AND bi.school_id = ?';
+            params.push(schoolId);
+        }
 
         if (student_id) {
             query += ' AND bi.student_id = ?';
@@ -61,6 +71,7 @@ router.get('/', authenticateToken, async (req, res) => {
 // Get incident by ID
 router.get('/:id', authenticateToken, async (req, res) => {
     try {
+        const schoolId = getSchoolId(req);
         const incident = await dbGet(`
             SELECT bi.*, 
                    s.first_name || ' ' || s.last_name as student_name,
@@ -78,6 +89,15 @@ router.get('/:id', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'Incident not found' });
         }
 
+        if (req.user?.role !== 'platform_admin') {
+            if (!schoolId) {
+                return res.status(403).json({ error: 'School context required' });
+            }
+            if (incident.school_id !== schoolId) {
+                return res.status(404).json({ error: 'Incident not found' });
+            }
+        }
+
         res.json(incident);
     } catch (error) {
         console.error('Error fetching incident:', error);
@@ -89,6 +109,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
     try {
         const { student_id, incident_date, incident_time, incident_type, description, severity, points } = req.body;
+        const schoolId = getSchoolId(req);
 
         if (!student_id || !incident_date || !incident_type) {
             return res.status(400).json({ error: 'Student ID, incident date, and incident type are required' });
@@ -98,11 +119,15 @@ router.post('/', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Description is required' });
         }
 
+        if (!schoolId) {
+            return res.status(403).json({ error: 'School context required' });
+        }
+
         const result = await dbRun(
             `INSERT INTO behaviour_incidents 
-             (student_id, teacher_id, incident_date, incident_time, incident_type, description, severity, points, status)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-            [student_id, req.user.id, incident_date, incident_time || null, incident_type, String(description).trim(), severity || 'low', points || 0]
+             (student_id, teacher_id, incident_date, incident_time, incident_type, description, severity, points, status, school_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
+            [student_id, req.user.id, incident_date, incident_time || null, incident_type, String(description).trim(), severity || 'low', points || 0, schoolId]
         );
 
         const incident = await dbGet('SELECT * FROM behaviour_incidents WHERE id = ?', [result.id]);

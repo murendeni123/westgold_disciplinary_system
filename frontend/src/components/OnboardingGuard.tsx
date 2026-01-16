@@ -20,14 +20,18 @@ const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) => {
       // 1. User is a parent
       // 2. Onboarding not completed
       // 3. User has no school linked OR no children linked (first-time user)
+      const needsSchool = !user.school_id;
+      const needsChildren = !user.children || user.children.length === 0;
+      
       if (
         user.role === 'parent' &&
         !onboardingCompleted &&
-        (!user.school_id || !user.children || user.children.length === 0) &&
+        (needsSchool || needsChildren) &&
         window.location.pathname !== '/parent/onboarding' &&
         window.location.pathname !== '/parent/link-school' &&
         window.location.pathname !== '/parent/link-child'
       ) {
+        // Redirect to parent onboarding
         navigate('/parent/onboarding');
       }
       setChecking(false);

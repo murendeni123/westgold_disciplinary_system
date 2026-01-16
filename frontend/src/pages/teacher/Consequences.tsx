@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import Table from '../../components/Table';
 import Select from '../../components/Select';
+import ModernFilter from '../../components/ModernFilter';
 import { motion } from 'framer-motion';
 import { Filter, Eye, X, Scale } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
@@ -9,8 +10,8 @@ import { useToast } from '../../hooks/useToast';
 const TeacherConsequences: React.FC = () => {
   const { ToastContainer } = useToast();
   const [consequences, setConsequences] = useState<any[]>([]);
-  const [myClasses, setMyClasses] = useState<any[] | null>(null);
   const [consequenceTypes, setConsequenceTypes] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedConsequence, setSelectedConsequence] = useState<any | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -20,33 +21,30 @@ const TeacherConsequences: React.FC = () => {
     consequence_type: '',
   });
 
+  const fetchAllStudents = async () => {
+    try {
+      const response = await api.getStudents();
+      setStudents(response.data || []);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      setStudents([]);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       await Promise.all([
-        fetchMyClasses(),
-        fetchConsequenceTypes()
+        fetchConsequenceTypes(),
+        fetchAllStudents(),
+        fetchConsequences()
       ]);
     };
     loadData();
   }, []);
 
   useEffect(() => {
-    // Only fetch consequences after classes are loaded (even if empty)
-    // This prevents infinite loops and ensures proper data flow
-    if (myClasses !== null) {
-      fetchConsequences();
-    }
-  }, [filters, myClasses]);
-
-  const fetchMyClasses = async () => {
-    try {
-      const response = await api.getClasses();
-      setMyClasses(response.data || []);
-    } catch (error) {
-      console.error('Error fetching classes:', error);
-      setMyClasses([]); // Set to empty array on error
-    }
-  };
+    fetchConsequences();
+  }, [filters]);
 
   const fetchConsequenceTypes = async () => {
     try {
@@ -69,22 +67,10 @@ const TeacherConsequences: React.FC = () => {
 
       const response = await api.getConsequences(params);
       
-      // Get all students from teacher's classes
-      const allStudentIds = await getAllStudentIdsFromMyClasses();
-      
-      // Filter to only show consequences for students in teacher's classes
-      // If teacher has no classes, show empty array
+      // Show all consequences for students in the same school (backend handles school_id filtering)
       let filtered = Array.isArray(response.data) ? response.data : [];
-      if (allStudentIds.length > 0) {
-        filtered = filtered.filter((consequence: any) => {
-          return consequence && allStudentIds.includes(consequence.student_id);
-        });
-      } else {
-        // If no classes, show no consequences
-        filtered = [];
-      }
       
-      // Filter by consequence type if specified
+      // Filter by consequence type if specified (client-side filter)
       if (filters.consequence_type) {
         filtered = filtered.filter((consequence: any) => {
           const consequenceName = (consequence.consequence_name || '').toLowerCase();
@@ -99,50 +85,6 @@ const TeacherConsequences: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const getAllStudentIdsFromMyClasses = async () => {
-    const studentIds: number[] = [];
-    try {
-      if (!myClasses || myClasses.length === 0) {
-        return studentIds;
-      }
-      for (const classItem of myClasses) {
-        const classResponse = await api.getClass(classItem.id);
-        if (classResponse.data && classResponse.data.students) {
-          classResponse.data.students.forEach((student: any) => {
-            if (student && student.id && !studentIds.includes(student.id)) {
-              studentIds.push(student.id);
-            }
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching students from classes:', error);
-    }
-    return studentIds;
-  };
-
-  const getStudentsFromMyClasses = async () => {
-    const students: any[] = [];
-    try {
-      if (!myClasses || myClasses.length === 0) {
-        return students;
-      }
-      for (const classItem of myClasses) {
-        const classResponse = await api.getClass(classItem.id);
-        if (classResponse.data && classResponse.data.students) {
-          classResponse.data.students.forEach((student: any) => {
-            if (student && student.id && !students.find(s => s.id === student.id)) {
-              students.push(student);
-            }
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching students from classes:', error);
-    }
-    return students;
   };
 
   const handleViewDetails = (consequence: any) => {
@@ -194,20 +136,6 @@ const TeacherConsequences: React.FC = () => {
     ),
   }));
 
-  const [students, setStudents] = useState<any[]>([]);
-
-  useEffect(() => {
-    const loadStudents = async () => {
-      const studentList = await getStudentsFromMyClasses();
-      setStudents(studentList);
-    };
-    if (myClasses && myClasses.length > 0) {
-      loadStudents();
-    } else {
-      setStudents([]);
-    }
-  }, [myClasses]);
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -236,57 +164,43 @@ const TeacherConsequences: React.FC = () => {
         <p className="text-gray-600 mt-2 text-lg">View consequences for students in your classes</p>
       </motion.div>
 
-      {/* Filters */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Filters</h2>
-          <Filter className="text-emerald-600" size={24} />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Select
-            label="Student"
-            value={filters.student_id}
-            onChange={(e) => setFilters({ ...filters, student_id: e.target.value })}
-            className="rounded-xl"
-          >
-            <option value="">All Students</option>
-            {students.map((student: any) => (
-              <option key={student.id} value={student.id}>
-                {student.first_name} {student.last_name}
-              </option>
-            ))}
-          </Select>
-          <Select
-            label="Status"
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            className="rounded-xl"
-          >
-            <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </Select>
-          <Select
-            label="Consequence Type"
-            value={filters.consequence_type}
-            onChange={(e) => setFilters({ ...filters, consequence_type: e.target.value })}
-            className="rounded-xl"
-          >
-            <option value="">All Types</option>
-            {consequenceTypes.map((type: any) => (
-              <option key={type.id} value={type.name}>
-                {type.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-      </motion.div>
+      {/* Modern Filters */}
+      <ModernFilter
+        fields={[
+          {
+            type: 'searchable-select',
+            name: 'student_id',
+            label: 'Student',
+            placeholder: 'Search and select a student...',
+            options: students.map((student: any) => ({
+              value: student.id.toString(),
+              label: `${student.first_name} ${student.last_name}`,
+            })),
+          },
+          {
+            type: 'select',
+            name: 'status',
+            label: 'Status',
+            options: [
+              { value: 'pending', label: 'Pending' },
+              { value: 'completed', label: 'Completed' },
+              { value: 'cancelled', label: 'Cancelled' },
+            ],
+          },
+          {
+            type: 'select',
+            name: 'consequence_type',
+            label: 'Consequence Type',
+            options: consequenceTypes.map((type: any) => ({
+              value: type.name,
+              label: type.name,
+            })),
+          },
+        ]}
+        values={filters}
+        onChange={(name, value) => setFilters({ ...filters, [name]: value })}
+        onClear={() => setFilters({ student_id: '', status: '', consequence_type: '' })}
+      />
 
       {/* Table */}
       {consequences.length === 0 ? (
