@@ -144,6 +144,63 @@ CREATE TABLE IF NOT EXISTS teachers (
     UNIQUE(employee_id, school_id)
 );
 
+-- Parents table (extends users)
+CREATE TABLE IF NOT EXISTS parents (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL UNIQUE,
+    phone TEXT,
+    work_phone TEXT,
+    relationship_to_child TEXT,
+    emergency_contact_1_name TEXT,
+    emergency_contact_1_phone TEXT,
+    emergency_contact_2_name TEXT,
+    emergency_contact_2_phone TEXT,
+    home_address TEXT,
+    city TEXT,
+    postal_code TEXT,
+    school_id INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE
+);
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS phone TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS work_phone TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS relationship_to_child TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS emergency_contact_1_name TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS emergency_contact_1_phone TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS emergency_contact_2_name TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS emergency_contact_2_phone TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS home_address TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS city TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS postal_code TEXT;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS school_id INTEGER;
+
+ALTER TABLE parents
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
 -- Behaviour incidents table (demerits)
 CREATE TABLE IF NOT EXISTS behaviour_incidents (
     id SERIAL PRIMARY KEY,
@@ -436,21 +493,37 @@ CREATE TABLE IF NOT EXISTS platform_settings (
     support_email TEXT,
     max_schools INTEGER DEFAULT 1000,
     max_students_per_school INTEGER DEFAULT 10000,
+    goldie_badge_enabled INTEGER DEFAULT 1,
+    goldie_badge_threshold INTEGER DEFAULT 10,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- School Feature Flags table (for feature toggles per school)
-CREATE TABLE IF NOT EXISTS school_feature_flags (
+-- Add goldie_badge columns if they don't exist
+ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS goldie_badge_enabled INTEGER DEFAULT 1;
+ALTER TABLE platform_settings ADD COLUMN IF NOT EXISTS goldie_badge_threshold INTEGER DEFAULT 10;
+
+-- Goldie Badge Flags table (tracks students flagged for recognition)
+CREATE TABLE IF NOT EXISTS goldie_badge_flags (
     id SERIAL PRIMARY KEY,
-    school_id INTEGER NOT NULL,
-    feature_name TEXT NOT NULL,
-    is_enabled BOOLEAN DEFAULT false,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    student_id INTEGER NOT NULL,
+    flagged_by INTEGER NOT NULL,
+    flagged_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    merit_points INTEGER DEFAULT 0,
+    demerit_points INTEGER DEFAULT 0,
+    net_score INTEGER DEFAULT 0,
+    notes TEXT,
+    status TEXT DEFAULT 'flagged' CHECK(status IN ('flagged', 'awarded', 'removed')),
+    awarded_at TIMESTAMP,
+    school_id INTEGER,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    FOREIGN KEY (flagged_by) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE,
-    UNIQUE(school_id, feature_name)
+    UNIQUE(student_id, school_id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_goldie_badge_student ON goldie_badge_flags(student_id);
+CREATE INDEX IF NOT EXISTS idx_goldie_badge_school ON goldie_badge_flags(school_id);
 
 -- Subscription Plans table
 CREATE TABLE IF NOT EXISTS subscription_plans (

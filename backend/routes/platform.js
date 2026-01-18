@@ -113,7 +113,9 @@ router.get('/settings', requirePlatformAdmin, async (req, res) => {
             platform_name: 'Positive Discipline System',
             support_email: 'support@pds.com',
             max_schools: 1000,
-            max_students_per_school: 10000
+            max_students_per_school: 10000,
+            goldie_badge_enabled: 1,
+            goldie_badge_threshold: 10
         });
     } catch (error) {
         console.error('Error fetching platform settings:', error);
@@ -124,22 +126,27 @@ router.get('/settings', requirePlatformAdmin, async (req, res) => {
 // Update platform settings
 router.put('/settings', requirePlatformAdmin, async (req, res) => {
     try {
-        const { platform_name, support_email, max_schools, max_students_per_school } = req.body;
+        const { platform_name, support_email, max_schools, max_students_per_school, goldie_badge_enabled, goldie_badge_threshold } = req.body;
 
         const existing = await dbGet('SELECT id FROM platform_settings WHERE id = 1');
         
         if (existing) {
             await dbRun(
                 `UPDATE platform_settings 
-                 SET platform_name = ?, support_email = ?, max_schools = ?, max_students_per_school = ?
+                 SET platform_name = ?, support_email = ?, max_schools = ?, max_students_per_school = ?,
+                     goldie_badge_enabled = ?, goldie_badge_threshold = ?
                  WHERE id = 1`,
-                [platform_name, support_email, max_schools, max_students_per_school]
+                [platform_name, support_email, max_schools, max_students_per_school, 
+                 goldie_badge_enabled !== undefined ? (goldie_badge_enabled ? 1 : 0) : 1,
+                 goldie_badge_threshold || 10]
             );
         } else {
             await dbRun(
-                `INSERT INTO platform_settings (id, platform_name, support_email, max_schools, max_students_per_school)
-                 VALUES (1, ?, ?, ?, ?)`,
-                [platform_name, support_email, max_schools, max_students_per_school]
+                `INSERT INTO platform_settings (id, platform_name, support_email, max_schools, max_students_per_school, goldie_badge_enabled, goldie_badge_threshold)
+                 VALUES (1, ?, ?, ?, ?, ?, ?)`,
+                [platform_name, support_email, max_schools, max_students_per_school,
+                 goldie_badge_enabled !== undefined ? (goldie_badge_enabled ? 1 : 0) : 1,
+                 goldie_badge_threshold || 10]
             );
         }
 

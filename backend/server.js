@@ -93,6 +93,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/medical-info', require('./routes/medicalInfo'));
 app.use('/api/whatsapp', require('./routes/whatsapp'));
 app.use('/api/feature-flags', require('./routes/featureFlags'));
+app.use('/api/goldie-badge', require('./routes/goldieBadge'));
 
 // Health check
 app.get('/api/health', (req, res) => {

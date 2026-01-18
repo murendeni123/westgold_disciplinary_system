@@ -36,6 +36,7 @@ const PlatformLayout: React.FC = () => {
     { path: '/platform', label: 'Dashboard', icon: LayoutDashboard, color: 'from-purple-500 to-pink-500' },
     { path: '/platform/schools', label: 'Schools', icon: Building2, color: 'from-blue-500 to-cyan-500' },
     { path: '/platform/users', label: 'Platform Users', icon: Shield, color: 'from-indigo-500 to-purple-500' },
+    { path: '/platform/feature-flags', label: 'Feature Flags', icon: Flag, color: 'from-amber-500 to-orange-500' },
     { path: '/platform/subscriptions', label: 'Subscriptions', icon: CreditCard, color: 'from-green-500 to-emerald-500' },
     { path: '/platform/analytics', label: 'Analytics', icon: BarChart3, color: 'from-orange-500 to-red-500' },
     { path: '/platform/billing', label: 'Billing', icon: CreditCard, color: 'from-teal-500 to-blue-500' },

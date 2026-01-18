@@ -109,8 +109,21 @@ export const api = {
   deleteTeacher: (id: number) => axiosInstance.delete(`/teachers/${id}`),
 
   // Auth - Signup
-  signup: (data: { name: string; email: string; password: string; phone?: string }) =>
-    axiosInstance.post('/auth/signup', data),
+  signup: (data: {
+    name: string;
+    email: string;
+    password: string;
+    phone?: string;
+    work_phone?: string;
+    relationship_to_child?: string;
+    emergency_contact_1_name?: string;
+    emergency_contact_1_phone?: string;
+    emergency_contact_2_name?: string;
+    emergency_contact_2_phone?: string;
+    home_address?: string;
+    city?: string;
+    postal_code?: string;
+  }) => axiosInstance.post('/auth/signup', data),
 
   // Parents
   getParents: () => axiosInstance.get('/parents'),
@@ -240,7 +253,6 @@ export const api = {
   // Notifications
   getNotifications: (params?: any) => axiosInstance.get('/notifications', { params }),
   getUnreadCount: () => axiosInstance.get('/notifications/unread-count'),
-  getNotificationDetails: (id: number) => axiosInstance.get(`/notifications/${id}/details`),
   markNotificationRead: (id: number) => axiosInstance.put(`/notifications/${id}/read`),
   markAllNotificationsRead: () => axiosInstance.put('/notifications/read-all'),
   deleteNotification: (id: number) => axiosInstance.delete(`/notifications/${id}`),
@@ -365,43 +377,12 @@ export const api = {
   deleteLoginBackground: (schoolId: number) => axiosInstance.delete(`/school-customizations/${schoolId}/login-background`),
   deleteDashboardBackground: (schoolId: number) => axiosInstance.delete(`/school-customizations/${schoolId}/dashboard-background`),
 
-  // Medical Information
-  getMedicalInfo: (studentId: number) => axiosInstance.get(`/medical-info/${studentId}`),
-  saveMedicalInfo: (studentId: number, data: any) => axiosInstance.post(`/medical-info/${studentId}`, data),
-  getEmergencyContacts: (studentId: number) => axiosInstance.get(`/medical-info/${studentId}/emergency-contacts`),
-  addEmergencyContact: (studentId: number, data: any) => axiosInstance.post(`/medical-info/${studentId}/emergency-contacts`, data),
-  updateEmergencyContact: (contactId: number, data: any) => axiosInstance.put(`/medical-info/emergency-contacts/${contactId}`, data),
-  deleteEmergencyContact: (contactId: number) => axiosInstance.delete(`/medical-info/emergency-contacts/${contactId}`),
-
-  // WhatsApp Notifications
-  getWhatsAppStatus: () => axiosInstance.get('/whatsapp/status'),
-  getWhatsAppLogs: (params?: { student_id?: number; type?: string; status?: string; start_date?: string; end_date?: string; limit?: number; offset?: number }) => 
-    axiosInstance.get('/whatsapp/logs', { params }),
-  getWhatsAppTemplates: () => axiosInstance.get('/whatsapp/templates'),
-  updateWhatsAppTemplate: (id: number, data: { status?: string; template_name?: string }) => 
-    axiosInstance.put(`/whatsapp/templates/${id}`, data),
-  getWhatsAppOptedInUsers: () => axiosInstance.get('/whatsapp/opted-in-users'),
-  sendWhatsAppTest: (phone: string, template_name?: string) => 
-    axiosInstance.post('/whatsapp/test', { phone, template_name }),
-  sendWhatsAppNotification: (data: { student_id: number; type: string; custom_message?: string }) => 
-    axiosInstance.post('/whatsapp/send', data),
-  updateWhatsAppOptIn: (userId: number, data: { opt_in: boolean; whatsapp_number?: string; notification_preferences?: object }) => 
-    axiosInstance.put(`/whatsapp/opt-in/${userId}`, data),
-  getWhatsAppStats: (params?: { start_date?: string; end_date?: string }) => 
-    axiosInstance.get('/whatsapp/stats', { params }),
-
-  // Feature Flags (School-level)
-  getFeatureFlag: (featureName: string) => axiosInstance.get(`/feature-flags/${featureName}`),
-  getAllFeatureFlags: () => axiosInstance.get('/feature-flags'),
-
-  // Feature Flags (Platform Admin)
-  getAllSchoolFeatureFlags: () => axiosInstance.get('/platform/feature-flags'),
-  getSchoolFeatureFlags: (schoolId: number) => axiosInstance.get(`/platform/feature-flags/${schoolId}`),
-  getSchoolFeatureFlag: (schoolId: number, featureName: string) => 
-    axiosInstance.get(`/platform/feature-flags/${schoolId}/${featureName}`),
-  toggleSchoolFeatureFlag: (schoolId: number, featureName: string, isEnabled: boolean) => 
-    axiosInstance.post(`/platform/feature-flags/${schoolId}/${featureName}`, { is_enabled: isEnabled }),
-  bulkToggleFeatureFlag: (featureName: string, isEnabled: boolean, schoolIds?: number[]) => 
-    axiosInstance.post(`/platform/feature-flags/bulk/${featureName}`, { is_enabled: isEnabled, school_ids: schoolIds }),
+  // Goldie Badge
+  getGoldieBadgeStatus: () => axiosInstance.get('/goldie-badge/status'),
+  getGoldieBadgeQualified: () => axiosInstance.get('/goldie-badge/qualified'),
+  getGoldieBadgeFlagged: () => axiosInstance.get('/goldie-badge/flagged'),
+  flagStudentForGoldieBadge: (studentId: number, notes?: string) => axiosInstance.post(`/goldie-badge/flag/${studentId}`, { notes }),
+  unflagStudentForGoldieBadge: (studentId: number) => axiosInstance.delete(`/goldie-badge/flag/${studentId}`),
+  awardGoldieBadge: (studentId: number) => axiosInstance.put(`/goldie-badge/award/${studentId}`),
 };
 

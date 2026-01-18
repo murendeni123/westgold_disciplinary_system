@@ -19,6 +19,8 @@ const PlatformSettings: React.FC = () => {
     support_email: '',
     max_schools: '',
     max_students_per_school: '',
+    goldie_badge_enabled: true,
+    goldie_badge_threshold: '10',
   });
 
   const [profileData, setProfileData] = useState({
@@ -45,6 +47,8 @@ const PlatformSettings: React.FC = () => {
         support_email: response.data.support_email || '',
         max_schools: response.data.max_schools || '',
         max_students_per_school: response.data.max_students_per_school || '',
+        goldie_badge_enabled: response.data.goldie_badge_enabled === 1 || response.data.goldie_badge_enabled === true,
+        goldie_badge_threshold: String(response.data.goldie_badge_threshold || 10),
       });
     } catch (err: any) {
       error(err.response?.data?.error || 'Error fetching settings');
@@ -79,6 +83,8 @@ const PlatformSettings: React.FC = () => {
         support_email: settings.support_email,
         max_schools: Number(settings.max_schools),
         max_students_per_school: Number(settings.max_students_per_school),
+        goldie_badge_enabled: settings.goldie_badge_enabled,
+        goldie_badge_threshold: Number(settings.goldie_badge_threshold),
       });
       success('Platform settings saved successfully');
     } catch (err: any) {
@@ -253,6 +259,7 @@ const PlatformSettings: React.FC = () => {
                 required
                 className="rounded-xl"
               />
+
               <div className="flex justify-end pt-4">
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Button
