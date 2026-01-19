@@ -6,7 +6,7 @@ import Modal from '../../components/Modal';
 import Input from '../../components/Input';
 import Textarea from '../../components/Textarea';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit, Trash2, CreditCard, Sparkles } from 'lucide-react';
+import { Plus, Edit } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 const PlatformSubscriptions: React.FC = () => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../hooks/useParentStudents';
 
 interface OnboardingGuardProps {
   children: React.ReactNode;
@@ -8,22 +9,23 @@ interface OnboardingGuardProps {
 
 const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
+  const { hasStudents, loading: studentsLoading } = useParentStudents();
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && !studentsLoading && user) {
       // Check if onboarding is completed
       const onboardingCompleted = localStorage.getItem('parent_onboarding_completed');
       
       // Only redirect to onboarding if:
       // 1. User is a parent
       // 2. Onboarding not completed
-      // 3. User has no school linked OR no children linked (first-time user)
+      // 3. User has no school linked OR no students linked (first-time user)
       if (
-        user.role === 'parent' &&
+        profile?.role === 'parent' &&
         !onboardingCompleted &&
-        (!user.school_id || !user.children || user.children.length === 0) &&
+        (!profile?.school_id || !hasStudents) &&
         window.location.pathname !== '/parent/onboarding' &&
         window.location.pathname !== '/parent/link-school' &&
         window.location.pathname !== '/parent/link-child'
@@ -34,7 +36,7 @@ const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) => {
     } else if (!loading && !user) {
       setChecking(false);
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, studentsLoading, hasStudents, navigate, profile]);
 
   if (loading || checking) {
     return (

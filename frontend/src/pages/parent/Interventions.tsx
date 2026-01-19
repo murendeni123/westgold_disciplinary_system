@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../../hooks/useParentStudents';
 import Table from '../../components/Table';
 import Card from '../../components/Card';
 import Select from '../../components/Select';
 import { Filter } from 'lucide-react';
 
 const ParentInterventions: React.FC = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
+  const { students } = useParentStudents();
   const [interventions, setInterventions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -18,7 +20,7 @@ const ParentInterventions: React.FC = () => {
 
   useEffect(() => {
     fetchInterventions();
-  }, [filters, user]);
+  }, [filters, students]);
 
   const fetchInterventions = async () => {
     try {
@@ -26,12 +28,12 @@ const ParentInterventions: React.FC = () => {
       const params: any = {};
       
       // Filter by children's student IDs
-      if (user?.children && user.children.length > 0) {
+      if (students && students.length > 0) {
         if (filters.student_id) {
           params.student_id = filters.student_id;
         } else {
           // Get all interventions for all children
-          const childIds = user.children.map((child: any) => child.id);
+          students.map((child: any) => child.id);
           // We'll filter on the frontend since API doesn't support multiple student_ids
         }
       } else {
@@ -47,7 +49,7 @@ const ParentInterventions: React.FC = () => {
       const response = await api.getInterventions(params);
       
       // Filter to only show interventions for parent's children
-      const childIds = user?.children?.map((child: any) => child.id) || [];
+      const childIds = students?.map((child: any) => child.id) || [];
       const filtered = response.data.filter((intervention: any) => {
         return childIds.includes(intervention.student_id);
       });
@@ -91,7 +93,7 @@ const ParentInterventions: React.FC = () => {
         <p className="text-gray-600 mt-2">View interventions for your children</p>
       </div>
 
-      {user?.children && user.children.length > 0 ? (
+      {students && students.length > 0 ? (
         <>
           <Card>
             <div className="flex items-center space-x-2 mb-4">
@@ -105,7 +107,7 @@ const ParentInterventions: React.FC = () => {
                 onChange={(e) => setFilters({ ...filters, student_id: e.target.value })}
               >
                 <option value="">All Children</option>
-                {user.children.map((child: any) => (
+                {students.map((child: any) => (
                   <option key={child.id} value={child.id}>
                     {child.first_name} {child.last_name}
                   </option>

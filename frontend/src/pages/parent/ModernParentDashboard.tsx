@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../../hooks/useParentStudents';
 import { api } from '../../services/api';
 import { useNotifications } from '../../contexts/NotificationContext';
 import ModernCard from '../../components/ModernCard';
@@ -11,7 +12,6 @@ import {
   Calendar, 
   Bell, 
   Award,
-  TrendingUp,
   ArrowRight,
   Sparkles
 } from 'lucide-react';
@@ -19,7 +19,8 @@ import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 
 const ModernParentDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
+  const { students, hasStudents, loading: studentsLoading } = useParentStudents();
   const navigate = useNavigate();
   const { unreadCount } = useNotifications();
   const [stats, setStats] = useState<any>(null);
@@ -29,7 +30,7 @@ const ModernParentDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [hasLinkedSchool, setHasLinkedSchool] = useState(false);
   const [hasLinkedChild, setHasLinkedChild] = useState(false);
-  const [setupChecked, setSetupChecked] = useState(false);
+  const [, setSetupChecked] = useState(false);
 
   useEffect(() => {
     checkSetupStatus();
@@ -37,7 +38,7 @@ const ModernParentDashboard: React.FC = () => {
     fetchNotifications();
     fetchBehaviorData();
     fetchAttendanceData();
-  }, [user]);
+  }, [profile, hasStudents, studentsLoading]);
 
   const checkSetupStatus = async () => {
     try {
@@ -47,8 +48,7 @@ const ModernParentDashboard: React.FC = () => {
       setHasLinkedSchool(hasSchool);
 
       // Check if parent has linked children
-      const hasChildren = !!(user?.children && user.children.length > 0);
-      setHasLinkedChild(hasChildren);
+      setHasLinkedChild(hasStudents);
 
       setSetupChecked(true);
       
@@ -81,12 +81,12 @@ const ModernParentDashboard: React.FC = () => {
 
   const fetchBehaviorData = async () => {
     try {
-      if (!user?.children || user.children.length === 0) return;
+      if (students.length === 0) return;
 
       const allIncidents: any[] = [];
       const allMerits: any[] = [];
 
-      for (const child of user.children) {
+      for (const child of students) {
         try {
           const [incidentsRes, meritsRes] = await Promise.all([
             api.getIncidents({ student_id: child.id }),
@@ -130,10 +130,10 @@ const ModernParentDashboard: React.FC = () => {
 
   const fetchAttendanceData = async () => {
     try {
-      if (!user?.children || user.children.length === 0) return;
+      if (students.length === 0) return;
 
       const allAttendance: any[] = [];
-      for (const child of user.children) {
+      for (const child of students) {
         try {
           const response = await api.getAttendance({
             student_id: child.id,
@@ -223,8 +223,8 @@ const ModernParentDashboard: React.FC = () => {
             <Sparkles className="text-yellow-300" size={32} />
             <h1 className="text-4xl font-bold">
               {hasLinkedSchool && hasLinkedChild 
-                ? `Welcome back, ${user?.name}!` 
-                : `Welcome, ${user?.name}!`}
+                ? `Welcome back, ${profile?.full_name || 'Parent'}!` 
+                : `Welcome, ${profile?.full_name || 'Parent'}!`}
             </h1>
           </motion.div>
           <p className="text-xl text-white/90 mb-6">
@@ -234,10 +234,10 @@ const ModernParentDashboard: React.FC = () => {
               ? "Let's get you started by linking your school"
               : "Let's complete your setup by linking your children"}
           </p>
-          {user?.children && user.children.length > 0 && (
+          {students.length > 0 && (
             <div className="flex items-center space-x-4">
               <div className="flex -space-x-2">
-                {user.children.slice(0, 3).map((child: any, index: number) => (
+                {students.slice(0, 3).map((child: any, index: number) => (
                   <motion.div
                     key={child.id}
                     initial={{ scale: 0 }}
@@ -250,7 +250,7 @@ const ModernParentDashboard: React.FC = () => {
                 ))}
               </div>
               <span className="text-white/80">
-                {user.children.length} {user.children.length === 1 ? 'child' : 'children'} linked
+                {students.length} {students.length === 1 ? 'child' : 'children'} linked
               </span>
             </div>
           )}
@@ -297,7 +297,7 @@ const ModernParentDashboard: React.FC = () => {
       </motion.div>
 
       {/* Quick Actions */}
-      {user?.children && user.children.length > 0 && (
+      {students.length > 0 && (
         <motion.div variants={itemVariants}>
           <ModernCard title="Quick Actions" variant="glass">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -357,7 +357,7 @@ const ModernParentDashboard: React.FC = () => {
       )}
 
       {/* Charts Section */}
-      {user?.children && user.children.length > 0 && (
+      {students.length > 0 && (
         <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <ModernCard title="Behavior Trends" variant="glass">
             {behaviorData.length > 0 ? (
@@ -457,7 +457,7 @@ const ModernParentDashboard: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {(!user?.children || user.children.length === 0) && (
+      {students.length === 0 && !studentsLoading && (
         <motion.div
           variants={itemVariants}
           className="text-center py-16"

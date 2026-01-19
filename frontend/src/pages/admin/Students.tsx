@@ -7,7 +7,6 @@ import Input from '../../components/Input';
 import Select from '../../components/Select';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Plus, 
   Edit, 
   Trash2, 
   Copy, 

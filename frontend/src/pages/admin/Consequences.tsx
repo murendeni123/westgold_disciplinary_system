@@ -15,14 +15,14 @@ import { useToast } from '../../hooks/useToast';
 const Consequences: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
   const [consequences, setConsequences] = useState<any[]>([]);
-  const [definitions, setDefinitions] = useState<any[]>([]);
+  const [, setDefinitions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusData, setStatusData] = useState<any[]>([]);
   const [severityData, setSeverityData] = useState<any[]>([]);
   const [trendData, setTrendData] = useState<any[]>([]);
   const [completionData, setCompletionData] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [, ] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isDefinitionModalOpen, setIsDefinitionModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -140,7 +140,7 @@ const Consequences: React.FC = () => {
     setIsDefinitionModalOpen(true);
   };
 
-  const handleEditDefinition = (definition: any) => {
+  const _handleEditDefinition = (definition: any) => {
     setEditingConsequence(definition);
     setFormData({
       name: definition.name || '',
@@ -167,7 +167,7 @@ const Consequences: React.FC = () => {
     }
   };
 
-  const handleDeleteDefinition = async (id: number) => {
+  const _handleDeleteDefinition = async (id: number) => {
     if (!confirm('Are you sure you want to delete this consequence definition?')) return;
     try {
       await api.deleteConsequenceDefinition(id);
@@ -245,7 +245,7 @@ const Consequences: React.FC = () => {
     {
       key: 'actions',
       label: 'Actions',
-      render: (value: any, row: any) => (
+      render: (_value: any, row: any) => (
         <div className="flex items-center space-x-2">
           <button
             onClick={(e) => {
@@ -272,7 +272,7 @@ const Consequences: React.FC = () => {
     },
   ];
 
-  const tableData = consequences.map((consequence) => ({
+  const _tableData = consequences.map((consequence) => ({
     ...consequence,
     actions: (
       <div className="flex space-x-2">

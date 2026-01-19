@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
 import { 
   GraduationCap, 
   Mail, 
@@ -12,7 +12,6 @@ import {
   User,
   Phone,
   ArrowRight,
-  ArrowLeft,
   Building2,
   Users,
   Check,
@@ -26,7 +25,7 @@ type Step = 'account' | 'school' | 'child' | 'complete';
 
 const ParentSignup: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { signIn } = useAuth();
   
   // Step tracking
   const [currentStep, setCurrentStep] = useState<Step>('account');
@@ -105,7 +104,7 @@ const ParentSignup: React.FC = () => {
       });
 
       // Auto-login after successful signup
-      await login(accountData.email.trim().toLowerCase(), accountData.password);
+      await signIn(accountData.email.trim().toLowerCase(), accountData.password);
       
       // Move to next step
       setCurrentStep('school');
@@ -171,7 +170,7 @@ const ParentSignup: React.FC = () => {
     }, 2000);
   };
 
-  const handleSkipChild = () => {
+  const _handleSkipChild = () => {
     if (linkedChildren.length === 0) {
       setError('Please link at least one child to continue');
       return;

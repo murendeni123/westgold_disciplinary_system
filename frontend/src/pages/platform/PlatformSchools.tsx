@@ -6,7 +6,7 @@ import Input from '../../components/Input';
 import Select from '../../components/Select';
 import Modal from '../../components/Modal';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, Search, Plus, Edit, Trash2, Power, Download, CheckSquare, Building2, Sparkles } from 'lucide-react';
+import { Eye, Search, Plus, Edit, Trash2, Power, Download, CheckSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
 

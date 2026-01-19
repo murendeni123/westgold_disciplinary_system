@@ -10,7 +10,7 @@ import { useSchoolTheme } from '../contexts/SchoolThemeContext';
 const ParentLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
   const location = useLocation();
-  const { customizations } = useSchoolTheme();
+  useSchoolTheme();
 
   useEffect(() => {
     const handleResize = () => {

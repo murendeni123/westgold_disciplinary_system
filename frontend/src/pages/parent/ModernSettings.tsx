@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../../hooks/useParentStudents';
 import { api } from '../../services/api';
 import ModernCard from '../../components/ModernCard';
 import { motion } from 'framer-motion';
@@ -9,7 +10,8 @@ import Input from '../../components/Input';
 
 const ModernSettings: React.FC = () => {
   const navigate = useNavigate();
-  const { user, updateUser } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
+  const { students } = useParentStudents();
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'school'>('profile');
   
   const [profileData, setProfileData] = useState({
@@ -37,16 +39,16 @@ const ModernSettings: React.FC = () => {
   useEffect(() => {
     if (user) {
       setProfileData({
-        name: user.name || '',
+        name: profile?.full_name || '',
         email: user.email || '',
       });
     }
-  }, [user]);
+  }, [user, profile]);
 
   // Fetch linked schools and children when school tab is active
   useEffect(() => {
     const fetchSchoolData = async () => {
-      if (activeTab !== 'school' || user?.role !== 'parent') return;
+      if (activeTab !== 'school' || profile?.role !== 'parent') return;
       
       setLoadingSchoolData(true);
       try {
@@ -57,7 +59,7 @@ const ModernSettings: React.FC = () => {
         // Fetch children (students linked to this parent)
         try {
           const studentsRes = await api.getStudents();
-          const myChildren = studentsRes.data?.filter?.((s: any) => s.parent_id === user.id) || [];
+          const myChildren = studentsRes.data?.filter?.((s: any) => s.parent_id === user?.id) || [];
           setLinkedChildren(myChildren);
         } catch {
           setLinkedChildren([]);
@@ -94,9 +96,7 @@ const ModernSettings: React.FC = () => {
         email: profileData.email.trim().toLowerCase(),
       });
       setProfileSuccess('Profile updated successfully!');
-      if (updateUser && response.data.user) {
-        updateUser(response.data.user);
-      }
+      await refreshProfile();
     } catch (error: any) {
       setProfileError(error.response?.data?.error || 'Error updating profile');
     } finally {
@@ -259,10 +259,10 @@ const ModernSettings: React.FC = () => {
                   <p className="text-sm font-medium text-gray-600 mb-2">Role</p>
                   <p className="text-lg font-bold capitalize text-gray-900">{user?.role}</p>
                 </div>
-                {user?.children && user.children.length > 0 && (
+                {students && students.length > 0 && (
                   <div className="p-4 bg-gradient-to-r from-gray-50 to-purple-50 rounded-xl border border-gray-200">
                     <p className="text-sm font-medium text-gray-600 mb-2">Linked Children</p>
-                    <p className="text-lg font-bold text-gray-900">{user.children.length} child(ren)</p>
+                    <p className="text-lg font-bold text-gray-900">{students.length} child(ren)</p>
                   </div>
                 )}
                 {profileError && (

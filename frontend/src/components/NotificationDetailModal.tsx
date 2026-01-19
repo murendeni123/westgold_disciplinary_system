@@ -10,7 +10,6 @@ import {
   AlertTriangle,
   Star,
   FileText,
-  CheckCircle,
   XCircle,
   Loader2
 } from 'lucide-react';

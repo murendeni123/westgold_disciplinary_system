@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { api } from '../../services/api';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
@@ -8,7 +8,7 @@ import { Save, Lock, User, Settings, Building2 } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 const TeacherSettings: React.FC = () => {
-  const { user, updateUser } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const { success, error, ToastContainer } = useToast();
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'preferences'>('profile');
   
@@ -32,18 +32,18 @@ const TeacherSettings: React.FC = () => {
   useEffect(() => {
     if (user) {
       setProfileData({
-        name: user.name || '',
+        name: profile?.full_name || '',
         email: user.email || '',
-        phone: user.teacher?.phone || '',
+        phone: teacherData?.phone || '',
       });
       fetchTeacherData();
     }
-  }, [user]);
+  }, [user, profile]);
 
   const fetchTeacherData = async () => {
     try {
       if (!user?.id) return;
-      const response = await api.getTeacher(user.id);
+      const response = await api.getTeacher(parseInt(user.id, 10));
       console.log('Teacher data with school:', response.data);
       setTeacherData(response.data);
     } catch (err) {
@@ -73,20 +73,18 @@ const TeacherSettings: React.FC = () => {
       });
       
       // Update teacher phone if changed
-      if (profileData.phone !== (user?.teacher?.phone || '')) {
+      if (profileData.phone !== (teacherData?.phone || '')) {
         try {
-          await api.updateTeacher(user?.teacher?.id || user?.id, {
+          await api.updateTeacher(teacherData?.id || parseInt(user?.id || '0', 10), {
             phone: profileData.phone.trim() || null,
           });
-        } catch (error) {
-          console.error('Error updating teacher phone:', error);
+        } catch (err) {
+          console.error('Error updating teacher phone:', err);
         }
       }
 
       success('Profile updated successfully!');
-      if (updateUser && response.data.user) {
-        updateUser(response.data.user);
-      }
+      await refreshProfile();
     } catch (err: any) {
       error(err.response?.data?.error || 'Error updating profile');
     } finally {
@@ -219,10 +217,10 @@ const TeacherSettings: React.FC = () => {
                   <p className="text-sm text-gray-600 mb-1">Role</p>
                   <p className="text-lg font-semibold capitalize text-emerald-700">{user?.role}</p>
                 </div>
-                {user?.teacher?.employee_id && (
+                {teacherData?.employee_id && (
                   <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
                     <p className="text-sm text-gray-600 mb-1">Employee ID</p>
-                    <p className="text-lg font-semibold text-emerald-700">{user.teacher.employee_id}</p>
+                    <p className="text-lg font-semibold text-emerald-700">{teacherData.employee_id}</p>
                   </div>
                 )}
               </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../../hooks/useParentStudents';
 import { api } from '../../services/api';
 import Table from '../../components/Table';
 import Card from '../../components/Card';
@@ -8,12 +9,13 @@ import Select from '../../components/Select';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { Award, Download } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 
 const ViewMerits: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const _navigate = useNavigate();
+  const { profile } = useAuth();
+  const { students } = useParentStudents();
   const [merits, setMerits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedChild, setSelectedChild] = useState(searchParams.get('student') || '');
@@ -26,14 +28,14 @@ const ViewMerits: React.FC = () => {
   const [typeData, setTypeData] = useState<any[]>([]);
 
   useEffect(() => {
-    if (selectedChild || user?.children?.[0]) {
+    if (selectedChild || students?.[0]) {
       fetchMerits();
     }
-  }, [selectedChild, startDate, endDate, user]);
+  }, [selectedChild, startDate, endDate, students]);
 
   const fetchMerits = async () => {
     try {
-      const studentId = selectedChild || user?.children?.[0]?.id;
+      const studentId = selectedChild || students?.[0]?.id;
       if (!studentId) return;
 
       const response = await api.getMerits({
@@ -88,7 +90,7 @@ const ViewMerits: React.FC = () => {
 
   const handleExport = async () => {
     try {
-      const studentId = selectedChild || user?.children?.[0]?.id;
+      const studentId = selectedChild || students?.[0]?.id;
       if (!studentId) return;
       await api.exportStudentRecord(Number(studentId), 'pdf');
       alert('Export started! Check your downloads.');
@@ -193,12 +195,12 @@ const ViewMerits: React.FC = () => {
 
       <Card title="Filters">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {user?.children && user.children.length > 1 && (
+          {students && students.length > 1 && (
             <Select
               label="Child"
               value={selectedChild}
               onChange={(e) => setSelectedChild(e.target.value)}
-              options={user.children.map((c: any) => ({
+              options={students.map((c: any) => ({
                 value: c.id,
                 label: `${c.first_name} ${c.last_name}`,
               }))}
@@ -256,7 +258,7 @@ const ViewMerits: React.FC = () => {
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {typeData.map((entry, index) => (
+                    {typeData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444'][index % 5]} />
                     ))}
                   </Pie>

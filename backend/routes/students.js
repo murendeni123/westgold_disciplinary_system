@@ -9,14 +9,12 @@ const router = express.Router();
 // Get all students
 router.get('/', authenticateToken, async (req, res) => {
     try {
+        // Simple query that works with minimal schema
         const students = await dbAll(`
-            SELECT s.*, c.class_name, u.name as parent_name, u.email as parent_email
-            FROM students s
-            LEFT JOIN classes c ON s.class_id = c.id
-            LEFT JOIN users u ON s.parent_id = u.id
-            ORDER BY s.last_name, s.first_name
+            SELECT * FROM students
+            ORDER BY last_name, first_name
         `);
-        res.json(students);
+        res.json(students || []);
     } catch (error) {
         console.error('Error fetching students:', error);
         res.status(500).json({ error: 'Internal server error' });
@@ -27,11 +25,7 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
     try {
         const student = await dbGet(`
-            SELECT s.*, c.class_name, u.name as parent_name, u.email as parent_email
-            FROM students s
-            LEFT JOIN classes c ON s.class_id = c.id
-            LEFT JOIN users u ON s.parent_id = u.id
-            WHERE s.id = ?
+            SELECT * FROM students WHERE id = $1
         `, [req.params.id]);
 
         if (!student) {

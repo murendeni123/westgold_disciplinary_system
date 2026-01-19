@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../../hooks/useParentStudents';
 import { api } from '../../services/api';
 import ModernCard from '../../components/ModernCard';
 import AnimatedStatCard from '../../components/AnimatedStatCard';
@@ -10,12 +11,13 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import Table from '../../components/Table';
 import Select from '../../components/Select';
 import Input from '../../components/Input';
-import Button from '../../components/Button';
+// Button imported for future use
 
 const ModernAttendanceOverview: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profile } = useAuth();
+  const { students } = useParentStudents();
   const [attendance, setAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedChild, setSelectedChild] = useState(searchParams.get('student') || '');
@@ -28,14 +30,14 @@ const ModernAttendanceOverview: React.FC = () => {
   const [monthlyData, setMonthlyData] = useState<any[]>([]);
 
   useEffect(() => {
-    if (selectedChild || user?.children?.[0]) {
+    if (selectedChild || students?.[0]) {
       fetchAttendance();
     }
-  }, [selectedChild, startDate, endDate, user]);
+  }, [selectedChild, startDate, endDate, students]);
 
   const fetchAttendance = async () => {
     try {
-      const studentId = selectedChild || user?.children?.[0]?.id;
+      const studentId = selectedChild || students?.[0]?.id;
       if (!studentId) return;
 
       const response = await api.getAttendance({
@@ -108,7 +110,7 @@ const ModernAttendanceOverview: React.FC = () => {
 
   const handleExport = async () => {
     try {
-      const studentId = selectedChild || user?.children?.[0]?.id;
+      const studentId = selectedChild || students?.[0]?.id;
       if (!studentId) return;
       await api.exportStudentRecord(Number(studentId), 'pdf');
       alert('Export started! Check your downloads.');
@@ -253,12 +255,12 @@ const ModernAttendanceOverview: React.FC = () => {
       <motion.div variants={itemVariants}>
         <ModernCard title="Filters" variant="glass">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {user?.children && user.children.length > 1 && (
+            {students && students.length > 1 && (
               <Select
                 label="Child"
                 value={selectedChild}
                 onChange={(e) => setSelectedChild(e.target.value)}
-                options={user.children.map((c: any) => ({
+                options={students.map((c: any) => ({
                   value: c.id,
                   label: `${c.first_name} ${c.last_name}`,
                 }))}

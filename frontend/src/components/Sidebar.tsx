@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -31,7 +31,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const { customizations, getImageUrl } = useSchoolTheme();
 
   const adminMenu = [
@@ -185,14 +185,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
                       className="w-14 h-14 rounded-xl bg-white shadow-lg flex items-center justify-center"
                     >
                       <span className={`text-2xl font-bold bg-gradient-to-r ${currentColor} bg-clip-text text-transparent`}>
-                        {user?.name?.charAt(0).toUpperCase() || 'U'}
+                        {profile?.full_name?.charAt(0).toUpperCase() || 'U'}
                       </span>
                     </motion.div>
                     <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white truncate">{user?.name}</p>
-                    <p className="text-xs text-white/70 capitalize font-medium">{user?.role}</p>
+                    <p className="text-sm font-bold text-white truncate">{profile?.full_name}</p>
+                    <p className="text-xs text-white/70 capitalize font-medium">{profile?.role}</p>
                   </div>
                 </div>
               </motion.div>
@@ -268,7 +268,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={logout}
+              onClick={signOut}
               className="flex items-center space-x-3 w-full px-4 py-3.5 rounded-xl text-gray-700 bg-gray-50 hover:bg-gradient-to-r hover:from-red-500 hover:to-pink-500 hover:text-white transition-all duration-300 border border-gray-200 hover:border-transparent shadow-sm hover:shadow-lg group"
             >
               <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white group-hover:bg-white/20 transition-all">

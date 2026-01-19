@@ -1,5 +1,5 @@
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
 import { usePlatformAuth } from '../contexts/PlatformAuthContext';
 
 interface ProtectedRouteProps {

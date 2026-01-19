@@ -28,7 +28,7 @@ interface GoldieBadgeStudent {
 }
 
 const MeritsDemerits: React.FC = () => {
-  const { success, error, ToastContainer } = useToast();
+  const { error, ToastContainer } = useToast();
   const [merits, setMerits] = useState<any[]>([]);
   const [demerits, setDemerits] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);

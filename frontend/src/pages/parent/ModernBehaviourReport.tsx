@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../../hooks/useParentStudents';
 import { api } from '../../services/api';
 import ModernCard from '../../components/ModernCard';
 import AnimatedStatCard from '../../components/AnimatedStatCard';
 import { motion } from 'framer-motion';
-import { AlertTriangle, TrendingDown, BarChart3 } from 'lucide-react';
+import { AlertTriangle, TrendingDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import Table from '../../components/Table';
 import Select from '../../components/Select';
@@ -13,7 +14,8 @@ import Select from '../../components/Select';
 const ModernBehaviourReport: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profile } = useAuth();
+  const { students } = useParentStudents();
   const [incidents, setIncidents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedChild, setSelectedChild] = useState(searchParams.get('student') || '');
@@ -23,14 +25,14 @@ const ModernBehaviourReport: React.FC = () => {
   const [summary, setSummary] = useState<any>(null);
 
   useEffect(() => {
-    if (selectedChild || user?.children?.[0]) {
+    if (selectedChild || students?.[0]) {
       fetchIncidents();
     }
-  }, [selectedChild, user]);
+  }, [selectedChild, students]);
 
   const fetchIncidents = async () => {
     try {
-      const studentId = selectedChild || user?.children?.[0]?.id;
+      const studentId = selectedChild || students?.[0]?.id;
       if (!studentId) return;
 
       const response = await api.getIncidents({ student_id: studentId });
@@ -214,14 +216,14 @@ const ModernBehaviourReport: React.FC = () => {
       )}
 
       {/* Filters */}
-      {user?.children && user.children.length > 1 && (
+      {students && students.length > 1 && (
         <motion.div variants={itemVariants}>
           <ModernCard title="Filters" variant="glass">
             <Select
               label="Child"
               value={selectedChild}
               onChange={(e) => setSelectedChild(e.target.value)}
-              options={user.children.map((c: any) => ({
+              options={students.map((c: any) => ({
                 value: c.id,
                 label: `${c.first_name} ${c.last_name}`,
               }))}
@@ -266,7 +268,7 @@ const ModernBehaviourReport: React.FC = () => {
                     fill="#8884d8"
                     dataKey="value"
                   >
-                    {severityData.map((entry, index) => (
+                    {severityData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={['#ef4444', '#f59e0b', '#10b981'][index % 3]} />
                     ))}
                   </Pie>

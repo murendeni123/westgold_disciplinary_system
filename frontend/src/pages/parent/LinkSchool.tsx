@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { api } from '../../services/api';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
@@ -11,14 +11,12 @@ import {
   CheckCircle, 
   AlertCircle, 
   Info,
-  Sparkles,
-  Check,
-  X
+  Check
 } from 'lucide-react';
 
 const LinkSchool: React.FC = () => {
   const navigate = useNavigate();
-  const { user, refreshUser, updateUser } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const [schoolCode, setSchoolCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,7 +28,7 @@ const LinkSchool: React.FC = () => {
 
   useEffect(() => {
     fetchLinkedSchools();
-  }, [user]);
+  }, [profile]);
 
   const fetchLinkedSchools = async () => {
     try {
@@ -39,19 +37,8 @@ const LinkSchool: React.FC = () => {
       setLinkedSchools(response.data);
     } catch (error) {
       console.error('Error fetching linked schools:', error);
-      // If API doesn't exist yet, get schools from children
-      if (user?.children && user.children.length > 0) {
-        const uniqueSchools = new Map<number, any>();
-        user.children.forEach((child: any) => {
-          if (child.school_id && !uniqueSchools.has(child.school_id)) {
-            uniqueSchools.set(child.school_id, {
-              id: child.school_id,
-              name: child.school_name || `School ${child.school_id}`,
-            });
-          }
-        });
-        setLinkedSchools(Array.from(uniqueSchools.values()));
-      }
+      // Fallback: no linked schools found
+      setLinkedSchools([]);
     } finally {
       setLoadingSchools(false);
     }
@@ -69,14 +56,8 @@ const LinkSchool: React.FC = () => {
       setSuccess(true);
       setSchoolCode('');
       
-      // Update auth user with new school_id so UI reacts immediately
-      if (user && response.data?.school?.id) {
-        const updatedUser = { ...(user as any), school_id: response.data.school.id } as any;
-        updateUser(updatedUser);
-      }
-
-      // Refresh user data and linked schools from server
-      await refreshUser();
+      // Refresh profile data and linked schools from server
+      await refreshProfile();
       await fetchLinkedSchools();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Invalid school code. Please check and try again.');
@@ -86,20 +67,12 @@ const LinkSchool: React.FC = () => {
   };
 
   const handleSwitchSchool = async (schoolId: number) => {
-    if (schoolId === user?.school_id) {
-      return; // Already on this school
-    }
-
     setSwitchingSchool(schoolId);
     try {
       await api.switchSchool(schoolId);
       
-      // Update user context
-      const updatedUser = { ...user, school_id: schoolId };
-      updateUser(updatedUser);
-      
-      // Refresh page data
-      await refreshUser();
+      // Refresh profile data
+      await refreshProfile();
       window.location.reload();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Error switching school');
@@ -111,15 +84,16 @@ const LinkSchool: React.FC = () => {
   const handleContinue = () => {
     setSuccess(false);
     setLinkedSchool(null);
-    fetchLinkedSchools();
+    // Navigate to link-child page after successful school linking
+    navigate('/parent/link-child');
   };
 
   const getCurrentSchool = () => {
-    if (!user?.school_id) return null;
-    return linkedSchools.find(s => s.id === user.school_id);
+    if (!profile?.school_id) return null;
+    return linkedSchools.find(s => s.id === Number(profile.school_id));
   };
 
-  const currentSchool = getCurrentSchool();
+  getCurrentSchool();
 
   return (
     <div className="space-y-6">
@@ -235,7 +209,7 @@ const LinkSchool: React.FC = () => {
 
           <div className="space-y-3">
             {linkedSchools.map((school) => {
-              const isCurrent = school.id === user?.school_id;
+              const isCurrent = school.id === Number(profile?.school_id);
               const isSwitching = switchingSchool === school.id;
 
               return (

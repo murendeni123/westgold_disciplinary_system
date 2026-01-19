@@ -9,7 +9,7 @@ import { Menu, X, GraduationCap } from 'lucide-react';
 const TeacherLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
   const location = useLocation();
-  const { customizations } = useSchoolTheme();
+  useSchoolTheme();
 
   useEffect(() => {
     const handleResize = () => {

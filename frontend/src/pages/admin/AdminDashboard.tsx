@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   Users, 
   AlertTriangle, 
@@ -9,18 +9,12 @@ import {
   Award, 
   Gavel, 
   TrendingDown, 
-  Bell, 
   UserCheck, 
-  BookOpen, 
-  ArrowRight, 
-  TrendingUp,
   CheckCircle2,
-  XCircle,
   Activity,
   BarChart3,
   Shield,
   ChevronRight,
-  Eye,
   RefreshCw,
   Zap,
   Target,
@@ -28,13 +22,13 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState<any>(null);
   const [pendingIncidents, setPendingIncidents] = useState<any[]>([]);
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [, setRecentActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -309,7 +303,7 @@ const AdminDashboard: React.FC = () => {
             
             {/* Stats Breakdown */}
             <div className="flex flex-col justify-center space-y-4">
-              {attendanceData.map((item, index) => (
+              {attendanceData.map((item) => (
                 <div key={item.name} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                   <div className="flex items-center gap-3">
                     <div 
@@ -485,7 +479,7 @@ const AdminDashboard: React.FC = () => {
               { label: 'Detention Sessions', icon: Clock, path: '/admin/detention-sessions', color: 'bg-orange-500' },
               { label: 'Reports & Analytics', icon: BarChart3, path: '/admin/reports', color: 'bg-indigo-500' },
               { label: 'WhatsApp Settings', icon: MessageSquare, path: '/admin/whatsapp', color: 'bg-green-500' },
-            ].map((action, index) => {
+            ].map((action) => {
               const Icon = action.icon;
               return (
                 <motion.button

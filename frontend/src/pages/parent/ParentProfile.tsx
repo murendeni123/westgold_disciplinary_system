@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
 import { api } from '../../services/api';
 import Card from '../../components/Card';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
-import { Save, User, Phone, MapPin, AlertCircle } from 'lucide-react';
+import { Save, AlertCircle } from 'lucide-react';
 
 const ParentProfile: React.FC = () => {
-  const { user, updateUser } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -32,7 +32,7 @@ const ParentProfile: React.FC = () => {
       const response = await api.getParentProfile();
       const profile = response.data;
       setFormData({
-        name: profile.name || user?.name || '',
+        name: profile.name || profile?.full_name || '',
         email: profile.email || user?.email || '',
         phone: profile.phone || '',
         work_phone: profile.work_phone || '',
@@ -56,10 +56,7 @@ const ParentProfile: React.FC = () => {
     try {
       await api.updateParentProfile(formData);
       setSuccess('Profile updated successfully!');
-      if (updateUser) {
-        const updatedUser = { ...user, ...formData };
-        updateUser(updatedUser);
-      }
+      await refreshProfile();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error updating profile');
     } finally {
@@ -96,7 +93,6 @@ const ParentProfile: React.FC = () => {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
-              icon="user"
             />
             <Input
               label="Email Address"
@@ -104,7 +100,6 @@ const ParentProfile: React.FC = () => {
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               required
-              icon="mail"
             />
           </div>
         </Card>
@@ -117,7 +112,6 @@ const ParentProfile: React.FC = () => {
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              icon="phone"
               placeholder="Enter your phone number"
             />
             <Input
@@ -125,7 +119,6 @@ const ParentProfile: React.FC = () => {
               type="tel"
               value={formData.work_phone}
               onChange={(e) => setFormData({ ...formData, work_phone: e.target.value })}
-              icon="phone"
               placeholder="Enter your work phone number"
             />
           </div>
@@ -138,7 +131,6 @@ const ParentProfile: React.FC = () => {
               label="Emergency Contact Name"
               value={formData.emergency_contact_name}
               onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
-              icon="user"
               placeholder="Enter emergency contact name"
             />
             <Input
@@ -146,7 +138,6 @@ const ParentProfile: React.FC = () => {
               type="tel"
               value={formData.emergency_contact_phone}
               onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
-              icon="phone"
               placeholder="Enter emergency contact phone"
             />
           </div>
@@ -159,7 +150,6 @@ const ParentProfile: React.FC = () => {
               label="Home Address"
               value={formData.home_address}
               onChange={(e) => setFormData({ ...formData, home_address: e.target.value })}
-              icon="map-pin"
               placeholder="Enter your home address"
             />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

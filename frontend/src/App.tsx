@@ -1,8 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/SupabaseAuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
-import { PlatformAuthProvider } from './contexts/PlatformAuthContext';
 import { SchoolThemeProvider } from './contexts/SchoolThemeContext';
 import Login from './pages/Login';
 import ParentSignup from './pages/ParentSignup';
@@ -10,8 +9,9 @@ import AdminLayout from './layouts/AdminLayout';
 import TeacherLayout from './layouts/TeacherLayout';
 import ModernParentLayout from './layouts/ModernParentLayout';
 import PlatformLayout from './layouts/PlatformLayout';
-import ProtectedRoute from './components/ProtectedRoute';
+import RequireRole from './components/RequireRole';
 import OnboardingGuard from './components/OnboardingGuard';
+import Unauthorized from './pages/Unauthorized';
 
 // Admin pages
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -89,13 +89,16 @@ function App() {
       <AuthProvider>
         <SchoolThemeProvider>
           <NotificationProvider>
-            <PlatformAuthProvider>
             <Routes>
+          {/* Public routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<ParentSignup />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
           
-          <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>}>
-            <Route index element={<AdminDashboard />} />
+          {/* School Admin routes */}
+          <Route path="/admin" element={<RequireRole role="school_admin"><AdminLayout /></RequireRole>}>
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="students" element={<Students />} />
             <Route path="students/:id" element={<StudentProfile />} />
@@ -115,8 +118,10 @@ function App() {
             <Route path="settings" element={<AdminSettings />} />
           </Route>
 
-          <Route path="/teacher" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherLayout /></ProtectedRoute>}>
-            <Route index element={<TeacherDashboard />} />
+          {/* Teacher routes */}
+          <Route path="/teacher" element={<RequireRole role="teacher"><TeacherLayout /></RequireRole>}>
+            <Route index element={<Navigate to="/teacher/dashboard" replace />} />
+            <Route path="dashboard" element={<TeacherDashboard />} />
             <Route path="classes" element={<MyClasses />} />
             <Route path="classes/:id" element={<ClassDetails />} />
             <Route path="behaviour" element={<TeacherBehaviour />} />
@@ -131,8 +136,10 @@ function App() {
             <Route path="students/:id" element={<TeacherStudentProfile />} />
           </Route>
 
-          <Route path="/parent" element={<ProtectedRoute allowedRoles={['parent']}><OnboardingGuard><ModernParentLayout /></OnboardingGuard></ProtectedRoute>}>
-            <Route index element={<ModernParentDashboard />} />
+          {/* Parent routes */}
+          <Route path="/parent" element={<RequireRole role="parent"><OnboardingGuard><ModernParentLayout /></OnboardingGuard></RequireRole>}>
+            <Route index element={<Navigate to="/parent/dashboard" replace />} />
+            <Route path="dashboard" element={<ModernParentDashboard />} />
             <Route path="onboarding" element={<ParentOnboarding />} />
             <Route path="link-school" element={<LinkSchool />} />
             <Route path="link-child" element={<LinkChild />} />
@@ -152,8 +159,10 @@ function App() {
                        <Route path="settings" element={<ModernSettings />} />
           </Route>
 
+          {/* Super Admin / Platform routes */}
           <Route path="/platform/login" element={<PlatformLogin />} />
-          <Route path="/platform" element={<ProtectedRoute allowedRoles={['platform_admin']}><PlatformLayout /></ProtectedRoute>}>
+          <Route path="/super-admin" element={<Navigate to="/platform" replace />} />
+          <Route path="/platform" element={<RequireRole role="super_admin"><PlatformLayout /></RequireRole>}>
             <Route index element={<PlatformDashboard />} />
             <Route path="settings" element={<PlatformSettings />} />
             <Route path="schools" element={<PlatformSchools />} />
@@ -169,7 +178,6 @@ function App() {
 
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
-            </PlatformAuthProvider>
           </NotificationProvider>
         </SchoolThemeProvider>
       </AuthProvider>

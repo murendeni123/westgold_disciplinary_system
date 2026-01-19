@@ -12,6 +12,7 @@ const express = require('express');
 const { dbAll, dbGet, dbRun } = require('../database/db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const whatsappService = require('../services/whatsappService');
+const testMode = require('../config/whatsappTestMode');
 
 const router = express.Router();
 
@@ -142,10 +143,18 @@ router.get('/status', authenticateToken, requireRole('admin'), async (req, res) 
         AND created_at >= date('now', '-30 days')
     `);
 
+    // Get today's message count for test mode
+    const todayCount = await dbGet(`
+      SELECT COUNT(*) as count FROM notification_logs
+      WHERE channel = 'whatsapp' AND DATE(created_at) = DATE('now')
+    `);
+
     res.json({
       enabled,
       configured: !!(config.token && config.phoneNumberId),
       phoneNumberId: config.phoneNumberId ? '***' + config.phoneNumberId.slice(-4) : null,
+      testMode: testMode.getTestModeStatus(),
+      todayMessageCount: todayCount?.count || 0,
       stats: {
         last30Days: stats || { total: 0, sent: 0, delivered: 0, read: 0, failed: 0 },
       },
@@ -341,9 +350,9 @@ router.post('/test', authenticateToken, requireRole('admin'), async (req, res) =
 });
 
 /**
- * Manually send notification to a parent
+ * Manually send notification to a parent (legacy endpoint)
  */
-router.post('/send', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
+router.post('/send-legacy', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
   try {
     const { student_id, type, custom_message } = req.body;
 
@@ -415,6 +424,268 @@ router.post('/send', authenticateToken, requireRole('admin', 'teacher'), async (
     res.json(result);
   } catch (error) {
     console.error('Error sending notification:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/whatsapp/send
+ * 
+ * Enhanced template-based WhatsApp notification endpoint.
+ * 
+ * Payload:
+ * {
+ *   "schoolId": "...",
+ *   "studentId": "...",
+ *   "templateName": "student_incident",
+ *   "language": "en",
+ *   "phone": "2783XXXXXX",
+ *   "parameters": {
+ *     "parent_name": "Mrs Smith",
+ *     "student_name": "John Doe",
+ *     "incident": "Disruptive behaviour"
+ *   }
+ * }
+ * 
+ * Server does:
+ * 1. Validate opt-in
+ * 2. Insert notification_logs
+ * 3. Call Meta API
+ * 4. Update status
+ * 5. Write audit log
+ */
+router.post('/send', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
+  try {
+    const { 
+      schoolId, 
+      studentId, 
+      templateName, 
+      language = 'en', 
+      phone, 
+      parameters = {} 
+    } = req.body;
+
+    // =========================================================================
+    // STEP 1: Validate required fields
+    // =========================================================================
+    if (!schoolId) {
+      return res.status(400).json({ error: 'schoolId is required' });
+    }
+    if (!templateName) {
+      return res.status(400).json({ error: 'templateName is required' });
+    }
+    if (!phone) {
+      return res.status(400).json({ error: 'phone is required' });
+    }
+
+    // =========================================================================
+    // STEP 1.5: Validate test mode restrictions
+    // =========================================================================
+    const getMessageCount = async () => {
+      const result = await dbGet(`
+        SELECT COUNT(*) as count FROM notification_logs
+        WHERE channel = 'whatsapp' AND DATE(created_at) = DATE('now')
+      `);
+      return result?.count || 0;
+    };
+
+    const testModeValidation = await testMode.validateTestModeRequest({
+      phone,
+      schoolId,
+      templateName,
+      getMessageCount,
+    });
+
+    if (!testModeValidation.allowed) {
+      return res.status(403).json({
+        error: testModeValidation.reason,
+        code: 'TEST_MODE_BLOCKED',
+        testMode: true,
+      });
+    }
+
+    // Check if dry run mode (log only, don't actually send)
+    if (testMode.isDryRun()) {
+      console.log('[WhatsApp Test Mode] DRY RUN - Would send:', { phone, templateName, parameters });
+      
+      await dbRun(`
+        INSERT INTO audit_logs 
+        (school_id, actor_user_id, actor_role, action, entity_type, entity_id, description, metadata, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `, [
+        schoolId,
+        req.user.id,
+        req.user.role,
+        'WHATSAPP_DRY_RUN',
+        'notification',
+        null,
+        `[DRY RUN] WhatsApp notification would be sent to ${phone} using template ${templateName}`,
+        JSON.stringify({ template: templateName, phone, parameters, dryRun: true }),
+      ]);
+
+      return res.json({
+        success: true,
+        dryRun: true,
+        message: 'Test mode dry run - message not actually sent',
+      });
+    }
+
+    // =========================================================================
+    // STEP 2: Validate opt-in status
+    // =========================================================================
+    // Find user by phone number to check opt-in
+    const user = await dbGet(`
+      SELECT id, name, whatsapp_opt_in, whatsapp_number, phone
+      FROM users
+      WHERE whatsapp_number = ? OR phone = ?
+      LIMIT 1
+    `, [phone, phone]);
+
+    if (!user) {
+      return res.status(404).json({ 
+        error: 'No user found with this phone number',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+
+    if (!user.whatsapp_opt_in) {
+      // Log the attempt even though opt-in is missing
+      await whatsappService.logNotification({
+        userId: user.id,
+        studentId,
+        type: templateName,
+        templateName,
+        recipientPhone: phone,
+        payload: { templateName, language, parameters },
+        status: 'blocked',
+        errorMessage: 'User has not opted in for WhatsApp notifications',
+        schoolId,
+      });
+
+      return res.status(403).json({ 
+        error: 'User has not opted in for WhatsApp notifications',
+        code: 'OPT_IN_REQUIRED'
+      });
+    }
+
+    // =========================================================================
+    // STEP 3: Validate template exists
+    // =========================================================================
+    const template = await dbGet(`
+      SELECT * FROM whatsapp_templates
+      WHERE template_name = ? AND status = 'approved'
+    `, [templateName]);
+
+    if (!template) {
+      return res.status(400).json({ 
+        error: 'Template not found or not approved',
+        code: 'TEMPLATE_NOT_FOUND'
+      });
+    }
+
+    // =========================================================================
+    // STEP 4: Build template components from parameters
+    // =========================================================================
+    const components = [];
+    
+    // Convert parameters object to template component format
+    if (Object.keys(parameters).length > 0) {
+      const bodyParameters = Object.values(parameters).map(value => ({
+        type: 'text',
+        text: String(value),
+      }));
+
+      components.push({
+        type: 'body',
+        parameters: bodyParameters,
+      });
+    }
+
+    // =========================================================================
+    // STEP 5: Send via Meta API (handled by whatsappService)
+    // =========================================================================
+    const result = await whatsappService.sendTemplateMessage({
+      to: phone,
+      templateName,
+      languageCode: language,
+      components,
+      metadata: {
+        userId: user.id,
+        studentId,
+        schoolId,
+        type: templateName,
+      },
+    });
+
+    // =========================================================================
+    // STEP 6: Write audit log for legal-grade proof
+    // =========================================================================
+    if (result.success) {
+      // Get the notification log ID for the audit trail
+      const notificationLog = await dbGet(`
+        SELECT id FROM notification_logs
+        WHERE message_id = ?
+        ORDER BY created_at DESC
+        LIMIT 1
+      `, [result.messageId]);
+
+      await dbRun(`
+        INSERT INTO audit_logs 
+        (school_id, actor_user_id, actor_role, action, entity_type, entity_id, description, metadata, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `, [
+        schoolId,
+        req.user.id,
+        req.user.role,
+        'WHATSAPP_SENT',
+        'notification',
+        notificationLog?.id?.toString() || result.messageId,
+        `WhatsApp notification sent to ${phone} using template ${templateName}`,
+        JSON.stringify({
+          template: templateName,
+          phone,
+          messageId: result.messageId,
+          studentId,
+          parameters,
+        }),
+      ]);
+
+      res.json({
+        success: true,
+        messageId: result.messageId,
+        notificationId: notificationLog?.id,
+      });
+    } else {
+      // Log failed attempt to audit log
+      await dbRun(`
+        INSERT INTO audit_logs 
+        (school_id, actor_user_id, actor_role, action, entity_type, entity_id, description, metadata, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      `, [
+        schoolId,
+        req.user.id,
+        req.user.role,
+        'WHATSAPP_FAILED',
+        'notification',
+        null,
+        `WhatsApp notification failed to ${phone}: ${result.error}`,
+        JSON.stringify({
+          template: templateName,
+          phone,
+          error: result.error,
+          studentId,
+          parameters,
+        }),
+      ]);
+
+      res.status(500).json({
+        success: false,
+        error: result.error,
+        code: 'SEND_FAILED',
+      });
+    }
+  } catch (error) {
+    console.error('Error sending WhatsApp notification:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

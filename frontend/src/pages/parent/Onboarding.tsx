@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../../hooks/useParentStudents';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { 
@@ -18,7 +19,8 @@ import {
 
 const Onboarding: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profile } = useAuth();
+  const { hasStudents, loading: studentsLoading } = useParentStudents();
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [hasSchool, setHasSchool] = useState(false);
@@ -26,16 +28,16 @@ const Onboarding: React.FC = () => {
 
   useEffect(() => {
     checkProgress();
-  }, [user]);
+  }, [profile, hasStudents, studentsLoading]);
 
   const checkProgress = async () => {
     // Check if user has linked a school
-    if (user?.school_id) {
+    if (profile?.school_id) {
       setHasSchool(true);
     }
     
     // Check if user has linked at least one child
-    if (user?.children && user.children.length > 0) {
+    if (hasStudents) {
       setHasChild(true);
     }
   };
@@ -52,7 +54,7 @@ const Onboarding: React.FC = () => {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-100 rounded-full mb-4">
               <GraduationCap className="text-blue-600" size={40} />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome, {user?.name}!</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome, {profile?.full_name || 'Parent'}!</h2>
             <p className="text-gray-600 text-lg mb-4">
               We're excited to have you join our parent portal. This quick setup will help you get started in just a few minutes.
             </p>

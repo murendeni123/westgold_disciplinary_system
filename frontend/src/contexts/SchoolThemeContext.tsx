@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { api } from '../services/api';
-import { useAuth } from './AuthContext';
+import { useAuth } from './SupabaseAuthContext';
 
 interface SchoolCustomizations {
   // Branding
@@ -77,7 +77,7 @@ interface SchoolThemeProviderProps {
 export const SchoolThemeProvider: React.FC<SchoolThemeProviderProps> = ({ children, schoolId }) => {
   const [customizations, setCustomizations] = useState<SchoolCustomizations | null>(null);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { profile } = useAuth();
 
   const getImageUrl = (path: string | null | undefined): string | null => {
     if (!path) return null;
@@ -97,7 +97,7 @@ export const SchoolThemeProvider: React.FC<SchoolThemeProviderProps> = ({ childr
   const fetchCustomizations = async () => {
     try {
       setLoading(true);
-      const targetSchoolId = schoolId || user?.school_id;
+      const targetSchoolId = schoolId || profile?.school_id;
       
       if (!targetSchoolId) {
         setCustomizations(null);
@@ -106,13 +106,13 @@ export const SchoolThemeProvider: React.FC<SchoolThemeProviderProps> = ({ childr
       }
 
       // Only fetch if we have a school_id (not for platform admin)
-      if (user?.role === 'platform_admin') {
+      if ((profile?.role as string) === 'platform_admin' || (profile?.role as string) === 'super_admin') {
         setCustomizations(null);
         setLoading(false);
         return;
       }
 
-      const response = await api.getSchoolCustomizations(targetSchoolId);
+      const response = await api.getSchoolCustomizations(Number(targetSchoolId));
       setCustomizations(response.data || null);
       applyCustomizations(response.data);
     } catch (error) {
@@ -271,7 +271,7 @@ export const SchoolThemeProvider: React.FC<SchoolThemeProviderProps> = ({ childr
 
   useEffect(() => {
     fetchCustomizations();
-  }, [schoolId, user?.school_id]);
+  }, [schoolId, profile?.school_id]);
 
   const refreshCustomizations = async () => {
     await fetchCustomizations();

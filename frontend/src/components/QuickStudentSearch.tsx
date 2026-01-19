@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../hooks/useParentStudents';
 import { api } from '../services/api';
 import { Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const QuickStudentSearch: React.FC = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
+  const { students: parentStudents } = useParentStudents();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<any[]>([]);
@@ -55,8 +57,8 @@ const QuickStudentSearch: React.FC = () => {
     try {
       let studentsToSearch: any[] = [];
       
-      if (user?.role === 'parent' && user?.children) {
-        studentsToSearch = user.children;
+      if (profile?.role === 'parent') {
+        studentsToSearch = parentStudents;
       } else {
         const response = await api.getStudents();
         studentsToSearch = response.data;
@@ -81,8 +83,8 @@ const QuickStudentSearch: React.FC = () => {
   };
 
   const handleSelect = (student: any) => {
-    const role = user?.role;
-    if (role === 'admin') {
+    const role = profile?.role;
+    if (role === 'school_admin' || role === 'super_admin') {
       navigate(`/admin/students/${student.id}`);
     } else if (role === 'teacher') {
       navigate(`/teacher/students/${student.id}`);

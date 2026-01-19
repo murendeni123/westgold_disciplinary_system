@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../../hooks/useParentStudents';
 import { api } from '../../services/api';
 import ModernCard from '../../components/ModernCard';
 import AnimatedStatCard from '../../components/AnimatedStatCard';
@@ -9,27 +10,30 @@ import { Award, AlertTriangle, Calendar, Users, ArrowRight, TrendingUp } from 'l
 
 const ModernMyChildren: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profile } = useAuth();
+  const { students, loading: studentsLoading } = useParentStudents();
   const [children, setChildren] = useState<any[]>([]);
   const [childrenStats, setChildrenStats] = useState<any[]>([]);
   const [overallStats, setOverallStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.children) {
-      setChildren(user.children);
+    if (students.length > 0) {
+      setChildren(students);
       fetchChildrenStats();
+    } else if (!studentsLoading) {
+      setLoading(false);
     }
-  }, [user]);
+  }, [students, studentsLoading]);
 
   const fetchChildrenStats = async () => {
     try {
-      if (!user?.children || user.children.length === 0) {
+      if (students.length === 0) {
         setLoading(false);
         return;
       }
 
-      const statsPromises = user.children.map(async (child: any) => {
+      const statsPromises = students.map(async (child: any) => {
         try {
           const [meritsRes, incidentsRes, attendanceRes] = await Promise.all([
             api.getMerits({ student_id: child.id, start_date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }),

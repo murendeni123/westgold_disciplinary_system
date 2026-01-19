@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import Button from '../../components/Button';
 import { motion } from 'framer-motion';
-import { Bell, Check, Trash2, Filter, Sparkles } from 'lucide-react';
+import { Bell, Check, Trash2, Filter } from 'lucide-react';
 import Select from '../../components/Select';
 import Input from '../../components/Input';
 import { useToast } from '../../hooks/useToast';

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/SupabaseAuthContext';
+import { useParentStudents } from '../../hooks/useParentStudents';
 import { api } from '../../services/api';
 import Table from '../../components/Table';
 import Card from '../../components/Card';
@@ -8,27 +9,28 @@ import { Award, AlertTriangle, Calendar } from 'lucide-react';
 
 const MyChildren: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { profile } = useAuth();
+  const { students } = useParentStudents();
   const [children, setChildren] = useState<any[]>([]);
   const [childrenStats, setChildrenStats] = useState<any[]>([]);
   const [overallStats, setOverallStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.children) {
-      setChildren(user.children);
+    if (students) {
+      setChildren(students);
       fetchChildrenStats();
     }
-  }, [user]);
+  }, [students]);
 
   const fetchChildrenStats = async () => {
     try {
-      if (!user?.children || user.children.length === 0) {
+      if (!students || students.length === 0) {
         setLoading(false);
         return;
       }
 
-      const statsPromises = user.children.map(async (child: any) => {
+      const statsPromises = students.map(async (child: any) => {
         try {
           const [meritsRes, incidentsRes, attendanceRes] = await Promise.all([
             api.getMerits({ student_id: child.id, start_date: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }),
@@ -112,7 +114,7 @@ const MyChildren: React.FC = () => {
     {
       key: 'totalMerits',
       label: 'Merits',
-      render: (value: number, row: any) => (
+      render: (value: number, _row: any) => (
         <span className="text-green-600 font-semibold">{value || 0}</span>
       ),
     },
