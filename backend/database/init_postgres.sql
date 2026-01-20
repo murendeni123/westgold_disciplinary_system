@@ -97,6 +97,19 @@ CREATE TABLE IF NOT EXISTS school_customizations (
     FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE
 );
 
+-- Classes table (must be created before students)
+CREATE TABLE IF NOT EXISTS classes (
+    id SERIAL PRIMARY KEY,
+    class_name TEXT NOT NULL,
+    grade_level TEXT,
+    teacher_id INTEGER,
+    academic_year TEXT,
+    school_id INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE
+);
+
 -- Students table
 CREATE TABLE IF NOT EXISTS students (
     id SERIAL PRIMARY KEY,
@@ -115,19 +128,6 @@ CREATE TABLE IF NOT EXISTS students (
     FOREIGN KEY (parent_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE,
     UNIQUE(student_id, school_id)
-);
-
--- Classes table
-CREATE TABLE IF NOT EXISTS classes (
-    id SERIAL PRIMARY KEY,
-    class_name TEXT NOT NULL,
-    grade_level TEXT,
-    teacher_id INTEGER,
-    academic_year TEXT,
-    school_id INTEGER,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE
 );
 
 -- Teachers table (extends users)

@@ -11,6 +11,12 @@ interface User {
   children?: any[];
 }
 
+interface SignInResult {
+  success: boolean;
+  error?: string;
+  role?: string | null;
+}
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -19,6 +25,13 @@ interface AuthContextType {
   loading: boolean;
   refreshUser: () => Promise<void>;
   updateUser: (userData: User) => void;
+  // Compatibility aliases for Supabase-style auth
+  profile: User | null;
+  session: { access_token: string } | null;
+  role: string | null;
+  signOut: () => void;
+  refreshProfile: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<SignInResult>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -92,8 +105,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
+  // Compatibility aliases for Supabase-style auth
+  const profile = user;
+  const session = token ? { access_token: token } : null;
+  const role = user?.role || null;
+  const signOut = logout;
+  const refreshProfile = refreshUser;
+
+  // Supabase-style signIn that returns a result object
+  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string; role?: string | null }> => {
+    try {
+      await login(email, password);
+      // If login succeeds, get the user from state (it's set by login)
+      const storedUser = localStorage.getItem('user');
+      const userData = storedUser ? JSON.parse(storedUser) : null;
+      return { success: true, role: userData?.role || null };
+    } catch (error: any) {
+      return { success: false, error: error.message || 'Login failed' };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading, refreshUser, updateUser }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      login, 
+      logout, 
+      loading, 
+      refreshUser, 
+      updateUser,
+      // Supabase-style aliases
+      profile,
+      session,
+      role,
+      signOut,
+      refreshProfile,
+      signIn,
+    }}>
       {children}
     </AuthContext.Provider>
   );

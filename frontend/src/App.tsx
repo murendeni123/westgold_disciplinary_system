@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider } from './contexts/SupabaseAuthContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { PlatformAuthProvider } from './contexts/PlatformAuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { SchoolThemeProvider } from './contexts/SchoolThemeContext';
 import Login from './pages/Login';
@@ -9,7 +10,7 @@ import AdminLayout from './layouts/AdminLayout';
 import TeacherLayout from './layouts/TeacherLayout';
 import ModernParentLayout from './layouts/ModernParentLayout';
 import PlatformLayout from './layouts/PlatformLayout';
-import RequireRole from './components/RequireRole';
+import ProtectedRoute from './components/ProtectedRoute';
 import OnboardingGuard from './components/OnboardingGuard';
 import Unauthorized from './pages/Unauthorized';
 
@@ -96,7 +97,7 @@ function App() {
           <Route path="/unauthorized" element={<Unauthorized />} />
           
           {/* School Admin routes */}
-          <Route path="/admin" element={<RequireRole role="school_admin"><AdminLayout /></RequireRole>}>
+          <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="users" element={<UserManagement />} />
@@ -119,7 +120,7 @@ function App() {
           </Route>
 
           {/* Teacher routes */}
-          <Route path="/teacher" element={<RequireRole role="teacher"><TeacherLayout /></RequireRole>}>
+          <Route path="/teacher" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherLayout /></ProtectedRoute>}>
             <Route index element={<Navigate to="/teacher/dashboard" replace />} />
             <Route path="dashboard" element={<TeacherDashboard />} />
             <Route path="classes" element={<MyClasses />} />
@@ -137,7 +138,7 @@ function App() {
           </Route>
 
           {/* Parent routes */}
-          <Route path="/parent" element={<RequireRole role="parent"><OnboardingGuard><ModernParentLayout /></OnboardingGuard></RequireRole>}>
+          <Route path="/parent" element={<ProtectedRoute allowedRoles={['parent']}><OnboardingGuard><ModernParentLayout /></OnboardingGuard></ProtectedRoute>}>
             <Route index element={<Navigate to="/parent/dashboard" replace />} />
             <Route path="dashboard" element={<ModernParentDashboard />} />
             <Route path="onboarding" element={<ParentOnboarding />} />
@@ -162,7 +163,7 @@ function App() {
           {/* Super Admin / Platform routes */}
           <Route path="/platform/login" element={<PlatformLogin />} />
           <Route path="/super-admin" element={<Navigate to="/platform" replace />} />
-          <Route path="/platform" element={<RequireRole role="super_admin"><PlatformLayout /></RequireRole>}>
+          <Route path="/platform" element={<ProtectedRoute allowedRoles={['platform_admin']}><PlatformLayout /></ProtectedRoute>}>
             <Route index element={<PlatformDashboard />} />
             <Route path="settings" element={<PlatformSettings />} />
             <Route path="schools" element={<PlatformSchools />} />
