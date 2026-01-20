@@ -19,12 +19,11 @@ import {
   FileText,
 } from 'lucide-react';
 
-interface DashboardStats {
+interface Stats {
   totalStudents: number;
   totalTeachers: number;
   totalParents: number;
   totalClasses: number;
-  attendanceRate: number;
   incidentCount: number;
   meritCount: number;
   detentionCount: number;
@@ -33,18 +32,15 @@ interface DashboardStats {
 const ReportsAnalytics: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('month');
-  const [stats, setStats] = useState<DashboardStats>({
+  const [stats, setStats] = useState<Stats>({
     totalStudents: 0,
     totalTeachers: 0,
     totalParents: 0,
     totalClasses: 0,
-    attendanceRate: 0,
     incidentCount: 0,
     meritCount: 0,
     detentionCount: 0,
   });
-
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [behaviourData, setBehaviourData] = useState<any[]>([]);
 
   useEffect(() => {
@@ -54,7 +50,7 @@ const ReportsAnalytics: React.FC = () => {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const [studentsRes, teachersRes, parentsRes, classesRes, incidentsRes, meritsRes, detentionsRes, attendanceRes] = await Promise.all([
+      const [studentsRes, teachersRes, parentsRes, classesRes, incidentsRes, meritsRes, detentionsRes] = await Promise.all([
         api.getStudents(),
         api.getTeachers(),
         api.getParents(),
@@ -62,39 +58,19 @@ const ReportsAnalytics: React.FC = () => {
         api.getIncidents(),
         api.getMerits(),
         api.getDetentions(),
-        api.getAttendance(),
       ]);
 
       const students = studentsRes.data || [];
-      const attendance = attendanceRes.data || [];
-      
-      // Calculate attendance rate
-      const presentCount = attendance.filter((a: any) => a.status === 'present').length;
-      const attendanceRate = attendance.length > 0 ? Math.round((presentCount / attendance.length) * 100) : 0;
 
       setStats({
         totalStudents: students.length,
         totalTeachers: teachersRes.data?.length || 0,
         totalParents: parentsRes.data?.length || 0,
         totalClasses: classesRes.data?.length || 0,
-        attendanceRate,
         incidentCount: incidentsRes.data?.length || 0,
         meritCount: meritsRes.data?.length || 0,
         detentionCount: detentionsRes.data?.length || 0,
       });
-
-      // Process attendance by day for chart
-      const attendanceByDay: { [key: string]: { present: number; absent: number; late: number } } = {};
-      attendance.forEach((record: any) => {
-        const date = new Date(record.date).toLocaleDateString('en-US', { weekday: 'short' });
-        if (!attendanceByDay[date]) {
-          attendanceByDay[date] = { present: 0, absent: 0, late: 0 };
-        }
-        if (record.status === 'present') attendanceByDay[date].present++;
-        else if (record.status === 'absent') attendanceByDay[date].absent++;
-        else if (record.status === 'late') attendanceByDay[date].late++;
-      });
-      setAttendanceData(Object.entries(attendanceByDay).map(([day, data]) => ({ day, ...data })));
 
       // Process behaviour data
       const incidents = incidentsRes.data || [];
@@ -114,15 +90,13 @@ const ReportsAnalytics: React.FC = () => {
 
   const statCards = [
     { label: 'Total Students', value: stats.totalStudents, icon: Users, color: 'from-blue-500 to-cyan-500', change: '+12%', trend: 'up' },
-    { label: 'Attendance Rate', value: `${stats.attendanceRate}%`, icon: CheckCircle, color: 'from-green-500 to-emerald-500', change: '+3%', trend: 'up' },
     { label: 'Behaviour Incidents', value: stats.incidentCount, icon: AlertTriangle, color: 'from-red-500 to-orange-500', change: '-8%', trend: 'down' },
     { label: 'Merits Awarded', value: stats.meritCount, icon: Award, color: 'from-amber-500 to-yellow-500', change: '+15%', trend: 'up' },
     { label: 'Active Detentions', value: stats.detentionCount, icon: Clock, color: 'from-purple-500 to-pink-500', change: '-5%', trend: 'down' },
-    { label: 'Total Classes', value: stats.totalClasses, icon: Calendar, color: 'from-indigo-500 to-violet-500', change: '0%', trend: 'neutral' },
+    { label: 'Total Teachers', value: stats.totalTeachers, icon: Users, color: 'from-indigo-500 to-purple-500', change: '+2%', trend: 'up' },
   ];
 
   const reportTypes = [
-    { name: 'Attendance Report', description: 'Daily, weekly, and monthly attendance statistics', icon: Calendar, color: 'from-green-500 to-emerald-500' },
     { name: 'Behaviour Report', description: 'Incident trends and severity analysis', icon: AlertTriangle, color: 'from-red-500 to-orange-500' },
     { name: 'Merit Report', description: 'Recognition and achievement tracking', icon: Award, color: 'from-amber-500 to-yellow-500' },
     { name: 'Student Progress', description: 'Individual student performance overview', icon: TrendingUp, color: 'from-blue-500 to-cyan-500' },
@@ -212,74 +186,6 @@ const ReportsAnalytics: React.FC = () => {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Attendance Chart */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-gray-900">Attendance Overview</h3>
-            <div className="flex items-center space-x-4 text-xs">
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 bg-green-500 rounded-full" />
-                <span className="text-gray-600">Present</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 bg-red-500 rounded-full" />
-                <span className="text-gray-600">Absent</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 bg-amber-500 rounded-full" />
-                <span className="text-gray-600">Late</span>
-              </div>
-            </div>
-          </div>
-          
-          {loading ? (
-            <div className="h-48 flex items-center justify-center">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full"
-              />
-            </div>
-          ) : (
-            <div className="h-48 flex items-end justify-between space-x-2">
-              {attendanceData.length > 0 ? attendanceData.slice(0, 7).map((day, index) => (
-                <div key={index} className="flex-1 flex flex-col items-center">
-                  <div className="w-full flex flex-col space-y-1">
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: `${Math.min(day.present * 5, 100)}px` }}
-                      transition={{ delay: index * 0.1 }}
-                      className="w-full bg-gradient-to-t from-green-500 to-green-400 rounded-t-lg"
-                    />
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: `${Math.min(day.late * 5, 40)}px` }}
-                      transition={{ delay: index * 0.1 + 0.05 }}
-                      className="w-full bg-gradient-to-t from-amber-500 to-amber-400"
-                    />
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: `${Math.min(day.absent * 5, 40)}px` }}
-                      transition={{ delay: index * 0.1 + 0.1 }}
-                      className="w-full bg-gradient-to-t from-red-500 to-red-400 rounded-b-lg"
-                    />
-                  </div>
-                  <span className="text-xs text-gray-500 mt-2">{day.day}</span>
-                </div>
-              )) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                  No attendance data available
-                </div>
-              )}
-            </div>
-          )}
-        </motion.div>
-
         {/* Behaviour Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -391,12 +297,12 @@ const ReportsAnalytics: React.FC = () => {
               <p className="text-white/70 text-sm">Teachers</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold">{stats.attendanceRate}%</p>
-              <p className="text-white/70 text-sm">Attendance</p>
-            </div>
-            <div className="text-center">
               <p className="text-3xl font-bold">{stats.meritCount}</p>
               <p className="text-white/70 text-sm">Merits</p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl font-bold">{stats.detentionCount}</p>
+              <p className="text-white/70 text-sm">Detentions</p>
             </div>
           </div>
         </div>

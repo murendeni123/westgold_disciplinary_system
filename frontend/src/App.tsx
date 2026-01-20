@@ -18,18 +18,21 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import Students from './pages/admin/Students';
 import StudentProfile from './pages/admin/StudentProfile';
 import Classes from './pages/admin/Classes';
+import ClassDetail from './pages/admin/ClassDetail';
 import Teachers from './pages/admin/Teachers';
-import AdminAttendanceOverview from './pages/admin/AttendanceOverview';
 import MeritsDemerits from './pages/admin/MeritsDemerits';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminTeacherProfile from './pages/admin/TeacherProfile';
 import Parents from './pages/admin/Parents';
 import BulkImport from './pages/admin/BulkImport';
+import BulkImportV2 from './pages/admin/BulkImportV2';
 import UserManagement from './pages/admin/UserManagement';
 import DisciplineCenter from './pages/admin/DisciplineCenter';
 import DisciplineRules from './pages/admin/DisciplineRules';
 import DetentionSessions from './pages/admin/DetentionSessions';
 import ReportsAnalytics from './pages/admin/ReportsAnalytics';
+import BehaviourDashboard from './pages/admin/BehaviourDashboard';
+import AdminNotifications from './pages/admin/NotificationsEnhanced';
 
 // Platform pages
 import PlatformLogin from './pages/platform/PlatformLogin';
@@ -44,6 +47,7 @@ import PlatformBilling from './pages/platform/PlatformBilling';
 import PlatformLogs from './pages/platform/PlatformLogs';
 import PlatformUsers from './pages/platform/PlatformUsers';
 import SchoolOnboardingWizard from './pages/platform/SchoolOnboardingWizard';
+import PlatformNotifications from './pages/platform/NotificationsPage';
 
 // Teacher pages
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
@@ -53,20 +57,18 @@ import TeacherBehaviour from './pages/teacher/Behaviour';
 import LogIncident from './pages/teacher/LogIncident';
 import TeacherMerits from './pages/teacher/Merits';
 import AwardMerit from './pages/teacher/AwardMerit';
-import DailyRegister from './pages/teacher/DailyRegister';
 import TeacherDetentions from './pages/teacher/Detentions';
 import TeacherStudentProfile from './pages/teacher/StudentProfile';
 import TeacherSettings from './pages/teacher/TeacherSettings';
 import TeacherInterventions from './pages/teacher/Interventions';
 import TeacherConsequences from './pages/teacher/Consequences';
+import TeacherNotifications from './pages/teacher/NotificationsPage';
 
 // Parent pages
 import ModernParentDashboard from './pages/parent/ModernParentDashboard';
 import LinkChild from './pages/parent/LinkChild';
 import ModernMyChildren from './pages/parent/ModernMyChildren';
 import ChildProfile from './pages/parent/ChildProfile';
-import ModernAttendanceOverview from './pages/parent/ModernAttendanceOverview';
-import AttendanceDayDetail from './pages/parent/AttendanceDayDetail';
 import ModernBehaviourReport from './pages/parent/ModernBehaviourReport';
 import BehaviourDetails from './pages/parent/BehaviourDetails';
 import ModernViewMerits from './pages/parent/ModernViewMerits';
@@ -74,6 +76,7 @@ import ModernViewDetentions from './pages/parent/ModernViewDetentions';
 import ParentMessages from './pages/parent/ParentMessages';
 import ModernSettings from './pages/parent/ModernSettings';
 import ModernNotifications from './pages/parent/ModernNotifications';
+import ParentNotifications from './pages/parent/NotificationsPage';
 import ModernInterventions from './pages/parent/ModernInterventions';
 import ModernConsequences from './pages/parent/ModernConsequences';
 import LinkSchool from './pages/parent/LinkSchool';
@@ -98,17 +101,19 @@ function App() {
             <Route path="students" element={<Students />} />
             <Route path="students/:id" element={<StudentProfile />} />
             <Route path="classes" element={<Classes />} />
+            <Route path="classes/:id" element={<ClassDetail />} />
             <Route path="teachers" element={<Teachers />} />
             <Route path="teachers/:id" element={<AdminTeacherProfile />} />
             <Route path="parents" element={<Parents />} />
-            <Route path="attendance" element={<AdminAttendanceOverview />} />
             <Route path="discipline" element={<DisciplineCenter />} />
             <Route path="discipline-rules" element={<DisciplineRules />} />
             <Route path="detention-sessions" element={<DetentionSessions />} />
             <Route path="merits" element={<MeritsDemerits />} />
             <Route path="reports" element={<ReportsAnalytics />} />
             <Route path="bulk-import" element={<BulkImport />} />
+            <Route path="smart-import" element={<BulkImportV2 />} />
             <Route path="settings" element={<AdminSettings />} />
+            <Route path="notifications" element={<AdminNotifications />} />
           </Route>
 
           <Route path="/teacher" element={<ProtectedRoute allowedRoles={['teacher']}><TeacherLayout /></ProtectedRoute>}>
@@ -119,12 +124,12 @@ function App() {
             <Route path="behaviour/log" element={<LogIncident />} />
             <Route path="merits" element={<TeacherMerits />} />
             <Route path="merits/award" element={<AwardMerit />} />
-            <Route path="attendance/daily" element={<DailyRegister />} />
             <Route path="detentions" element={<TeacherDetentions />} />
             <Route path="interventions" element={<TeacherInterventions />} />
             <Route path="consequences" element={<TeacherConsequences />} />
             <Route path="settings" element={<TeacherSettings />} />
             <Route path="students/:id" element={<TeacherStudentProfile />} />
+            <Route path="notifications" element={<TeacherNotifications />} />
           </Route>
 
           <Route path="/parent" element={<ProtectedRoute allowedRoles={['parent']}><OnboardingGuard><ModernParentLayout /></OnboardingGuard></ProtectedRoute>}>
@@ -134,8 +139,6 @@ function App() {
             <Route path="link-child" element={<LinkChild />} />
             <Route path="children" element={<ModernMyChildren />} />
             <Route path="children/:id" element={<ChildProfile />} />
-                       <Route path="attendance" element={<ModernAttendanceOverview />} />
-            <Route path="attendance/:date" element={<AttendanceDayDetail />} />
                        <Route path="behaviour" element={<ModernBehaviourReport />} />
             <Route path="behaviour/:id" element={<BehaviourDetails />} />
                        <Route path="merits" element={<ModernViewMerits />} />
@@ -143,7 +146,7 @@ function App() {
                        <Route path="interventions" element={<ModernInterventions />} />
                        <Route path="consequences" element={<ModernConsequences />} />
                        <Route path="messages" element={<ParentMessages />} />
-                       <Route path="notifications" element={<ModernNotifications />} />
+                       <Route path="notifications" element={<ParentNotifications />} />
                        <Route path="profile" element={<ParentProfile />} />
                        <Route path="settings" element={<ModernSettings />} />
           </Route>
@@ -161,6 +164,7 @@ function App() {
             <Route path="analytics" element={<PlatformAnalytics />} />
             <Route path="billing" element={<PlatformBilling />} />
             <Route path="logs" element={<PlatformLogs />} />
+            <Route path="notifications" element={<PlatformNotifications />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/login" replace />} />

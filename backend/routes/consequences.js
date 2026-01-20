@@ -1,6 +1,7 @@
 const express = require('express');
 const { dbAll, dbGet, dbRun } = require('../database/db');
-const { authenticateToken, requireRole, getSchoolId } = require('../middleware/auth');
+const { schemaAll, schemaGet, schemaRun, getSchema } = require('../utils/schemaHelper');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
 
 const router = express.Router();
@@ -8,18 +9,12 @@ const router = express.Router();
 // Get all consequence definitions (admin only)
 router.get('/definitions', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
-    const schoolId = getSchoolId(req);
-    let query = 'SELECT * FROM consequences WHERE 1=1';
-    const params = [];
-
-    if (schoolId) {
-      query += ' AND (school_id = ? OR school_id IS NULL)';
-      params.push(schoolId);
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
     }
 
-    query += ' ORDER BY name';
-
-    const consequences = await dbAll(query, params);
+    const consequences = await schemaAll(req, 'SELECT * FROM consequences ORDER BY name');
     res.json(consequences);
   } catch (error) {
     console.error('Error fetching consequences:', error);
@@ -31,22 +26,25 @@ router.get('/definitions', authenticateToken, requireRole('admin'), async (req, 
 router.post('/definitions', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const { name, description, severity, default_duration, is_active } = req.body;
-    const schoolId = getSchoolId(req);
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    const result = await dbRun(
-      `INSERT INTO consequences (name, description, severity, default_duration, is_active, school_id)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [name, description || null, severity || 'low', default_duration || null, is_active !== undefined ? is_active : 1, schoolId]
+    const result = await schemaRun(req,
+      `INSERT INTO consequences (name, description, severity, default_duration, is_active)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [name, description || null, severity || 'low', default_duration || null, is_active !== undefined ? is_active : 1]
     );
 
-    const consequence = await dbGet('SELECT * FROM consequences WHERE id = ?', [result.id]);
+    const consequence = await schemaGet(req, 'SELECT * FROM consequences WHERE id = $1', [result.id]);
     res.status(201).json(consequence);
   } catch (error) {
-    if (error.message.includes('UNIQUE constraint')) {
+    if (error.message.includes('unique') || error.message.includes('duplicate')) {
       return res.status(400).json({ error: 'Consequence with this name already exists' });
     }
     console.error('Error creating consequence:', error);
@@ -58,18 +56,22 @@ router.post('/definitions', authenticateToken, requireRole('admin'), async (req,
 router.put('/definitions/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const { name, description, severity, default_duration, is_active } = req.body;
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
 
-    await dbRun(
+    await schemaRun(req,
       `UPDATE consequences 
-       SET name = ?, description = ?, severity = ?, default_duration = ?, is_active = ?
-       WHERE id = ?`,
+       SET name = $1, description = $2, severity = $3, default_duration = $4, is_active = $5
+       WHERE id = $6`,
       [name, description || null, severity || 'low', default_duration || null, is_active !== undefined ? is_active : 1, req.params.id]
     );
 
-    const consequence = await dbGet('SELECT * FROM consequences WHERE id = ?', [req.params.id]);
+    const consequence = await schemaGet(req, 'SELECT * FROM consequences WHERE id = $1', [req.params.id]);
     res.json(consequence);
   } catch (error) {
-    if (error.message.includes('UNIQUE constraint')) {
+    if (error.message.includes('unique') || error.message.includes('duplicate')) {
       return res.status(400).json({ error: 'Consequence with this name already exists' });
     }
     console.error('Error updating consequence:', error);
@@ -80,7 +82,11 @@ router.put('/definitions/:id', authenticateToken, requireRole('admin'), async (r
 // Delete consequence definition (admin only)
 router.delete('/definitions/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
-    await dbRun('DELETE FROM consequences WHERE id = ?', [req.params.id]);
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+    await schemaRun(req, 'DELETE FROM consequences WHERE id = $1', [req.params.id]);
     res.json({ message: 'Consequence deleted successfully' });
   } catch (error) {
     console.error('Error deleting consequence:', error);
@@ -92,7 +98,10 @@ router.delete('/definitions/:id', authenticateToken, requireRole('admin'), async
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { student_id, status } = req.query;
-    const schoolId = getSchoolId(req);
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
     
     let query = `
       SELECT sc.*, 
@@ -105,29 +114,25 @@ router.get('/', authenticateToken, async (req, res) => {
       FROM student_consequences sc
       INNER JOIN students s ON sc.student_id = s.id
       LEFT JOIN consequences c ON sc.consequence_id = c.id
-      INNER JOIN users u ON sc.assigned_by = u.id
-      LEFT JOIN users verifier ON sc.completion_verified_by = verifier.id
+      INNER JOIN public.users u ON sc.assigned_by = u.id
+      LEFT JOIN public.users verifier ON sc.completion_verified_by = verifier.id
       WHERE 1=1
     `;
     const params = [];
-
-    if (schoolId) {
-      query += ' AND sc.school_id = ?';
-      params.push(schoolId);
-    }
+    let paramIndex = 1;
 
     if (student_id) {
-      query += ' AND sc.student_id = ?';
+      query += ` AND sc.student_id = $${paramIndex++}`;
       params.push(student_id);
     }
     if (status) {
-      query += ' AND sc.status = ?';
+      query += ` AND sc.status = $${paramIndex++}`;
       params.push(status);
     }
 
     query += ' ORDER BY sc.assigned_date DESC';
 
-    const consequences = await dbAll(query, params);
+    const consequences = await schemaAll(req, query, params);
     res.json(consequences);
   } catch (error) {
     console.error('Error fetching student consequences:', error);
@@ -138,7 +143,11 @@ router.get('/', authenticateToken, async (req, res) => {
 // Get consequence by ID
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const consequence = await dbGet(`
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+    const consequence = await schemaGet(req, `
       SELECT sc.*, 
              s.first_name || ' ' || s.last_name as student_name,
              s.student_id,
@@ -149,9 +158,9 @@ router.get('/:id', authenticateToken, async (req, res) => {
       FROM student_consequences sc
       INNER JOIN students s ON sc.student_id = s.id
       LEFT JOIN consequences c ON sc.consequence_id = c.id
-      INNER JOIN users u ON sc.assigned_by = u.id
-      LEFT JOIN users verifier ON sc.completion_verified_by = verifier.id
-      WHERE sc.id = ?
+      INNER JOIN public.users u ON sc.assigned_by = u.id
+      LEFT JOIN public.users verifier ON sc.completion_verified_by = verifier.id
+      WHERE sc.id = $1
     `, [req.params.id]);
 
     if (!consequence) {
@@ -168,15 +177,19 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Get student consequences by student ID
 router.get('/student/:studentId', authenticateToken, async (req, res) => {
   try {
-    const consequences = await dbAll(`
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+    const consequences = await schemaAll(req, `
       SELECT sc.*, 
              c.name as consequence_name,
              c.severity,
              u.name as assigned_by_name
       FROM student_consequences sc
       LEFT JOIN consequences c ON sc.consequence_id = c.id
-      INNER JOIN users u ON sc.assigned_by = u.id
-      WHERE sc.student_id = ?
+      INNER JOIN public.users u ON sc.assigned_by = u.id
+      WHERE sc.student_id = $1
       ORDER BY sc.assigned_date DESC
     `, [req.params.studentId]);
     res.json(consequences);
@@ -190,35 +203,35 @@ router.get('/student/:studentId', authenticateToken, async (req, res) => {
 router.post('/assign', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
   try {
     const { student_id, consequence_id, incident_id, assigned_date, due_date, notes } = req.body;
-    const schoolId = getSchoolId(req);
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
 
     if (!student_id || !assigned_date) {
       return res.status(400).json({ error: 'Student ID and assigned date are required' });
     }
 
-    // Verify student is in the same school
-    const student = await dbGet('SELECT id, school_id FROM students WHERE id = ?', [student_id]);
+    // Verify student exists in this school's schema
+    const student = await schemaGet(req, 'SELECT id FROM students WHERE id = $1', [student_id]);
     if (!student) {
       return res.status(404).json({ error: 'Student not found' });
     }
-    if (student.school_id !== schoolId) {
-      return res.status(403).json({ error: 'You can only assign consequences to students in your school' });
-    }
 
-    const result = await dbRun(
-      `INSERT INTO student_consequences (student_id, consequence_id, incident_id, assigned_by, assigned_date, due_date, notes, parent_acknowledged, parent_acknowledged_at, parent_notes, completion_verified, completion_verified_by, completion_verified_at, school_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL, NULL, 0, NULL, NULL, ?)`,
-      [student_id, consequence_id || null, incident_id || null, req.user.id, assigned_date, due_date || null, notes || null, schoolId]
+    const result = await schemaRun(req,
+      `INSERT INTO student_consequences (student_id, consequence_id, incident_id, assigned_by, assigned_date, due_date, notes, parent_acknowledged, parent_acknowledged_at, parent_notes, completion_verified, completion_verified_by, completion_verified_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, false, NULL, NULL, false, NULL, NULL) RETURNING id`,
+      [student_id, consequence_id || null, incident_id || null, req.user.id, assigned_date, due_date || null, notes || null]
     );
 
-    const consequence = await dbGet('SELECT * FROM student_consequences WHERE id = ?', [result.id]);
+    const consequence = await schemaGet(req, 'SELECT * FROM student_consequences WHERE id = $1', [result.id]);
     
     // Create notification for parent
     try {
-      const student = await dbGet('SELECT parent_id FROM students WHERE id = ?', [student_id]);
-      if (student && student.parent_id) {
+      const studentWithParent = await schemaGet(req, 'SELECT parent_id FROM students WHERE id = $1', [student_id]);
+      if (studentWithParent && studentWithParent.parent_id) {
         await createNotification(
-          student.parent_id,
+          studentWithParent.parent_id,
           'consequence',
           'Consequence Assigned',
           `A consequence has been assigned to your child`,
@@ -242,27 +255,32 @@ router.post('/assign', authenticateToken, requireRole('admin', 'teacher'), async
 router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
     const { status, notes, due_date, completion_verified, completion_verified_by } = req.body;
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
 
     const updates = [];
     const params = [];
+    let paramIndex = 1;
 
     if (status !== undefined) {
-      updates.push('status = ?');
+      updates.push(`status = $${paramIndex++}`);
       params.push(status);
     }
     if (notes !== undefined) {
-      updates.push('notes = ?');
+      updates.push(`notes = $${paramIndex++}`);
       params.push(notes || null);
     }
     if (due_date !== undefined) {
-      updates.push('due_date = ?');
+      updates.push(`due_date = $${paramIndex++}`);
       params.push(due_date || null);
     }
     if (completion_verified !== undefined) {
-      updates.push('completion_verified = ?');
-      updates.push('completion_verified_by = ?');
+      updates.push(`completion_verified = $${paramIndex++}`);
+      updates.push(`completion_verified_by = $${paramIndex++}`);
       updates.push('completion_verified_at = CURRENT_TIMESTAMP');
-      params.push(completion_verified ? 1 : 0);
+      params.push(completion_verified ? true : false);
       params.push(completion_verified ? (completion_verified_by || req.user.id) : null);
     }
 
@@ -272,14 +290,14 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
 
     params.push(req.params.id);
 
-    await dbRun(
+    await schemaRun(req,
       `UPDATE student_consequences 
        SET ${updates.join(', ')}
-       WHERE id = ?`,
+       WHERE id = $${paramIndex}`,
       params
     );
 
-    const consequence = await dbGet('SELECT * FROM student_consequences WHERE id = ?', [req.params.id]);
+    const consequence = await schemaGet(req, 'SELECT * FROM student_consequences WHERE id = $1', [req.params.id]);
     res.json(consequence);
   } catch (error) {
     console.error('Error updating consequence:', error);
@@ -290,12 +308,16 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
 // Mark consequence as completed (admin only)
 router.put('/:id/complete', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
-    await dbRun(
-      'UPDATE student_consequences SET status = ? WHERE id = ?',
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+    await schemaRun(req,
+      'UPDATE student_consequences SET status = $1 WHERE id = $2',
       ['completed', req.params.id]
     );
 
-    const consequence = await dbGet('SELECT * FROM student_consequences WHERE id = ?', [req.params.id]);
+    const consequence = await schemaGet(req, 'SELECT * FROM student_consequences WHERE id = $1', [req.params.id]);
     res.json(consequence);
   } catch (error) {
     console.error('Error completing consequence:', error);
@@ -308,13 +330,17 @@ router.put('/:id/acknowledge', authenticateToken, async (req, res) => {
   try {
     const { parent_notes } = req.body;
     const userId = req.user.id;
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
 
     // Verify this is the parent of the student
-    const consequence = await dbGet(`
+    const consequence = await schemaGet(req, `
       SELECT sc.*, s.parent_id 
       FROM student_consequences sc
       INNER JOIN students s ON sc.student_id = s.id
-      WHERE sc.id = ?
+      WHERE sc.id = $1
     `, [req.params.id]);
 
     if (!consequence) {
@@ -325,16 +351,16 @@ router.put('/:id/acknowledge', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'You can only acknowledge consequences for your own children' });
     }
 
-    await dbRun(
+    await schemaRun(req,
       `UPDATE student_consequences 
-       SET parent_acknowledged = 1, 
+       SET parent_acknowledged = true, 
            parent_acknowledged_at = CURRENT_TIMESTAMP,
-           parent_notes = ?
-       WHERE id = ?`,
+           parent_notes = $1
+       WHERE id = $2`,
       [parent_notes || null, req.params.id]
     );
 
-    const updated = await dbGet('SELECT * FROM student_consequences WHERE id = ?', [req.params.id]);
+    const updated = await schemaGet(req, 'SELECT * FROM student_consequences WHERE id = $1', [req.params.id]);
     res.json(updated);
   } catch (error) {
     console.error('Error acknowledging consequence:', error);
@@ -345,7 +371,11 @@ router.put('/:id/acknowledge', authenticateToken, async (req, res) => {
 // Delete student consequence (admin only)
 router.delete('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
-    await dbRun('DELETE FROM student_consequences WHERE id = ?', [req.params.id]);
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+    await schemaRun(req, 'DELETE FROM student_consequences WHERE id = $1', [req.params.id]);
     res.json({ message: 'Consequence deleted successfully' });
   } catch (error) {
     console.error('Error deleting consequence:', error);

@@ -127,22 +127,31 @@ const AuthCallback: React.FC = () => {
       console.log('AuthCallback: User authenticated:', user.email, 'Role:', user.role);
       console.log('AuthCallback: User school_id:', user.school_id, 'Children:', user.children?.length || 0);
       
+      // Check if this is a signup (new user) vs login (existing user)
+      const isSignup = searchParams.get('signup') === 'true';
+      
       // Check if parent user needs onboarding (no school or no children linked)
       const needsOnboarding = user.role === 'parent' && (!user.school_id || !user.children || user.children.length === 0);
-      const onboardingCompleted = localStorage.getItem('parent_onboarding_completed') === 'true';
       
       setStatus('success');
-      setMessage(needsOnboarding ? 'Account created successfully!' : 'Signed in successfully!');
+      setMessage(needsOnboarding || isSignup ? 'Account created successfully!' : 'Signed in successfully!');
       
       setTimeout(() => {
+        // Set a flag to prevent OnboardingGuard from interfering
+        sessionStorage.setItem('auth_callback_redirect', 'true');
+        
         // Redirect based on user role and onboarding status
-        if (user.role === 'parent' && needsOnboarding && !onboardingCompleted) {
-          console.log('AuthCallback: Redirecting to parent onboarding');
-          navigate('/parent/onboarding');
+        // For new signups OR users missing school/children, go to onboarding
+        if (user.role === 'parent' && (isSignup || needsOnboarding)) {
+          console.log('AuthCallback: Redirecting to parent onboarding (isSignup:', isSignup, 'needsOnboarding:', needsOnboarding, ')');
+          navigate('/parent/onboarding', { replace: true });
         } else {
           console.log('AuthCallback: Redirecting to dashboard:', `/${user.role}`);
-          navigate(`/${user.role}`);
+          navigate(`/${user.role}`, { replace: true });
         }
+        
+        // Clear the flag after navigation
+        setTimeout(() => sessionStorage.removeItem('auth_callback_redirect'), 500);
       }, 1500);
     } else {
       console.log('AuthCallback: No user yet, waiting...');

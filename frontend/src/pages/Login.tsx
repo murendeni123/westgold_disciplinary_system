@@ -43,6 +43,20 @@ const Login: React.FC = () => {
       await login(email, password);
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const role = user.role || 'admin';
+      
+      // Check if parent user needs onboarding
+      if (role === 'parent') {
+        const needsSchool = !user.school_id;
+        const needsChildren = !user.children || user.children.length === 0;
+        
+        // If user needs school or children, redirect to onboarding
+        // This ensures even if the flag is set, we check actual data
+        if (needsSchool || needsChildren) {
+          navigate('/parent/onboarding');
+          return;
+        }
+      }
+      
       navigate(`/${role}`);
     } catch (err: any) {
       setError(err.message || 'Login failed');
@@ -392,32 +406,6 @@ const Login: React.FC = () => {
               </Link>
             </form>
 
-            {/* Demo Credentials */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100"
-            >
-              <div className="flex items-center space-x-2 mb-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                <p className="text-sm font-semibold text-gray-700">Demo Credentials</p>
-              </div>
-              <div className="grid grid-cols-1 gap-2 text-xs">
-                <div className="flex items-center justify-between p-2 bg-white rounded-lg">
-                  <span className="text-gray-500">Admin</span>
-                  <code className="text-blue-600 font-mono">admin@school.com / admin123</code>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-white rounded-lg">
-                  <span className="text-gray-500">Teacher</span>
-                  <code className="text-purple-600 font-mono">teacher1@school.com / teacher123</code>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-white rounded-lg">
-                  <span className="text-gray-500">Parent</span>
-                  <code className="text-pink-600 font-mono">parent1@email.com / parent123</code>
-                </div>
-              </div>
-            </motion.div>
           </motion.div>
 
           {/* Footer */}

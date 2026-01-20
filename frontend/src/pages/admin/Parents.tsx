@@ -73,61 +73,138 @@ const Parents: React.FC = () => {
           />
         </div>
       ) : (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-3">
-              <div className="p-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500">
-                <Users className="text-white" size={24} />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900">All Parents ({parents.length})</h2>
-            </div>
-          </div>
-          <Table
-          columns={[
-            ...columns,
-            {
-              key: 'actions',
-              label: 'Actions',
-              render: (_value: any, row: any) => (
-                <div className="flex space-x-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedParent(row);
-                      setIsModalOpen(true);
-                    }}
-                  >
-                    <Eye size={16} className="mr-1" />
-                    View Profile
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.location.href = `mailto:${row.email}`;
-                    }}
-                  >
-                    <Mail size={16} />
-                  </Button>
+        <>
+          {/* Stats Cards */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          >
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-purple-100 text-sm font-medium">Total Parents</p>
+                  <p className="text-4xl font-bold mt-2">{parents.length}</p>
                 </div>
-              ),
-            },
-          ]}
-          data={parents.map((parent) => ({
-            ...parent,
-            children_count: parent.children?.length || 0,
-          }))}
-          onRowClick={handleRowClick}
-        />
-        </motion.div>
+                <Users size={48} className="text-purple-200 opacity-50" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-blue-100 text-sm font-medium">Total Children</p>
+                  <p className="text-4xl font-bold mt-2">
+                    {parents.reduce((sum, p) => sum + (p.children?.length || 0), 0)}
+                  </p>
+                </div>
+                <Users size={48} className="text-blue-200 opacity-50" />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-6 text-white shadow-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-amber-100 text-sm font-medium">Avg Children</p>
+                  <p className="text-4xl font-bold mt-2">
+                    {parents.length > 0 
+                      ? (parents.reduce((sum, p) => sum + (p.children?.length || 0), 0) / parents.length).toFixed(1)
+                      : 0}
+                  </p>
+                </div>
+                <Users size={48} className="text-amber-200 opacity-50" />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Parents Grid */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-3 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600">
+                  <Users className="text-white" size={24} />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">All Parents</h2>
+              </div>
+            </div>
+
+            {parents.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <Users size={48} className="mx-auto mb-4 text-gray-300" />
+                <p>No parents found</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {parents.map((parent, index) => (
+                  <motion.div
+                    key={parent.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.05 * index }}
+                    whileHover={{ scale: 1.02 }}
+                    onClick={() => handleRowClick(parent)}
+                    className="p-6 border-2 border-gray-200 rounded-xl hover:border-purple-400 hover:shadow-lg transition-all cursor-pointer bg-white"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-900">{parent.name}</h3>
+                        <p className="text-sm text-gray-500 mt-1 truncate">
+                          {parent.email}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                        <span className="text-sm text-gray-600">Children</span>
+                        <span className="text-lg font-bold text-purple-600">
+                          {parent.children?.length || 0}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                        <span className="text-sm text-gray-600">Joined</span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {new Date(parent.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-100">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedParent(parent);
+                          setIsModalOpen(true);
+                        }}
+                        className="flex-1 px-3 py-2 text-sm bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors"
+                      >
+                        <Eye size={16} className="inline mr-1" />
+                        View
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.location.href = `mailto:${parent.email}`;
+                        }}
+                        className="flex-1 px-3 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                      >
+                        <Mail size={16} className="inline mr-1" />
+                        Email
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        </>
       )}
 
       <ParentProfileModal

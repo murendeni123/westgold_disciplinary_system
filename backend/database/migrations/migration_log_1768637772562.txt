@@ -1,0 +1,73 @@
+[2026-01-17T08:15:43.456Z] Step 1: Initializing public schema...
+[2026-01-17T08:15:43.906Z] Warning: column "primary_school_id" does not exist
+[2026-01-17T08:15:44.092Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:44.275Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:44.502Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:44.688Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:44.911Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:45.118Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:45.323Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:45.508Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:45.691Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:45.881Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:46.065Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:46.347Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:46.583Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:46.874Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:47.062Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:47.247Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T08:15:47.732Z] Warning: unterminated dollar-quoted string at or near "$$ LANGUAGE plpgsql"
+[2026-01-17T08:15:47.986Z] Warning: prepared statement "format" does not exist
+[2026-01-17T08:15:48.422Z] Warning: unterminated dollar-quoted string at or near "$$ LANGUAGE plpgsql"
+[2026-01-17T08:15:48.906Z] Warning: unterminated dollar-quoted string at or near "$$ LANGUAGE plpgsql"
+[2026-01-17T08:15:48.906Z] Public schema initialized.
+[2026-01-17T08:15:48.908Z] Step 2: Migrating schools...
+[2026-01-17T08:15:49.336Z] Step 3: Creating school schemas...
+[2026-01-17T08:15:49.771Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:50.032Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:50.216Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:50.400Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:50.652Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:50.851Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:51.159Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:51.365Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:51.549Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:51.776Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:51.981Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:52.170Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:52.353Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:52.592Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:52.796Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:53.005Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:53.209Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:53.393Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:53.616Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:53.825Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:54.008Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:54.192Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:54.435Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:54.640Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:54.844Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:55.049Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:55.281Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:55.571Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:55.766Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:56.013Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:56.198Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:56.483Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:56.666Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:56.854Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:57.099Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:57.302Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:57.490Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:57.676Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:57.917Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T08:15:57.917Z] Created schema: undefined
+[2026-01-17T08:15:57.917Z] Step 4: Migrating users...
+[2026-01-17T08:15:58.127Z] No users to migrate or already migrated.
+[2026-01-17T08:15:58.127Z] Step 5: Migrating school data to schemas...
+[2026-01-17T08:15:58.127Z] Migrating data for school: undefined (undefined)
+[2026-01-17T08:16:10.820Z] Step 6: Creating platform admin...
+[2026-01-17T08:16:11.006Z] Platform admin already exists.
+[2026-01-17T08:16:11.007Z] Step 7: Updating sequences...
+[2026-01-17T08:16:12.372Z] Sequences updated.

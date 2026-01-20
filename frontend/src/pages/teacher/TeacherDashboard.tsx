@@ -14,7 +14,6 @@ const TeacherDashboard: React.FC = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [behaviorData, setBehaviorData] = useState<any[]>([]);
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [detentionNotification, setDetentionNotification] = useState<any>(null);
 
@@ -22,7 +21,6 @@ const TeacherDashboard: React.FC = () => {
     fetchStats();
     fetchNotifications();
     fetchBehaviorData();
-    fetchAttendanceData();
     checkDetentionDuty();
   }, [user]);
 
@@ -123,41 +121,6 @@ const TeacherDashboard: React.FC = () => {
     }
   };
 
-  const fetchAttendanceData = async () => {
-    try {
-      // Get attendance for last 30 days
-      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const response = await api.getAttendance({ start_date: startDate });
-      const attendanceRecords = response.data;
-
-      // Group by date
-      const dailyData: Record<string, { present: number; absent: number; late: number; total: number }> = {};
-
-      attendanceRecords.forEach((record: any) => {
-        const date = new Date(record.attendance_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        if (!dailyData[date]) {
-          dailyData[date] = { present: 0, absent: 0, late: 0, total: 0 };
-        }
-        dailyData[date].total++;
-        if (record.status === 'present') dailyData[date].present++;
-        else if (record.status === 'absent') dailyData[date].absent++;
-        else if (record.status === 'late') dailyData[date].late++;
-      });
-
-      const chartData = Object.entries(dailyData)
-        .map(([date, data]) => ({
-          date,
-          ...data,
-        }))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .slice(-14); // Last 14 days
-
-      setAttendanceData(chartData);
-    } catch (error) {
-      console.error('Error fetching attendance data:', error);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -184,13 +147,6 @@ const TeacherDashboard: React.FC = () => {
       icon: AlertTriangle,
       color: 'from-red-500 to-pink-500',
       bgColor: 'from-red-50 to-pink-50',
-    },
-    {
-      title: "Today's Attendance",
-      value: `${stats?.todayAttendance?.present || 0}/${stats?.todayAttendance?.total || 0}`,
-      icon: Calendar,
-      color: 'from-green-500 to-emerald-500',
-      bgColor: 'from-green-50 to-emerald-50',
     },
     {
       title: 'Merits Awarded',
@@ -284,7 +240,6 @@ const TeacherDashboard: React.FC = () => {
           {[
             { label: 'Log Incident', desc: 'Record a behavior incident', icon: AlertTriangle, color: 'from-red-500 to-pink-500', path: '/teacher/behaviour/log' },
             { label: 'Award Merit', desc: 'Recognize positive behavior', icon: Award, color: 'from-green-500 to-emerald-500', path: '/teacher/merits/award' },
-            { label: 'Take Attendance', desc: 'Mark daily attendance', icon: Calendar, color: 'from-blue-500 to-cyan-500', path: '/teacher/attendance/daily' },
           ].map((action, index) => {
             const Icon = action.icon;
             return (
@@ -407,106 +362,6 @@ const TeacherDashboard: React.FC = () => {
           </div>
         )}
       </motion.div>
-
-      {/* Attendance Analytics */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Attendance Trends (Last 14 Days)</h2>
-          <Calendar className="text-emerald-600" size={24} />
-        </div>
-        {attendanceData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={attendanceData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="date" stroke="#6b7280" />
-              <YAxis stroke="#6b7280" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                  border: 'none',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                }}
-              />
-              <Legend />
-              <Bar dataKey="present" stackId="a" fill="url(#presentGradient)" name="Present" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="late" stackId="a" fill="url(#lateGradient)" name="Late" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="absent" stackId="a" fill="url(#absentGradient)" name="Absent" radius={[8, 8, 0, 0]} />
-              <defs>
-                <linearGradient id="presentGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10B981" />
-                  <stop offset="100%" stopColor="#34D399" />
-                </linearGradient>
-                <linearGradient id="lateGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#F59E0B" />
-                  <stop offset="100%" stopColor="#FBBF24" />
-                </linearGradient>
-                <linearGradient id="absentGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#EF4444" />
-                  <stop offset="100%" stopColor="#F87171" />
-                </linearGradient>
-              </defs>
-            </BarChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="flex items-center justify-center h-[300px] text-gray-500">
-            <div className="text-center">
-              <Calendar className="mx-auto mb-2 text-gray-400" size={48} />
-              <p>No attendance data available</p>
-            </div>
-          </div>
-        )}
-      </motion.div>
-
-      {/* Today's Attendance Pie Chart */}
-      {stats?.todayAttendance && stats.todayAttendance.total > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9 }}
-          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Today's Attendance Overview</h2>
-            <Calendar className="text-emerald-600" size={24} />
-          </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={[
-                  { name: 'Present', value: stats.todayAttendance.present || 0 },
-                  { name: 'Absent', value: stats.todayAttendance.absent || 0 },
-                  { name: 'Late', value: stats.todayAttendance.late || 0 },
-                ]}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                <Cell fill="#10B981" />
-                <Cell fill="#EF4444" />
-                <Cell fill="#F59E0B" />
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
-                  border: 'none',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </motion.div>
-      )}
 
       {/* Notifications */}
       {notifications.length > 0 && (

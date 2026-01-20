@@ -1,27 +1,17 @@
 const express = require('express');
 const { dbGet, dbRun, dbAll } = require('../database/db');
-const { authenticateToken, requireRole, getSchoolId } = require('../middleware/auth');
+const { schemaAll, schemaGet, schemaRun, getSchema } = require('../utils/schemaHelper');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
 // Get parent profile (current user)
 router.get('/profile/me', authenticateToken, requireRole('parent'), async (req, res) => {
     try {
-        console.log('Fetching parent profile for user ID:', req.user.id);
-        
         const profile = await dbGet(
-            `SELECT u.id, u.email, u.name,
-                    p.phone, p.work_phone, p.relationship_to_child,
-                    p.emergency_contact_1_name, p.emergency_contact_1_phone,
-                    p.emergency_contact_2_name, p.emergency_contact_2_phone,
-                    p.home_address, p.city, p.postal_code
-             FROM users u
-             LEFT JOIN parents p ON p.user_id = u.id
-             WHERE u.id = ? AND u.role = 'parent'`,
+            `SELECT id, email, name, role FROM users WHERE id = $1 AND role = 'parent'`,
             [req.user.id]
         );
-
-        console.log('Parent profile data:', profile);
 
         if (!profile) {
             return res.status(404).json({ error: 'Parent not found' });
@@ -37,108 +27,22 @@ router.get('/profile/me', authenticateToken, requireRole('parent'), async (req, 
 // Update parent profile (current user)
 router.put('/profile/me', authenticateToken, requireRole('parent'), async (req, res) => {
     try {
-        const {
-            name,
-            email,
-            phone,
-            work_phone,
-            relationship_to_child,
-            emergency_contact_1_name,
-            emergency_contact_1_phone,
-            emergency_contact_2_name,
-            emergency_contact_2_phone,
-            home_address,
-            city,
-            postal_code,
-        } = req.body;
+        const { name, email } = req.body;
 
         if (!name || !email) {
             return res.status(400).json({ error: 'Name and email are required' });
         }
 
-        if (!phone) {
-            return res.status(400).json({ error: 'Phone number is required' });
-        }
-
-        if (!relationship_to_child) {
-            return res.status(400).json({ error: 'Relationship to child is required' });
-        }
-
-        if (!emergency_contact_1_name || !emergency_contact_1_phone) {
-            return res.status(400).json({ error: 'Emergency contact 1 name and phone are required' });
-        }
-
-        if (!emergency_contact_2_name || !emergency_contact_2_phone) {
-            return res.status(400).json({ error: 'Emergency contact 2 name and phone are required' });
-        }
-
-        if (!home_address) {
-            return res.status(400).json({ error: 'Home address is required' });
-        }
-
         // Check if email is already taken by another user
-        const existingUser = await dbGet('SELECT id FROM users WHERE email = ? AND id != ?', [email, req.user.id]);
+        const existingUser = await dbGet('SELECT id FROM public.users WHERE email = $1 AND id != $2', [email, req.user.id]);
         if (existingUser) {
             return res.status(400).json({ error: 'Email already in use' });
         }
 
-        await dbRun('UPDATE users SET name = ?, email = ? WHERE id = ?', [name, email, req.user.id]);
-
-        // Upsert into parents table
-        await dbRun(
-            `INSERT INTO parents (
-                user_id,
-                phone,
-                work_phone,
-                relationship_to_child,
-                emergency_contact_1_name,
-                emergency_contact_1_phone,
-                emergency_contact_2_name,
-                emergency_contact_2_phone,
-                home_address,
-                city,
-                postal_code,
-                school_id,
-                updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT (user_id) DO UPDATE SET
-                phone = EXCLUDED.phone,
-                work_phone = EXCLUDED.work_phone,
-                relationship_to_child = EXCLUDED.relationship_to_child,
-                emergency_contact_1_name = EXCLUDED.emergency_contact_1_name,
-                emergency_contact_1_phone = EXCLUDED.emergency_contact_1_phone,
-                emergency_contact_2_name = EXCLUDED.emergency_contact_2_name,
-                emergency_contact_2_phone = EXCLUDED.emergency_contact_2_phone,
-                home_address = EXCLUDED.home_address,
-                city = EXCLUDED.city,
-                postal_code = EXCLUDED.postal_code,
-                school_id = EXCLUDED.school_id,
-                updated_at = CURRENT_TIMESTAMP`,
-            [
-                req.user.id,
-                phone,
-                work_phone || null,
-                relationship_to_child,
-                emergency_contact_1_name,
-                emergency_contact_1_phone,
-                emergency_contact_2_name,
-                emergency_contact_2_phone,
-                home_address,
-                city || null,
-                postal_code || null,
-                req.user.school_id || null,
-            ]
-        );
+        await dbRun('UPDATE public.users SET name = $1, email = $2 WHERE id = $3', [name, email, req.user.id]);
 
         const updatedProfile = await dbGet(
-            `SELECT u.id, u.email, u.name,
-                    p.phone, p.work_phone, p.relationship_to_child,
-                    p.emergency_contact_1_name, p.emergency_contact_1_phone,
-                    p.emergency_contact_2_name, p.emergency_contact_2_phone,
-                    p.home_address, p.city, p.postal_code
-             FROM users u
-             LEFT JOIN parents p ON p.user_id = u.id
-             WHERE u.id = ? AND u.role = 'parent'`,
+            `SELECT id, email, name, role FROM public.users WHERE id = $1 AND role = 'parent'`,
             [req.user.id]
         );
 
@@ -152,36 +56,28 @@ router.put('/profile/me', authenticateToken, requireRole('parent'), async (req, 
 // Get all parents (admin only)
 router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
-        const schoolId = getSchoolId(req);
-
-        let query = `
-            SELECT u.id, u.email, u.name, u.role, u.created_at,
-                   (SELECT COUNT(*) FROM students WHERE parent_id = u.id) as children_count
-            FROM users u
-            WHERE u.role = 'parent'
-        `;
-        const params = [];
-
-        // Platform admin can view across schools
-        if (req.user?.role !== 'platform_admin') {
-            if (!schoolId) {
-                return res.status(403).json({ error: 'School context required' });
-            }
-            query += ' AND u.school_id = ?';
-            params.push(schoolId);
+        const schema = getSchema(req);
+        if (!schema) {
+            return res.status(403).json({ error: 'School context required' });
         }
 
-        query += ' ORDER BY u.name';
-
-        const parents = await dbAll(query, params);
+        // Get parents who have children in this school's schema
+        const parents = await schemaAll(req, `
+            SELECT DISTINCT u.id, u.email, u.name, u.role, u.created_at,
+                   (SELECT COUNT(*) FROM students WHERE parent_id = u.id) as children_count
+            FROM public.users u
+            INNER JOIN students s ON s.parent_id = u.id
+            WHERE u.role = 'parent'
+            ORDER BY u.name
+        `);
         
         // Get children for each parent
         for (const parent of parents) {
-            const children = await dbAll(`
+            const children = await schemaAll(req, `
                 SELECT s.*, c.class_name 
                 FROM students s 
                 LEFT JOIN classes c ON s.class_id = c.id 
-                WHERE s.parent_id = ?
+                WHERE s.parent_id = $1 AND s.is_active = true
             `, [parent.id]);
             parent.children = children;
         }
@@ -196,28 +92,28 @@ router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
 // Get parent by ID (admin only)
 router.get('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
-        const schoolId = getSchoolId(req);
-        const parent = await dbGet('SELECT * FROM users WHERE id = ? AND role = ?', [req.params.id, 'parent']);
+        const schema = getSchema(req);
+        if (!schema) {
+            return res.status(403).json({ error: 'School context required' });
+        }
+
+        const parent = await dbGet("SELECT * FROM public.users WHERE id = $1 AND role = 'parent'", [req.params.id]);
         
         if (!parent) {
             return res.status(404).json({ error: 'Parent not found' });
         }
 
-        if (req.user?.role !== 'platform_admin') {
-            if (!schoolId) {
-                return res.status(403).json({ error: 'School context required' });
-            }
-            if (parent.school_id !== schoolId) {
-                return res.status(404).json({ error: 'Parent not found' });
-            }
-        }
-        
-        const children = await dbAll(`
+        // Check if parent has children in this school
+        const children = await schemaAll(req, `
             SELECT s.*, c.class_name 
             FROM students s 
             LEFT JOIN classes c ON s.class_id = c.id 
-            WHERE s.parent_id = ?
+            WHERE s.parent_id = $1 AND s.is_active = true
         `, [req.params.id]);
+
+        if (children.length === 0) {
+            return res.status(404).json({ error: 'Parent not found in this school' });
+        }
         
         parent.children = children;
         res.json(parent);
@@ -230,14 +126,19 @@ router.get('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
 // Link child using parent link code
 router.post('/link-child', authenticateToken, requireRole('parent'), async (req, res) => {
     try {
+        const schema = getSchema(req);
+        if (!schema) {
+            return res.status(403).json({ error: 'School context required' });
+        }
+
         const { link_code } = req.body;
 
         if (!link_code) {
             return res.status(400).json({ error: 'Link code is required' });
         }
 
-        const student = await dbGet(
-            'SELECT * FROM students WHERE parent_link_code = ?',
+        const student = await schemaGet(req,
+            'SELECT * FROM students WHERE parent_link_code = $1',
             [link_code]
         );
 
@@ -245,35 +146,13 @@ router.post('/link-child', authenticateToken, requireRole('parent'), async (req,
             return res.status(404).json({ error: 'Invalid link code' });
         }
 
-        // Check if parent has linked a school
-        if (!req.user.school_id) {
-            return res.status(400).json({ 
-                error: 'You must link a school first before linking a child. Please go to "Link School" and link your school.' 
-            });
-        }
-
-        // Check if student belongs to the same school as the parent
-        if (student.school_id && student.school_id !== req.user.school_id) {
-            return res.status(403).json({ 
-                error: 'This child belongs to a different school. Please link that school first before linking this child.' 
-            });
-        }
-
-        // If student has no school_id but parent has one, assign the student to parent's school
-        if (!student.school_id && req.user.school_id) {
-            await dbRun(
-                'UPDATE students SET school_id = ? WHERE id = ?',
-                [req.user.school_id, student.id]
-            );
-        }
-
         // Update student's parent_id
-        await dbRun(
-            'UPDATE students SET parent_id = ? WHERE id = ?',
+        await schemaRun(req,
+            'UPDATE students SET parent_id = $1 WHERE id = $2',
             [req.user.id, student.id]
         );
 
-        const updatedStudent = await dbGet('SELECT * FROM students WHERE id = ?', [student.id]);
+        const updatedStudent = await schemaGet(req, 'SELECT * FROM students WHERE id = $1', [student.id]);
         res.json({ message: 'Child linked successfully', student: updatedStudent });
     } catch (error) {
         console.error('Error linking child:', error);
@@ -281,7 +160,7 @@ router.post('/link-child', authenticateToken, requireRole('parent'), async (req,
     }
 });
 
-// Link school by code only
+// Link school by code
 router.post('/link-school', authenticateToken, requireRole('parent'), async (req, res) => {
     try {
         const { school_code } = req.body;
@@ -290,89 +169,45 @@ router.post('/link-school', authenticateToken, requireRole('parent'), async (req
             return res.status(400).json({ error: 'School code is required' });
         }
 
-        // Try to find school by code or ID
-        let school;
+        // Try to find school by subdomain or schema_name
+        let school = await dbGet('SELECT * FROM public.schools WHERE subdomain = $1 OR schema_name = $1', [school_code]);
 
-        // First, if the code looks numeric, try it as an ID
-        const numericCode = parseInt(school_code, 10);
-        if (!isNaN(numericCode)) {
-            school = await dbGet('SELECT * FROM schools WHERE id = ?', [numericCode]);
-        }
-
-        // If not found or the code is non-numeric, try matching by dedicated code field
+        // If not found, try by ID
         if (!school) {
-            try {
-                school = await dbGet('SELECT * FROM schools WHERE code = ?', [school_code]);
-            } catch (err) {
-                console.error('Error looking up school by code:', err);
+            const numericCode = parseInt(school_code, 10);
+            if (!isNaN(numericCode)) {
+                school = await dbGet('SELECT * FROM public.schools WHERE id = $1', [numericCode]);
             }
         }
 
-        // As a final fallback, try matching by name pattern (case-insensitive)
+        // Try by name pattern
         if (!school) {
-            try {
-                school = await dbGet('SELECT * FROM schools WHERE name ILIKE ?', [`%${school_code}%`]);
-            } catch (err) {
-                console.error('Error looking up school by name:', err);
-            }
+            school = await dbGet('SELECT * FROM public.schools WHERE name ILIKE $1', [`%${school_code}%`]);
         }
 
         if (!school) {
             return res.status(404).json({ error: 'Invalid school code. Please check and try again.' });
         }
 
-        // Check if user is already linked to this school (handle missing table gracefully)
-        let existingLink = null;
-        let useUserSchoolsTable = true;
-
-        try {
-            existingLink = await dbGet(
-                'SELECT * FROM user_schools WHERE user_id = ? AND school_id = ?',
-                [req.user.id, school.id]
-            );
-        } catch (err) {
-            // user_schools table doesn't exist, fall back to users.school_id
-            console.log('user_schools table not available, using users.school_id fallback');
-            useUserSchoolsTable = false;
-        }
-
-        if (!existingLink) {
-            if (useUserSchoolsTable) {
-                // Create link in user_schools table
-                try {
-                    await dbRun(
-                        'INSERT INTO user_schools (user_id, school_id) VALUES (?, ?)',
-                        [req.user.id, school.id]
-                    );
-                } catch (err) {
-                    // If insert fails (e.g. duplicate), just update user's school_id
-                    console.log('user_schools insert failed, updating users.school_id:', err.message);
-                    await dbRun(
-                        'UPDATE users SET school_id = ? WHERE id = ?',
-                        [school.id, req.user.id]
-                    );
-                }
-            } else {
-                // Fallback: just update user's school_id directly
-                await dbRun(
-                    'UPDATE users SET school_id = ? WHERE id = ?',
-                    [school.id, req.user.id]
-                );
-            }
-        }
-
-        // Also update the user's current school_id for convenience
-        await dbRun(
-            'UPDATE users SET school_id = ? WHERE id = ?',
-            [school.id, req.user.id]
+        // Check if user is already linked to this school
+        const existingLink = await dbGet(
+            'SELECT * FROM public.user_schools WHERE user_id = $1 AND school_id = $2',
+            [req.user.id, school.id]
         );
 
-        // Keep parents table in sync (if present)
-        try {
-            await dbRun('UPDATE parents SET school_id = ? WHERE user_id = ?', [school.id, req.user.id]);
-        } catch (err) {
-            console.log('Could not update parents.school_id (table may not exist):', err.message);
+        if (!existingLink) {
+            // Create link in user_schools table
+            await dbRun(
+                'INSERT INTO public.user_schools (user_id, school_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                [req.user.id, school.id]
+            );
         }
+
+        // Update user's primary school
+        await dbRun(
+            'UPDATE public.users SET primary_school_id = $1 WHERE id = $2',
+            [school.id, req.user.id]
+        );
 
         res.json({ message: 'School linked successfully', school });
     } catch (error) {
@@ -384,45 +219,13 @@ router.post('/link-school', authenticateToken, requireRole('parent'), async (req
 // Get all schools linked to parent
 router.get('/linked-schools', authenticateToken, requireRole('parent'), async (req, res) => {
     try {
-        let schools = [];
-
-        // Try to get from user_schools table first
-        try {
-            schools = await dbAll(
-                `SELECT s.id, s.name, s.email, s.status 
-                 FROM schools s 
-                 INNER JOIN user_schools us ON s.id = us.school_id 
-                 WHERE us.user_id = ?`,
-                [req.user.id]
-            );
-        } catch (err) {
-            // If user_schools table doesn't exist, get schools from children
-            const children = await dbAll(
-                `SELECT DISTINCT s.school_id 
-                 FROM students s 
-                 WHERE s.parent_id = ? AND s.school_id IS NOT NULL`,
-                [req.user.id]
-            );
-
-            if (children.length > 0) {
-                const schoolIds = children.map(c => c.school_id).filter((id, index, self) => self.indexOf(id) === index);
-                if (schoolIds.length > 0) {
-                    const placeholders = schoolIds.map(() => '?').join(',');
-                    schools = await dbAll(
-                        `SELECT id, name, email, status FROM schools WHERE id IN (${placeholders})`,
-                        schoolIds
-                    );
-                }
-            }
-
-            // Also include the user's current school_id if set
-            if (req.user.school_id) {
-                const currentSchool = await dbGet('SELECT id, name, email, status FROM schools WHERE id = ?', [req.user.school_id]);
-                if (currentSchool && !schools.find(s => s.id === currentSchool.id)) {
-                    schools.push(currentSchool);
-                }
-            }
-        }
+        const schools = await dbAll(
+            `SELECT s.id, s.name, s.subdomain, s.schema_name
+             FROM public.schools s 
+             INNER JOIN public.user_schools us ON s.id = us.school_id 
+             WHERE us.user_id = $1`,
+            [req.user.id]
+        );
 
         res.json(schools);
     } catch (error) {
@@ -440,45 +243,27 @@ router.post('/switch-school', authenticateToken, requireRole('parent'), async (r
             return res.status(400).json({ error: 'School ID is required' });
         }
 
-        // Verify the school exists and user has access to it
-        const school = await dbGet('SELECT * FROM schools WHERE id = ?', [school_id]);
+        // Verify the school exists
+        const school = await dbGet('SELECT * FROM public.schools WHERE id = $1', [school_id]);
         if (!school) {
             return res.status(404).json({ error: 'School not found' });
         }
 
         // Check if user is linked to this school
-        let hasAccess = false;
-        try {
-            const link = await dbGet(
-                'SELECT * FROM user_schools WHERE user_id = ? AND school_id = ?',
-                [req.user.id, school_id]
-            );
-            hasAccess = !!link;
-        } catch (err) {
-            // If user_schools doesn't exist, check via children
-            const child = await dbGet(
-                'SELECT * FROM students WHERE parent_id = ? AND school_id = ? LIMIT 1',
-                [req.user.id, school_id]
-            );
-            hasAccess = !!child;
-        }
+        const link = await dbGet(
+            'SELECT * FROM public.user_schools WHERE user_id = $1 AND school_id = $2',
+            [req.user.id, school_id]
+        );
 
-        if (!hasAccess) {
+        if (!link) {
             return res.status(403).json({ error: 'You are not linked to this school' });
         }
 
-        // Update user's current school_id
+        // Update user's primary school
         await dbRun(
-            'UPDATE users SET school_id = ? WHERE id = ?',
+            'UPDATE public.users SET primary_school_id = $1 WHERE id = $2',
             [school_id, req.user.id]
         );
-
-        // Keep parents table in sync (if present)
-        try {
-            await dbRun('UPDATE parents SET school_id = ? WHERE user_id = ?', [school_id, req.user.id]);
-        } catch (err) {
-            console.log('Could not update parents.school_id (table may not exist):', err.message);
-        }
 
         res.json({ message: 'School switched successfully', school });
     } catch (error) {
@@ -488,6 +273,3 @@ router.post('/switch-school', authenticateToken, requireRole('parent'), async (r
 });
 
 module.exports = router;
-
-
-

@@ -1,5 +1,5 @@
 const express = require('express');
-const { dbAll, dbGet, dbRun } = require('../database/db');
+const { schemaAll, schemaGet, schemaRun, getSchema } = require('../utils/schemaHelper');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
 
@@ -8,7 +8,11 @@ const router = express.Router();
 // Get detention rules
 router.get('/rules', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
-    const rules = await dbAll('SELECT * FROM detention_rules ORDER BY min_points');
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+    const rules = await schemaAll(req, 'SELECT * FROM detention_rules ORDER BY min_points');
     res.json(rules);
   } catch (error) {
     console.error('Error fetching detention rules:', error);
@@ -19,24 +23,28 @@ router.get('/rules', authenticateToken, requireRole('admin'), async (req, res) =
 // Create/update detention rule
 router.post('/rules', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
     const { id, action_type, min_points, max_points, severity, detention_duration, is_active } = req.body;
 
     if (id) {
-      await dbRun(
+      await schemaRun(req,
         `UPDATE detention_rules 
-         SET action_type = ?, min_points = ?, max_points = ?, severity = ?, detention_duration = ?, is_active = ?
-         WHERE id = ?`,
-        [action_type, min_points, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : 1, id]
+         SET action_type = $1, min_points = $2, max_points = $3, severity = $4, detention_duration = $5, is_active = $6
+         WHERE id = $7`,
+        [action_type, min_points, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : true, id]
       );
-      const rule = await dbGet('SELECT * FROM detention_rules WHERE id = ?', [id]);
+      const rule = await schemaGet(req, 'SELECT * FROM detention_rules WHERE id = $1', [id]);
       res.json(rule);
     } else {
-      const result = await dbRun(
+      const result = await schemaRun(req,
         `INSERT INTO detention_rules (action_type, min_points, max_points, severity, detention_duration, is_active)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [action_type, min_points, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : 1]
+         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+        [action_type, min_points, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : true]
       );
-      const rule = await dbGet('SELECT * FROM detention_rules WHERE id = ?', [result.id]);
+      const rule = await schemaGet(req, 'SELECT * FROM detention_rules WHERE id = $1', [result.id]);
       res.status(201).json(rule);
     }
   } catch (error) {
@@ -48,29 +56,34 @@ router.post('/rules', authenticateToken, requireRole('admin'), async (req, res) 
 // Get all detentions
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
     const { date, status } = req.query;
     
     let query = `
-      SELECT d.*, u.name as teacher_name,
+      SELECT d.*, t.name as teacher_name,
              (SELECT COUNT(*) FROM detention_assignments WHERE detention_id = d.id) as student_count
-      FROM detentions d
-      LEFT JOIN users u ON d.teacher_on_duty_id = u.id
+      FROM detention_sessions d
+      LEFT JOIN teachers t ON d.teacher_on_duty_id = t.id
       WHERE 1=1
     `;
     const params = [];
+    let paramIndex = 1;
 
     if (date) {
-      query += ' AND d.detention_date = ?';
+      query += ` AND d.detention_date = $${paramIndex++}`;
       params.push(date);
     }
     if (status) {
-      query += ' AND d.status = ?';
+      query += ` AND d.status = $${paramIndex++}`;
       params.push(status);
     }
 
     query += ' ORDER BY d.detention_date DESC, d.detention_time';
 
-    const detentions = await dbAll(query, params);
+    const detentions = await schemaAll(req, query, params);
     res.json(detentions);
   } catch (error) {
     console.error('Error fetching detentions:', error);
@@ -81,22 +94,33 @@ router.get('/', authenticateToken, async (req, res) => {
 // Get detention by ID with assignments
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    const detention = await dbGet(`
-      SELECT d.*, u.name as teacher_name
-      FROM detentions d
-      LEFT JOIN users u ON d.teacher_on_duty_id = u.id
-      WHERE d.id = ?
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+
+    const detention = await schemaGet(req, `
+      SELECT d.*, t.name as teacher_name
+      FROM detention_sessions d
+      LEFT JOIN teachers t ON d.teacher_on_duty_id = t.id
+      WHERE d.id = $1
     `, [req.params.id]);
 
     if (!detention) {
       return res.status(404).json({ error: 'Detention not found' });
     }
 
-    const assignments = await dbAll(`
-      SELECT da.*, s.first_name || ' ' || s.last_name as student_name, s.student_id
+    const assignments = await schemaAll(req, `
+      SELECT da.*, 
+             s.first_name || ' ' || s.last_name as student_name, 
+             s.student_id,
+             c.grade_level,
+             c.class_name
       FROM detention_assignments da
       INNER JOIN students s ON da.student_id = s.id
-      WHERE da.detention_id = ?
+      LEFT JOIN classes c ON s.class_id = c.id
+      WHERE da.detention_id = $1
+      ORDER BY da.assigned_at DESC
     `, [req.params.id]);
 
     detention.assignments = assignments;
@@ -110,15 +134,19 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create detention
 router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
     const { detention_date, detention_time, duration, location, teacher_on_duty_id, notes } = req.body;
 
-    const result = await dbRun(
-      `INSERT INTO detentions (detention_date, detention_time, duration, location, teacher_on_duty_id, notes)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+    const result = await schemaRun(req,
+      `INSERT INTO detention_sessions (date, start_time, duration_minutes, location, supervisor_id, notes)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
       [detention_date, detention_time, duration || 60, location || null, teacher_on_duty_id || null, notes || null]
     );
 
-    const detention = await dbGet('SELECT * FROM detentions WHERE id = ?', [result.id]);
+    const detention = await schemaGet(req, 'SELECT * FROM detention_sessions WHERE id = $1', [result.id]);
     res.status(201).json(detention);
   } catch (error) {
     console.error('Error creating detention:', error);
@@ -129,16 +157,20 @@ router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
 // Update detention
 router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
     const { detention_date, detention_time, duration, location, teacher_on_duty_id, status, notes } = req.body;
 
-    await dbRun(
-      `UPDATE detentions 
-       SET detention_date = ?, detention_time = ?, duration = ?, location = ?, teacher_on_duty_id = ?, status = ?, notes = ?
-       WHERE id = ?`,
+    await schemaRun(req,
+      `UPDATE detention_sessions 
+       SET date = $1, start_time = $2, duration_minutes = $3, location = $4, supervisor_id = $5, status = $6, notes = $7
+       WHERE id = $8`,
       [detention_date, detention_time, duration || 60, location || null, teacher_on_duty_id || null, status || 'scheduled', notes || null, req.params.id]
     );
 
-    const detention = await dbGet('SELECT * FROM detentions WHERE id = ?', [req.params.id]);
+    const detention = await schemaGet(req, 'SELECT * FROM detention_sessions WHERE id = $1', [req.params.id]);
     res.json(detention);
   } catch (error) {
     console.error('Error updating detention:', error);
@@ -149,15 +181,45 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
 // Assign student to detention
 router.post('/:id/assign', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
     const { student_id, incident_id, reason } = req.body;
 
-    const result = await dbRun(
+    const result = await schemaRun(req,
       `INSERT INTO detention_assignments (detention_id, student_id, incident_id, reason)
-       VALUES (?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4) RETURNING id`,
       [req.params.id, student_id, incident_id || null, reason || null]
     );
 
-    const assignment = await dbGet('SELECT * FROM detention_assignments WHERE id = ?', [result.id]);
+    const assignment = await schemaGet(req, 'SELECT * FROM detention_assignments WHERE id = $1', [result.id]);
+    
+    // Get student and detention details for notification
+    const student = await schemaGet(req, 
+      'SELECT s.*, s.first_name || \' \' || s.last_name as student_name FROM students s WHERE s.id = $1', 
+      [student_id]
+    );
+    
+    const detention = await schemaGet(req,
+      'SELECT * FROM detention_sessions WHERE id = $1',
+      [req.params.id]
+    );
+    
+    // Notify parent if exists
+    if (student && student.parent_id && detention) {
+      const detentionDate = new Date(detention.detention_date).toLocaleDateString();
+      await createNotification(
+        req,
+        student.parent_id,
+        'detention',
+        'Detention Assigned',
+        `${student.student_name} has been assigned to detention on ${detentionDate} at ${detention.detention_time}. Reason: ${reason || 'Not specified'}`,
+        result.id,
+        'detention'
+      );
+    }
+    
     res.status(201).json(assignment);
   } catch (error) {
     console.error('Error assigning student:', error);
@@ -168,26 +230,31 @@ router.post('/:id/assign', authenticateToken, requireRole('admin'), async (req, 
 // Update detention attendance
 router.put('/assignments/:id', authenticateToken, async (req, res) => {
   try {
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
     const { status, attendance_time, notes } = req.body;
 
-    await dbRun(
+    await schemaRun(req,
       `UPDATE detention_assignments 
-       SET status = ?, attendance_time = ?, notes = ?
-       WHERE id = ?`,
+       SET status = $1, attended_at = $2, notes = $3
+       WHERE id = $4`,
       [status, attendance_time || null, notes || null, req.params.id]
     );
 
-    const assignment = await dbGet(`
-      SELECT da.*, s.first_name, s.last_name, s.parent_id, d.detention_date, d.detention_time
+    const assignment = await schemaGet(req, `
+      SELECT da.*, s.first_name, s.last_name, s.parent_id, d.date as detention_date, d.start_time as detention_time
       FROM detention_assignments da
       INNER JOIN students s ON da.student_id = s.id
-      INNER JOIN detentions d ON da.detention_id = d.id
-      WHERE da.id = ?
+      INNER JOIN detention_sessions d ON da.detention_id = d.id
+      WHERE da.id = $1
     `, [req.params.id]);
 
     // Notify parent if student was late or absent
     if (assignment && assignment.parent_id && (status === 'late' || status === 'absent')) {
       await createNotification(
+        req,
         assignment.parent_id,
         'detention_attendance',
         `Detention ${status === 'late' ? 'Late' : 'Absent'}`,
@@ -204,71 +271,15 @@ router.put('/assignments/:id', authenticateToken, async (req, res) => {
   }
 });
 
-// Auto-assign students based on incidents
-router.post('/auto-assign', authenticateToken, requireRole('admin'), async (req, res) => {
-  try {
-    const { detention_id } = req.body;
-
-    // Get active detention rules
-    const rules = await dbAll('SELECT * FROM detention_rules WHERE is_active = 1 ORDER BY min_points DESC');
-
-    // Get students with pending incidents
-    const incidents = await dbAll(`
-      SELECT bi.*, s.id as student_id,
-             (SELECT COALESCE(SUM(points), 0) FROM behaviour_incidents WHERE student_id = s.id AND status = 'approved') as total_points
-      FROM behaviour_incidents bi
-      INNER JOIN students s ON bi.student_id = s.id
-      WHERE bi.status = 'approved' AND bi.id NOT IN (SELECT incident_id FROM detention_assignments WHERE incident_id IS NOT NULL)
-    `);
-
-    const assignments = [];
-    for (const incident of incidents) {
-      // Find matching rule
-      const rule = rules.find(r => 
-        incident.total_points >= r.min_points &&
-        (!r.max_points || incident.total_points <= r.max_points) &&
-        (!r.severity || r.severity === incident.severity) &&
-        r.action_type === 'detention'
-      );
-
-      if (rule) {
-        const result = await dbRun(
-          `INSERT INTO detention_assignments (detention_id, student_id, incident_id, reason)
-           VALUES (?, ?, ?, ?)`,
-          [detention_id, incident.student_id, incident.id, `Auto-assigned: ${incident.incident_type} (${incident.total_points} points)`]
-        );
-        assignments.push(result.id);
-
-        // Get student and parent info for notification
-        const student = await dbGet('SELECT * FROM students WHERE id = ?', [incident.student_id]);
-        const detention = await dbGet('SELECT * FROM detentions WHERE id = ?', [detention_id]);
-
-        // Notify parent if student has a parent
-        if (student && student.parent_id) {
-          await createNotification(
-            student.parent_id,
-            'detention_assigned',
-            'Detention Assigned',
-            `Your child ${student.first_name} ${student.last_name} has been assigned to detention on ${detention.detention_date} at ${detention.detention_time}. Reason: ${incident.incident_type}`,
-            detention_id,
-            'detention'
-          );
-        }
-      }
-    }
-
-    res.json({ message: 'Auto-assignment completed', assignments_count: assignments.length });
-  } catch (error) {
-    console.error('Error auto-assigning:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
 // Delete detention
 router.delete('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
-    await dbRun('DELETE FROM detention_assignments WHERE detention_id = ?', [req.params.id]);
-    await dbRun('DELETE FROM detentions WHERE id = ?', [req.params.id]);
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+    await schemaRun(req, 'DELETE FROM detention_assignments WHERE detention_id = $1', [req.params.id]);
+    await schemaRun(req, 'DELETE FROM detention_sessions WHERE id = $1', [req.params.id]);
     res.json({ message: 'Detention deleted successfully' });
   } catch (error) {
     console.error('Error deleting detention:', error);
@@ -277,4 +288,3 @@ router.delete('/:id', authenticateToken, requireRole('admin'), async (req, res) 
 });
 
 module.exports = router;
-

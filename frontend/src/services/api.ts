@@ -85,7 +85,7 @@ axiosInstance.interceptors.response.use(
 
 export const api = {
   // Students
-  getStudents: () => axiosInstance.get('/students'),
+  getStudents: (params?: any) => axiosInstance.get('/students', { params }),
   getStudent: (id: number) => axiosInstance.get(`/students/${id}`),
   createStudent: (data: any) => axiosInstance.post('/students', data),
   updateStudent: (id: number, data: any) => axiosInstance.put(`/students/${id}`, data),
@@ -172,6 +172,10 @@ export const api = {
 
   // Analytics
   getDashboardStats: () => axiosInstance.get('/analytics/dashboard'),
+  getCriticalAlerts: () => axiosInstance.get('/analytics/critical-alerts'),
+  getAtRiskStudents: () => axiosInstance.get('/analytics/at-risk-students'),
+  getTeacherActivity: (teacherId: number) => axiosInstance.get(`/analytics/teacher-activity/${teacherId}`),
+  getClassProfile: (classId: number) => axiosInstance.get(`/analytics/class-profile/${classId}`),
 
   // Timetables
   getTimetables: (params?: any) => axiosInstance.get('/timetables', { params }),
@@ -233,6 +237,71 @@ export const api = {
     axiosInstance.get('/bulk-import/template/teachers', { responseType: 'blob' }),
   downloadClassesTemplate: () =>
     axiosInstance.get('/bulk-import/template/classes', { responseType: 'blob' }),
+
+  // Bulk Import V2 - Enhanced with validation, upsert, and auto-create
+  validateStudentsImport: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return axiosInstance.post('/bulk-import-v2/students/validate', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  importStudentsV2: (file: File, options: { mode?: string; autoCreateClasses?: boolean; useSheetNames?: boolean; academicYear?: string } = {}) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('mode', options.mode || 'upsert');
+    formData.append('autoCreateClasses', String(options.autoCreateClasses !== false));
+    formData.append('useSheetNames', String(options.useSheetNames !== false));
+    if (options.academicYear) formData.append('academicYear', options.academicYear);
+    return axiosInstance.post('/bulk-import-v2/students', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  validateTeachersImport: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return axiosInstance.post('/bulk-import-v2/teachers/validate', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  importTeachersV2: (file: File, options: { mode?: string } = {}) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('mode', options.mode || 'upsert');
+    return axiosInstance.post('/bulk-import-v2/teachers', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  validateClassesImport: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return axiosInstance.post('/bulk-import-v2/classes/validate', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  importClassesV2: (file: File, options: { mode?: string; academicYear?: string } = {}) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('mode', options.mode || 'upsert');
+    if (options.academicYear) formData.append('academicYear', options.academicYear);
+    return axiosInstance.post('/bulk-import-v2/classes', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  downloadStudentsTemplateV2: () =>
+    axiosInstance.get('/bulk-import-v2/template/students', { responseType: 'blob' }),
+  downloadTeachersTemplateV2: () =>
+    axiosInstance.get('/bulk-import-v2/template/teachers', { responseType: 'blob' }),
+  downloadClassesTemplateV2: () =>
+    axiosInstance.get('/bulk-import-v2/template/classes', { responseType: 'blob' }),
+  exportImportErrors: (errors: any[], type: string) =>
+    axiosInstance.post('/bulk-import-v2/export-errors', { errors, type }, { responseType: 'blob' }),
+  
+  // Import History
+  getImportHistory: (limit = 20, offset = 0) =>
+    axiosInstance.get(`/bulk-import-v2/history?limit=${limit}&offset=${offset}`),
+  getImportHistoryDetail: (id: number) =>
+    axiosInstance.get(`/bulk-import-v2/history/${id}`),
 
   // Photo uploads
   uploadStudentPhoto: (id: number, file: File) => {
@@ -385,5 +454,46 @@ export const api = {
   deleteSchoolFavicon: (schoolId: number) => axiosInstance.delete(`/school-customizations/${schoolId}/favicon`),
   deleteLoginBackground: (schoolId: number) => axiosInstance.delete(`/school-customizations/${schoolId}/login-background`),
   deleteDashboardBackground: (schoolId: number) => axiosInstance.delete(`/school-customizations/${schoolId}/dashboard-background`),
+
+  // Period Timetables
+  getTimetableTemplates: () => axiosInstance.get('/period-timetables/templates'),
+  getTimetableTemplate: (id: number) => axiosInstance.get(`/period-timetables/templates/${id}`),
+  createTimetableTemplate: (data: any) => axiosInstance.post('/period-timetables/templates', data),
+  updateTimetableTemplate: (id: number, data: any) => axiosInstance.put(`/period-timetables/templates/${id}`, data),
+  deleteTimetableTemplate: (id: number) => axiosInstance.delete(`/period-timetables/templates/${id}`),
+  getTimeSlots: (templateId: number) => axiosInstance.get(`/period-timetables/templates/${templateId}/slots`),
+  createTimeSlot: (templateId: number, data: any) => axiosInstance.post(`/period-timetables/templates/${templateId}/slots`, data),
+  bulkCreateTimeSlots: (templateId: number, data: any) => axiosInstance.post(`/period-timetables/templates/${templateId}/slots/bulk`, data),
+  updateTimeSlot: (id: number, data: any) => axiosInstance.put(`/period-timetables/slots/${id}`, data),
+  deleteTimeSlot: (id: number) => axiosInstance.delete(`/period-timetables/slots/${id}`),
+  getSubjects: () => axiosInstance.get('/subjects'),
+  getSubject: (id: number) => axiosInstance.get(`/subjects/${id}`),
+  createSubject: (data: any) => axiosInstance.post('/subjects', data),
+  updateSubject: (id: number, data: any) => axiosInstance.put(`/subjects/${id}`, data),
+  deleteSubject: (id: number) => axiosInstance.delete(`/subjects/${id}`),
+  getClassrooms: () => axiosInstance.get('/period-timetables/classrooms'),
+  createClassroom: (data: any) => axiosInstance.post('/period-timetables/classrooms', data),
+  getClassTimetable: (classId: number) => axiosInstance.get(`/period-timetables/class/${classId}`),
+  getTeacherTimetable: (teacherId: number) => axiosInstance.get(`/period-timetables/teacher/${teacherId}`),
+  assignClassPeriod: (classId: number, data: any) => axiosInstance.post(`/period-timetables/class/${classId}/assign`, data),
+  updateClassTimetable: (id: number, data: any) => axiosInstance.put(`/period-timetables/class-timetable/${id}`, data),
+  deleteClassTimetable: (id: number) => axiosInstance.delete(`/period-timetables/class-timetable/${id}`),
+
+  // Period Register
+  getTeacherPeriodsToday: (teacherId?: number) => axiosInstance.get('/period-register/teacher/today', { params: { teacher_id: teacherId } }),
+  getTeacherPeriodsWeek: (teacherId?: number, startDate?: string) => axiosInstance.get('/period-register/teacher/week', { params: { teacher_id: teacherId, start_date: startDate } }),
+  startPeriodSession: (data: any) => axiosInstance.post('/period-register/session/start', data),
+  markAttendance: (data: any) => axiosInstance.post('/period-register/attendance/mark', data),
+  bulkMarkAttendance: (data: any) => axiosInstance.post('/period-register/attendance/bulk-mark', data),
+  completePeriodSession: (sessionId: number) => axiosInstance.post(`/period-register/session/${sessionId}/complete`),
+  dismissStudent: (data: any) => axiosInstance.post('/period-register/dismiss', data),
+  returnStudent: (data: any) => axiosInstance.post('/period-register/return', data),
+  recordLateArrival: (data: any) => axiosInstance.post('/period-register/late-arrival', data),
+  
+  // Attendance Management (Enhanced)
+  getTodayDismissals: () => axiosInstance.get('/period-register/dismissals/today'),
+  getAttendanceFlags: (params?: any) => axiosInstance.get('/period-register/flags', { params }),
+  resolveAttendanceFlag: (flagId: number, data: any) => axiosInstance.put(`/period-register/flags/${flagId}/resolve`, data),
+  getAttendanceReport: (params: any) => axiosInstance.get('/period-register/reports/attendance', { params }),
 };
 

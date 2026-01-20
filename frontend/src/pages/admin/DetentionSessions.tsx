@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { api } from '../../services/api';
+import SearchableSelect from '../../components/SearchableSelect';
 import {
   Clock,
   Plus,
@@ -44,6 +46,7 @@ const DetentionSessions: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedSession, setSelectedSession] = useState<DetentionSession | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -56,48 +59,47 @@ const DetentionSessions: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Mock data - in real app, fetch from API
-      setSessions([
-        {
-          id: 1,
-          date: '2026-01-10',
-          start_time: '15:00',
-          end_time: '16:00',
-          location: 'Room 101',
-          max_students: 20,
-          assigned_students: 15,
-          teacher_id: 1,
-          teacher_name: 'Mr. Johnson',
-          status: 'scheduled',
-          notes: 'Regular Friday detention',
-        },
-        {
-          id: 2,
-          date: '2026-01-17',
-          start_time: '15:00',
-          end_time: '16:00',
-          location: 'Room 101',
-          max_students: 20,
-          assigned_students: 0,
-          teacher_id: null,
-          teacher_name: null,
-          status: 'scheduled',
-          notes: '',
-        },
-      ]);
+      // Fetch real teachers from API
+      const teachersResponse = await api.getTeachers();
+      const teachersData = teachersResponse.data.map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        email: t.email
+      }));
+      setTeachers(teachersData);
 
-      setTeachers([
-        { id: 1, name: 'Mr. Johnson', email: 'johnson@school.com' },
-        { id: 2, name: 'Mrs. Smith', email: 'smith@school.com' },
-        { id: 3, name: 'Mr. Brown', email: 'brown@school.com' },
-        { id: 4, name: 'Ms. Davis', email: 'davis@school.com' },
-      ]);
+      // Fetch real detention sessions from API
+      const detentionsResponse = await api.getDetentions();
+      const sessionsData = detentionsResponse.data.map((d: any) => ({
+        id: d.id,
+        date: d.detention_date,
+        start_time: d.detention_time,
+        end_time: d.end_time || calculateEndTime(d.detention_time, d.duration),
+        location: d.location || 'TBD',
+        max_students: d.max_capacity || 20,
+        assigned_students: d.student_count || 0,
+        teacher_id: d.teacher_on_duty_id,
+        teacher_name: d.teacher_name,
+        status: d.status || 'scheduled',
+        notes: d.notes || '',
+      }));
+      setSessions(sessionsData);
     } catch (error) {
       console.error('Error fetching data:', error);
       setMessage({ type: 'error', text: 'Failed to load detention sessions' });
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to calculate end time from start time and duration
+  const calculateEndTime = (startTime: string, durationMinutes: number = 60) => {
+    if (!startTime) return '';
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + durationMinutes;
+    const endHours = Math.floor(totalMinutes / 60) % 24;
+    const endMinutes = totalMinutes % 60;
+    return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
   };
 
   const handleCreateSession = async (sessionData: Partial<DetentionSession>) => {
@@ -372,6 +374,10 @@ const DetentionSessions: React.FC = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setSelectedSession(session);
+                  setShowDetailsModal(true);
+                }}
                 className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-100 text-blue-600 rounded-xl font-medium hover:bg-blue-200 transition-colors"
               >
                 <Eye size={16} />
@@ -417,6 +423,19 @@ const DetentionSessions: React.FC = () => {
             onAssign={handleAssignTeacher}
             onClose={() => {
               setShowAssignModal(false);
+              setSelectedSession(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Details Modal */}
+      <AnimatePresence>
+        {showDetailsModal && selectedSession && (
+          <SessionDetailsModal
+            session={selectedSession}
+            onClose={() => {
+              setShowDetailsModal(false);
               setSelectedSession(null);
             }}
           />
@@ -601,32 +620,37 @@ const AssignTeacherModal: React.FC<{
 
         <div className="p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Select Teacher</label>
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {teachers.map((teacher) => (
-                <motion.button
-                  key={teacher.id}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setSelectedTeacherId(teacher.id)}
-                  className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                    selectedTeacherId === teacher.id
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 hover:border-purple-200'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-gray-900">{teacher.name}</p>
-                      <p className="text-sm text-gray-500">{teacher.email}</p>
-                    </div>
-                    {selectedTeacherId === teacher.id && (
-                      <CheckCircle className="text-purple-600" size={24} />
-                    )}
+            <SearchableSelect
+              label="Select Teacher"
+              value={selectedTeacherId?.toString() || ''}
+              onChange={(value) => setSelectedTeacherId(Number(value))}
+              options={teachers.map(t => ({
+                value: t.id.toString(),
+                label: `${t.name} (${t.email})`
+              }))}
+              placeholder="Search and select a teacher..."
+              showClear={!!selectedTeacherId}
+              onClear={() => setSelectedTeacherId(null)}
+            />
+            {selectedTeacherId && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-3 p-4 bg-purple-50 border-2 border-purple-200 rounded-xl"
+              >
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="text-purple-600" size={20} />
+                  <div>
+                    <p className="font-medium text-purple-900">
+                      {teachers.find(t => t.id === selectedTeacherId)?.name}
+                    </p>
+                    <p className="text-sm text-purple-600">
+                      {teachers.find(t => t.id === selectedTeacherId)?.email}
+                    </p>
                   </div>
-                </motion.button>
-              ))}
-            </div>
+                </div>
+              </motion.div>
+            )}
           </div>
 
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4">
@@ -668,6 +692,225 @@ const AssignTeacherModal: React.FC<{
           >
             <UserCheck size={18} />
             <span>Assign Teacher</span>
+          </motion.button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// Session Details Modal
+const SessionDetailsModal: React.FC<{
+  session: DetentionSession;
+  onClose: () => void;
+}> = ({ session, onClose }) => {
+  const [assignedStudents, setAssignedStudents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAssignedStudents();
+  }, []);
+
+  const fetchAssignedStudents = async () => {
+    try {
+      setLoading(true);
+      // Fetch real detention data with assignments from API
+      const response = await api.getDetention(session.id);
+      const detention = response.data;
+      
+      // Map assignments to student list format
+      const students = (detention.assignments || []).map((assignment: any) => ({
+        id: assignment.student_id,
+        name: assignment.student_name,
+        grade: `Grade ${assignment.grade_level || 'N/A'}`,
+        reason: assignment.reason || 'Not specified',
+        points: assignment.demerit_points || 0,
+        status: assignment.status || 'assigned',
+        attendance_time: assignment.attendance_time
+      }));
+      
+      setAssignedStudents(students);
+    } catch (error) {
+      console.error('Error fetching assigned students:', error);
+      setAssignedStudents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statusColors = {
+    scheduled: 'bg-blue-100 text-blue-800',
+    in_progress: 'bg-yellow-100 text-yellow-800',
+    completed: 'bg-green-100 text-green-800',
+    cancelled: 'bg-red-100 text-red-800',
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-pink-50">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Detention Session Details</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                {new Date(session.date).toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  month: 'long', 
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </p>
+            </div>
+            <button 
+              onClick={onClose} 
+              className="p-2 hover:bg-white/50 rounded-lg transition-colors"
+            >
+              <X size={24} />
+            </button>
+          </div>
+        </div>
+
+        {/* Session Info */}
+        <div className="p-6 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <Clock className="text-blue-600" size={20} />
+                <span className="text-sm font-medium text-blue-900">Time</span>
+              </div>
+              <p className="text-lg font-bold text-blue-900">
+                {session.start_time} - {session.end_time}
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <Calendar className="text-purple-600" size={20} />
+                <span className="text-sm font-medium text-purple-900">Location</span>
+              </div>
+              <p className="text-lg font-bold text-purple-900">{session.location}</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <UserCheck className="text-green-600" size={20} />
+                <span className="text-sm font-medium text-green-900">Teacher on Duty</span>
+              </div>
+              <p className="text-lg font-bold text-green-900">
+                {session.teacher_name || 'Not assigned'}
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-4">
+              <div className="flex items-center space-x-2 mb-2">
+                <AlertCircle className="text-amber-600" size={20} />
+                <span className="text-sm font-medium text-amber-900">Status</span>
+              </div>
+              <span className={`inline-block px-3 py-1 rounded-full text-sm font-bold ${statusColors[session.status]}`}>
+                {session.status.toUpperCase()}
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-gray-50 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">Capacity</span>
+              <span className="text-sm font-bold text-gray-900">
+                {assignedStudents.length} / {session.max_students} students
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div 
+                className="bg-gradient-to-r from-purple-500 to-pink-600 h-3 rounded-full transition-all"
+                style={{ width: `${(assignedStudents.length / session.max_students) * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {session.notes && (
+            <div className="bg-blue-50 border-l-4 border-blue-500 rounded-xl p-4">
+              <p className="text-sm font-medium text-blue-900 mb-1">Notes</p>
+              <p className="text-sm text-blue-800">{session.notes}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Assigned Students */}
+        <div className="p-6 border-t border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-gray-900">Assigned Students</h3>
+            <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-bold">
+              {assignedStudents.length} Students
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full"
+              />
+            </div>
+          ) : assignedStudents.length === 0 ? (
+            <div className="text-center py-12 bg-gray-50 rounded-xl">
+              <UserCheck className="mx-auto text-gray-300 mb-4" size={48} />
+              <p className="text-gray-500">No students assigned yet</p>
+              <p className="text-gray-400 text-sm">Students will be auto-assigned based on detention rules</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {assignedStudents.map((student, index) => (
+                <motion.div
+                  key={student.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-xl hover:shadow-md transition-all"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white font-bold">
+                      {student.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900">{student.name}</p>
+                      <p className="text-sm text-gray-600">{student.grade}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-600 mb-1">{student.reason}</p>
+                    <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">
+                      {student.points} points
+                    </span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-6 border-t border-gray-100 bg-gray-50">
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={onClose}
+            className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-medium shadow-lg"
+          >
+            Close
           </motion.button>
         </div>
       </motion.div>

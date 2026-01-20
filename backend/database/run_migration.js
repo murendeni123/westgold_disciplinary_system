@@ -14,10 +14,12 @@ async function runMigration() {
   try {
     console.log('Connected to database');
     
+    const migrationFile = process.argv[2] || 'add_import_history.sql';
     const migrationSQL = fs.readFileSync(
-      path.join(__dirname, 'migrations', 'add_platform_admin_features.sql'),
+      path.join(__dirname, 'migrations', migrationFile),
       'utf8'
     );
+    console.log(`Running migration: ${migrationFile}`);
     
     console.log('Running migration...');
     await client.query(migrationSQL);

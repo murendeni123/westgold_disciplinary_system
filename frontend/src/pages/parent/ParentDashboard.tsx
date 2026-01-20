@@ -13,14 +13,12 @@ const ParentDashboard: React.FC = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [behaviorData, setBehaviorData] = useState<any[]>([]);
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchStats();
     fetchNotifications();
     fetchBehaviorData();
-    fetchAttendanceData();
   }, [user]);
 
   const fetchNotifications = async () => {
@@ -100,51 +98,6 @@ const ParentDashboard: React.FC = () => {
       setBehaviorData(chartData);
     } catch (error) {
       console.error('Error fetching behavior data:', error);
-    }
-  };
-
-  const fetchAttendanceData = async () => {
-    try {
-      if (!user?.children || user.children.length === 0) return;
-
-      // Get attendance for all children for last 30 days
-      const allAttendance: any[] = [];
-      for (const child of user.children) {
-        try {
-          const response = await api.getAttendance({
-            student_id: child.id,
-            start_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          });
-          allAttendance.push(...response.data);
-        } catch (error) {
-          console.error(`Error fetching attendance for child ${child.id}:`, error);
-        }
-      }
-
-      // Group by date
-      const dailyData: Record<string, { present: number; absent: number; late: number; total: number }> = {};
-      allAttendance.forEach((record: any) => {
-        const date = new Date(record.attendance_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        if (!dailyData[date]) {
-          dailyData[date] = { present: 0, absent: 0, late: 0, total: 0 };
-        }
-        dailyData[date].total++;
-        if (record.status === 'present') dailyData[date].present++;
-        else if (record.status === 'absent') dailyData[date].absent++;
-        else if (record.status === 'late') dailyData[date].late++;
-      });
-
-      const chartData = Object.entries(dailyData)
-        .map(([date, data]) => ({
-          date,
-          ...data,
-        }))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .slice(-14); // Last 14 days
-
-      setAttendanceData(chartData);
-    } catch (error) {
-      console.error('Error fetching attendance data:', error);
     }
   };
 
@@ -229,21 +182,6 @@ const ParentDashboard: React.FC = () => {
             </button>
 
             <button
-              onClick={() => navigate('/parent/attendance')}
-              className="p-4 bg-green-50 hover:bg-green-100 rounded-lg border-2 border-green-200 hover:border-green-300 transition-colors text-left"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Calendar className="text-green-600" size={24} />
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">View Attendance</p>
-                  <p className="text-sm text-gray-600">Check attendance records</p>
-                </div>
-              </div>
-            </button>
-
-            <button
               onClick={() => navigate('/parent/merits')}
               className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg border-2 border-purple-200 hover:border-purple-300 transition-colors text-left"
             >
@@ -258,24 +196,6 @@ const ParentDashboard: React.FC = () => {
               </div>
             </button>
           </div>
-        </Card>
-      )}
-
-      {/* Attendance Trends */}
-      {attendanceData.length > 0 && (
-        <Card title="Attendance Trends (Last 14 Days)">
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={attendanceData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="present" stackId="a" fill="#10b981" name="Present" />
-              <Bar dataKey="late" stackId="a" fill="#f59e0b" name="Late" />
-              <Bar dataKey="absent" stackId="a" fill="#ef4444" name="Absent" />
-            </BarChart>
-          </ResponsiveContainer>
         </Card>
       )}
 

@@ -1,0 +1,65 @@
+[2026-01-17T22:36:59.465Z] Step 1: Initializing public schema...
+[2026-01-17T22:37:01.598Z] Warning: column "school_id" does not exist
+[2026-01-17T22:37:01.783Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T22:37:02.009Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T22:37:02.212Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T22:37:02.408Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T22:37:02.629Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T22:37:02.829Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T22:37:03.031Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T22:37:03.216Z] Warning: current transaction is aborted, commands ignored until end of transaction block
+[2026-01-17T22:37:03.646Z] Warning: unterminated dollar-quoted string at or near "$$ LANGUAGE plpgsql"
+[2026-01-17T22:37:03.851Z] Warning: prepared statement "format" does not exist
+[2026-01-17T22:37:04.242Z] Warning: unterminated dollar-quoted string at or near "$$ LANGUAGE plpgsql"
+[2026-01-17T22:37:04.670Z] Warning: unterminated dollar-quoted string at or near "$$ LANGUAGE plpgsql"
+[2026-01-17T22:37:04.670Z] Public schema initialized.
+[2026-01-17T22:37:04.673Z] Step 2: Migrating schools...
+[2026-01-17T22:37:05.063Z] Step 3: Creating school schemas...
+[2026-01-17T22:37:05.513Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:05.797Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:05.981Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:06.212Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:06.412Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:06.616Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:06.824Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:07.010Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:07.231Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:07.435Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:07.643Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:07.846Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:08.049Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:08.254Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:08.459Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:08.664Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:08.870Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:09.076Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:09.278Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:09.483Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:09.688Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:09.876Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:10.097Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:10.303Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:10.508Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:10.714Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:10.916Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:11.125Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:11.329Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:11.531Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:11.736Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:11.942Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:12.146Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:12.352Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:12.558Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:12.760Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:12.965Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:13.169Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:13.480Z] Warning in undefined: schema "undefined" does not exist
+[2026-01-17T22:37:13.480Z] Created schema: undefined
+[2026-01-17T22:37:13.481Z] Step 4: Migrating users...
+[2026-01-17T22:37:16.345Z] Migrated 4 users.
+[2026-01-17T22:37:16.346Z] Step 5: Migrating school data to schemas...
+[2026-01-17T22:37:16.346Z] Migrating data for school: undefined (undefined)
+[2026-01-17T22:37:27.712Z] Step 6: Creating platform admin...
+[2026-01-17T22:37:27.915Z] Platform admin already exists.
+[2026-01-17T22:37:27.915Z] Step 7: Updating sequences...
+[2026-01-17T22:37:29.146Z] Sequences updated.

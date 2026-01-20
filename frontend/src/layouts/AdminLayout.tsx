@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import QuickStudentSearch from '../components/QuickStudentSearch';
+import NotificationBell from '../components/NotificationBell';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
 import { motion } from 'framer-motion';
 import { Menu, X, Shield } from 'lucide-react';
@@ -106,6 +107,7 @@ const AdminLayout: React.FC = () => {
               <div className="flex-1 max-w-md hidden md:block">
                 <QuickStudentSearch />
               </div>
+              <NotificationBell />
             </div>
           </div>
         </motion.header>

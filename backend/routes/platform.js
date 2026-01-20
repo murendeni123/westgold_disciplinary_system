@@ -381,18 +381,26 @@ router.post('/schools/onboard', requirePlatformAdmin, async (req, res) => {
         // 1. Create school
         const schoolResult = await dbRun(
             `INSERT INTO schools (name, email, phone, address, city, postal_code, code, school_code, status, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'trial', CURRENT_TIMESTAMP)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'trial', CURRENT_TIMESTAMP) RETURNING id`,
             [school_name, school_email, school_phone || null, school_address || null, school_city || null, school_postal_code || null, school_code, school_code]
         );
         const school_id = schoolResult.id;
+        
+        if (!school_id) {
+            throw new Error('Failed to create school - no ID returned');
+        }
 
         // 2. Create initial admin account
         const hashedPassword = await bcrypt.hash(admin_password, 10);
         const adminResult = await dbRun(
             `INSERT INTO users (email, password, name, role, school_id, created_at)
-             VALUES (?, ?, ?, 'admin', ?, CURRENT_TIMESTAMP)`,
+             VALUES (?, ?, ?, 'admin', ?, CURRENT_TIMESTAMP) RETURNING id`,
             [admin_email, hashedPassword, admin_name, school_id]
         );
+        
+        if (!adminResult.id) {
+            throw new Error('Failed to create admin user - no ID returned');
+        }
 
         // 3. Set trial/subscription
         const trial_end_date = new Date();

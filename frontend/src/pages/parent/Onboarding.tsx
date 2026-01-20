@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
+import { api } from '../../services/api';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   GraduationCap, 
   Link as LinkIcon, 
@@ -13,16 +15,32 @@ import {
   CheckCircle,
   ArrowRight,
   ArrowLeft,
-  Building2
+  Building2,
+  Loader2,
+  Sparkles
 } from 'lucide-react';
 
 const Onboarding: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [hasSchool, setHasSchool] = useState(false);
   const [hasChild, setHasChild] = useState(false);
+  
+  // School linking state
+  const [schoolCode, setSchoolCode] = useState('');
+  const [linkingSchool, setLinkingSchool] = useState(false);
+  const [schoolError, setSchoolError] = useState('');
+  const [showSchoolSuccess, setShowSchoolSuccess] = useState(false);
+  const [linkedSchoolName, setLinkedSchoolName] = useState('');
+  
+  // Child linking state
+  const [childLinkCode, setChildLinkCode] = useState('');
+  const [linkingChild, setLinkingChild] = useState(false);
+  const [childError, setChildError] = useState('');
+  const [showChildSuccess, setShowChildSuccess] = useState(false);
+  const [linkedChildName, setLinkedChildName] = useState('');
 
   useEffect(() => {
     checkProgress();
@@ -37,6 +55,58 @@ const Onboarding: React.FC = () => {
     // Check if user has linked at least one child
     if (user?.children && user.children.length > 0) {
       setHasChild(true);
+    }
+  };
+
+  const handleLinkSchool = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSchoolError('');
+    
+    if (!schoolCode.trim()) {
+      setSchoolError('Please enter a school code');
+      return;
+    }
+    
+    setLinkingSchool(true);
+    
+    try {
+      const response = await api.linkSchoolByCode(schoolCode.trim().toUpperCase());
+      await refreshUser();
+      setHasSchool(true);
+      setLinkedSchoolName(response.data?.school?.name || 'School');
+      setSchoolCode('');
+      setShowSchoolSuccess(true);
+      setTimeout(() => setShowSchoolSuccess(false), 3000);
+    } catch (err: any) {
+      setSchoolError(err.response?.data?.error || 'Failed to link school. Please check the code and try again.');
+    } finally {
+      setLinkingSchool(false);
+    }
+  };
+
+  const handleLinkChild = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChildError('');
+    
+    if (!childLinkCode.trim()) {
+      setChildError('Please enter a link code');
+      return;
+    }
+    
+    setLinkingChild(true);
+    
+    try {
+      const response = await api.linkChild(childLinkCode.trim().toUpperCase());
+      await refreshUser();
+      setHasChild(true);
+      setLinkedChildName(response.data?.child?.name || 'Child');
+      setChildLinkCode('');
+      setShowChildSuccess(true);
+      setTimeout(() => setShowChildSuccess(false), 3000);
+    } catch (err: any) {
+      setChildError(err.response?.data?.error || 'Failed to link child. Please check the code and try again.');
+    } finally {
+      setLinkingChild(false);
     }
   };
 
@@ -132,18 +202,43 @@ const Onboarding: React.FC = () => {
             </div>
           </div>
           {!hasSchool && (
-            <div className="mt-4">
+            <form onSubmit={handleLinkSchool} className="mt-4 space-y-3">
+              {schoolError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                  {schoolError}
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter School Code
+                </label>
+                <input
+                  type="text"
+                  value={schoolCode}
+                  onChange={(e) => setSchoolCode(e.target.value.toUpperCase())}
+                  placeholder="e.g., WS2025"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  disabled={linkingSchool}
+                />
+              </div>
               <Button
-                onClick={() => {
-                  setCompletedSteps([...completedSteps, 1]);
-                  navigate('/parent/link-school');
-                }}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                type="submit"
+                disabled={linkingSchool || !schoolCode.trim()}
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Building2 size={20} className="mr-2" />
-                Go to Link School
+                {linkingSchool ? (
+                  <>
+                    <Loader2 size={20} className="mr-2 animate-spin" />
+                    Linking School...
+                  </>
+                ) : (
+                  <>
+                    <Building2 size={20} className="mr-2" />
+                    Link School
+                  </>
+                )}
               </Button>
-            </div>
+            </form>
           )}
           {hasSchool && (
             <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -212,18 +307,43 @@ const Onboarding: React.FC = () => {
             </div>
           )}
           {hasSchool && !hasChild && (
-            <div className="mt-4">
+            <form onSubmit={handleLinkChild} className="mt-4 space-y-3">
+              {childError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                  {childError}
+                </div>
+              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter Child Link Code
+                </label>
+                <input
+                  type="text"
+                  value={childLinkCode}
+                  onChange={(e) => setChildLinkCode(e.target.value.toUpperCase())}
+                  placeholder="e.g., ABC123XYZ"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled={linkingChild}
+                />
+              </div>
               <Button
-                onClick={() => {
-                  setCompletedSteps([...completedSteps, 2]);
-                  navigate('/parent/link-child');
-                }}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                type="submit"
+                disabled={linkingChild || !childLinkCode.trim()}
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <LinkIcon size={20} className="mr-2" />
-                Go to Link Child
+                {linkingChild ? (
+                  <>
+                    <Loader2 size={20} className="mr-2 animate-spin" />
+                    Linking Child...
+                  </>
+                ) : (
+                  <>
+                    <LinkIcon size={20} className="mr-2" />
+                    Link Child
+                  </>
+                )}
               </Button>
-            </div>
+            </form>
           )}
           {hasChild && (
             <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -346,8 +466,10 @@ const Onboarding: React.FC = () => {
       setCurrentStep(currentStep + 1);
       setCompletedSteps([...completedSteps, currentStep]);
     } else {
-      // Complete onboarding
-      localStorage.setItem('parent_onboarding_completed', 'true');
+      // Complete onboarding - only mark as complete if school and child are linked
+      if (hasSchool && hasChild) {
+        localStorage.setItem('parent_onboarding_completed', 'true');
+      }
       navigate('/parent');
     }
   };
@@ -360,7 +482,10 @@ const Onboarding: React.FC = () => {
 
   const handleSkip = () => {
     if (confirm('Are you sure you want to skip onboarding? You can always access it later from the settings.')) {
-      localStorage.setItem('parent_onboarding_completed', 'true');
+      // Only mark as complete if school and child are linked
+      if (hasSchool && hasChild) {
+        localStorage.setItem('parent_onboarding_completed', 'true');
+      }
       navigate('/parent');
     }
   };
@@ -432,6 +557,138 @@ const Onboarding: React.FC = () => {
             </Button>
           </div>
         </Card>
+
+        {/* School Link Success Popup */}
+        <AnimatePresence>
+          {showSchoolSuccess && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 50 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+            >
+              <motion.div
+                initial={{ rotate: -5 }}
+                animate={{ rotate: 0 }}
+                className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative overflow-hidden"
+              >
+                {/* Animated background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-blue-50 opacity-50" />
+                
+                {/* Sparkles animation */}
+                <motion.div
+                  className="absolute top-4 right-4"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                >
+                  <Sparkles className="text-purple-500" size={24} />
+                </motion.div>
+                <motion.div
+                  className="absolute bottom-4 left-4"
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                >
+                  <Sparkles className="text-blue-500" size={20} />
+                </motion.div>
+
+                <div className="relative text-center">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                    className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full mb-4"
+                  >
+                    <CheckCircle className="text-white" size={40} />
+                  </motion.div>
+                  
+                  <motion.h3
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-2xl font-bold text-gray-900 mb-2"
+                  >
+                    School Linked! 🎉
+                  </motion.h3>
+                  
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="text-gray-600"
+                  >
+                    You've successfully linked <strong>{linkedSchoolName}</strong> to your account.
+                  </motion.p>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Child Link Success Popup */}
+        <AnimatePresence>
+          {showChildSuccess && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 50 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+            >
+              <motion.div
+                initial={{ rotate: -5 }}
+                animate={{ rotate: 0 }}
+                className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full relative overflow-hidden"
+              >
+                {/* Animated background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-purple-50 opacity-50" />
+                
+                {/* Sparkles animation */}
+                <motion.div
+                  className="absolute top-4 right-4"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                >
+                  <Sparkles className="text-blue-500" size={24} />
+                </motion.div>
+                <motion.div
+                  className="absolute bottom-4 left-4"
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                >
+                  <Sparkles className="text-purple-500" size={20} />
+                </motion.div>
+
+                <div className="relative text-center">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                    className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full mb-4"
+                  >
+                    <CheckCircle className="text-white" size={40} />
+                  </motion.div>
+                  
+                  <motion.h3
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-2xl font-bold text-gray-900 mb-2"
+                  >
+                    Child Linked! 🎊
+                  </motion.h3>
+                  
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="text-gray-600"
+                  >
+                    You've successfully linked <strong>{linkedChildName}</strong> to your account.
+                  </motion.p>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
