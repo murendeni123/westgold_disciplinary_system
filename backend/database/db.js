@@ -15,9 +15,10 @@ const pool = new Pool({
     ssl: process.env.DATABASE_URL?.includes('supabase') || process.env.DATABASE_URL?.includes('amazonaws.com') ? {
         rejectUnauthorized: false
     } : false,
-    max: 20, // Maximum number of clients in the pool
+    max: 30, // Increased for multi-tenant workload
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
+    connectionTimeoutMillis: 10000,
+    query_timeout: 15000, // Increased for complex queries
 });
 
 // Test connection
