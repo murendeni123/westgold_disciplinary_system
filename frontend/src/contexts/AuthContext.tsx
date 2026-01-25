@@ -4,6 +4,7 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { saveAccount } from '../utils/savedAccounts';
 import { supabase, isSupabaseConfigured, getSupabaseSession } from '../lib/supabase';
 import { Session } from '@supabase/supabase-js';
+import { axiosInstance as api } from '../services/api';
 
 interface User {
   id: number;
@@ -113,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Try to fetch user, but don't loop if it fails
         try {
-          const response = await axios.get('/api/auth/me');
+          const response = await api.get('/auth/me');
           const userData = response.data.user;
           setUser(userData);
         } catch (error: any) {
@@ -154,7 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       console.log('Sending sync request:', syncData);
       
-      const response = await axios.post('/api/auth/supabase-sync', syncData);
+      const response = await api.post('/auth/supabase-sync', syncData);
 
       console.log('Sync response:', response.data);
 
@@ -177,7 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUser = async () => {
     try {
-      const response = await axios.get('/api/auth/me');
+      const response = await api.get('/auth/me');
       setUser(response.data.user);
     } catch (error: any) {
       console.error('Error fetching user:', error);
@@ -196,7 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post('/api/auth/login', { email, password });
+      const response = await api.post('/auth/login', { email, password });
       const { token: newToken, user: userData } = response.data;
       
       setToken(newToken);
@@ -223,7 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // This ensures school context is available before any dashboard API calls
       if (userData.role !== 'platform_admin' && userData.schoolId) {
         try {
-          const schoolInfoResponse = await axios.get('/api/school-info');
+          const schoolInfoResponse = await api.get('/school-info');
           if (schoolInfoResponse.data) {
             localStorage.setItem('school_info', JSON.stringify(schoolInfoResponse.data));
             // Dispatch event to notify components that school context is ready

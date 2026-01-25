@@ -1,19 +1,8 @@
 import axios from 'axios';
 
-// Use network IP when accessed from mobile, otherwise use proxy
-const getApiBaseUrl = () => {
-  // Check if we're accessing from network (not localhost)
-  if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-      // Accessing from network, use the computer's IP
-      return 'http://192.168.18.160:5000/api';
-    }
-  }
-  return '/api';
-};
-
-const API_BASE_URL = getApiBaseUrl();
+// Use environment variable for API base URL
+// Falls back to /api for local development with proxy
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Create axios instance
 const axiosInstance = axios.create({
@@ -664,3 +653,5 @@ export const api = {
     axiosInstance.get(`/goldie-badge/check-eligibility/${studentId}`),
 };
 
+// Export the axios instance for direct use when needed
+export { axiosInstance };
