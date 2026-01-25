@@ -169,10 +169,21 @@ router.post('/link-school', authenticateToken, requireRole('parent'), async (req
             return res.status(400).json({ error: 'School code is required' });
         }
 
-        // Try to find school by subdomain or schema_name
-        let school = await dbGet('SELECT * FROM public.schools WHERE subdomain = $1 OR schema_name = $1', [school_code]);
+        // First, try to find school by the school_code field (primary method for parents)
+        let school = await dbGet(
+            'SELECT * FROM public.schools WHERE school_code = $1 OR code = $1',
+            [school_code.toUpperCase()]
+        );
 
-        // If not found, try by ID
+        // If not found, try by subdomain or schema_name (for backward compatibility)
+        if (!school) {
+            school = await dbGet(
+                'SELECT * FROM public.schools WHERE subdomain = $1 OR schema_name = $1',
+                [school_code.toLowerCase()]
+            );
+        }
+
+        // If not found, try by ID (for admin use)
         if (!school) {
             const numericCode = parseInt(school_code, 10);
             if (!isNaN(numericCode)) {
@@ -180,13 +191,16 @@ router.post('/link-school', authenticateToken, requireRole('parent'), async (req
             }
         }
 
-        // Try by name pattern
+        // Try by name pattern as last resort
         if (!school) {
             school = await dbGet('SELECT * FROM public.schools WHERE name ILIKE $1', [`%${school_code}%`]);
         }
 
         if (!school) {
-            return res.status(404).json({ error: 'Invalid school code. Please check and try again.' });
+            return res.status(404).json({ 
+                error: 'Invalid school code. Please check the code and try again.',
+                hint: 'The school code should look like XXXX-1234 (e.g., LEAR-2041)'
+            });
         }
 
         // Check if user is already linked to this school

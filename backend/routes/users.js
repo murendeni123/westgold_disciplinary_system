@@ -1,9 +1,86 @@
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const { dbGet, dbAll, dbRun } = require('../database/db');
 const { schemaGet, schemaRun, getSchema } = require('../utils/schemaHelper');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
+
+// Create new user (admin only)
+router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
+    try {
+        const schema = getSchema(req);
+        if (!schema) {
+            return res.status(403).json({ error: 'School context required' });
+        }
+
+        const { name, email, password, role } = req.body;
+
+        // Validate required fields
+        if (!name || !email || !password || !role) {
+            return res.status(400).json({ error: 'Name, email, password, and role are required' });
+        }
+
+        // Validate role
+        const validRoles = ['admin', 'teacher', 'parent'];
+        if (!validRoles.includes(role)) {
+            return res.status(400).json({ error: 'Invalid role. Must be admin, teacher, or parent' });
+        }
+
+        // Check if user already exists
+        const existingUser = await dbGet('SELECT id FROM public.users WHERE email = $1', [email.toLowerCase()]);
+        if (existingUser) {
+            return res.status(400).json({ error: 'User with this email already exists' });
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Get school_id from schema
+        const school = await dbGet('SELECT id FROM public.schools WHERE schema_name = $1', [schema]);
+        if (!school) {
+            return res.status(404).json({ error: 'School not found' });
+        }
+
+        // Create user in public.users
+        const userResult = await dbRun(
+            `INSERT INTO public.users (name, email, password, role, primary_school_id, is_active, created_at) 
+             VALUES ($1, $2, $3, $4, $5, true, CURRENT_TIMESTAMP) 
+             RETURNING id`,
+            [name, email.toLowerCase(), hashedPassword, role, school.id]
+        );
+
+        const userId = userResult.id;
+
+        // Link user to school in user_schools
+        await dbRun(
+            `INSERT INTO public.user_schools (user_id, school_id, role, is_primary, created_at) 
+             VALUES ($1, $2, $3, true, CURRENT_TIMESTAMP)`,
+            [userId, school.id, role]
+        );
+
+        // If teacher, create teacher record in school schema
+        if (role === 'teacher') {
+            await schemaRun(req,
+                'INSERT INTO teachers (user_id, name, email, employee_id, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)',
+                [userId, name, email.toLowerCase(), `T${Date.now()}`]
+            );
+        }
+
+        res.status(201).json({
+            message: 'User created successfully',
+            user: {
+                id: userId,
+                name,
+                email: email.toLowerCase(),
+                role
+            }
+        });
+    } catch (error) {
+        console.error('Error creating user:', error);
+        res.status(500).json({ error: 'Failed to create user' });
+    }
+});
 
 // Get all users (admin only)
 router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {

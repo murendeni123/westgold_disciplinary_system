@@ -156,15 +156,30 @@ const setSchemaFromSubdomain = async (req, res, next) => {
  */
 const setSchemaFromToken = async (req, res, next) => {
     try {
+        console.log('🔄 setSchemaFromToken called:', {
+            'req.user exists': !!req.user,
+            'req.user.schemaName': req.user?.schemaName,
+            'req.user.schoolId': req.user?.schoolId,
+            'req.schemaName (before)': req.schemaName,
+            'req.path': req.path
+        });
+        
         // Check if user has schema info in token
         if (req.user && req.user.schemaName) {
             req.schemaName = req.user.schemaName;
             req.schoolId = req.user.schoolId;
             
+            console.log('✅ Schema context set from token:', {
+                schemaName: req.schemaName,
+                schoolId: req.schoolId
+            });
+            
             // Optionally fetch full school info
             if (req.user.schoolId && !req.school) {
                 req.school = await getCachedSchool(req.user.schoolId, 'id');
             }
+        } else {
+            console.warn('⚠️ setSchemaFromToken: No schema found in req.user, keeping existing req.schemaName:', req.schemaName);
         }
         
         next();
@@ -244,20 +259,14 @@ const platformAdminOnly = async (req, res, next) => {
             return res.status(401).json({ error: 'Authentication required' });
         }
         
-        // Check if user is a platform admin
-        const platformUser = await dbGet(
-            'SELECT * FROM public.platform_users WHERE id = $1 AND is_active = true',
-            [req.user.platformUserId]
-        );
-        
-        if (!platformUser) {
+        // Check if user is a platform admin (set by authenticateToken middleware)
+        if (!req.user.isPlatformAdmin && req.user.role !== 'platform_admin') {
             return res.status(403).json({
                 error: 'Access denied',
                 message: 'This endpoint is restricted to platform administrators.'
             });
         }
         
-        req.platformUser = platformUser;
         next();
     } catch (error) {
         console.error('Platform admin check error:', error);

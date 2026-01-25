@@ -2,12 +2,12 @@ const express = require('express');
 const { dbAll, dbGet, dbRun } = require('../database/db');
 const { schemaAll, schemaGet, schemaRun, getSchema } = require('../utils/schemaHelper');
 const { authenticateToken, requireRole } = require('../middleware/auth');
-const { createNotification } = require('./notifications');
+const { createNotification, notifySchoolAdmins } = require('./notifications');
 
 const router = express.Router();
 
-// Get all consequence definitions (admin only)
-router.get('/definitions', authenticateToken, requireRole('admin'), async (req, res) => {
+// Get all consequence definitions (admin and teacher)
+router.get('/definitions', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
   try {
     const schema = getSchema(req);
     if (!schema) {
@@ -38,7 +38,7 @@ router.post('/definitions', authenticateToken, requireRole('admin'), async (req,
     const result = await schemaRun(req,
       `INSERT INTO consequences (name, description, severity, default_duration, is_active)
        VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [name, description || null, severity || 'low', default_duration || null, is_active !== undefined ? is_active : 1]
+      [name, description || null, severity || null, default_duration || null, is_active !== undefined ? (is_active ? 1 : 0) : 1]
     );
 
     const consequence = await schemaGet(req, 'SELECT * FROM consequences WHERE id = $1', [result.id]);
@@ -65,7 +65,7 @@ router.put('/definitions/:id', authenticateToken, requireRole('admin'), async (r
       `UPDATE consequences 
        SET name = $1, description = $2, severity = $3, default_duration = $4, is_active = $5
        WHERE id = $6`,
-      [name, description || null, severity || 'low', default_duration || null, is_active !== undefined ? is_active : 1, req.params.id]
+      [name, description || null, severity || null, default_duration || null, is_active !== undefined ? (is_active ? 1 : 0) : 1, req.params.id]
     );
 
     const consequence = await schemaGet(req, 'SELECT * FROM consequences WHERE id = $1', [req.params.id]);
@@ -106,7 +106,8 @@ router.get('/', authenticateToken, async (req, res) => {
     let query = `
       SELECT sc.*, 
              s.first_name || ' ' || s.last_name as student_name,
-             s.student_id,
+             s.student_id as student_number,
+             s.id as student_id,
              c.name as consequence_name,
              c.severity,
              u.name as assigned_by_name,
@@ -120,6 +121,12 @@ router.get('/', authenticateToken, async (req, res) => {
     `;
     const params = [];
     let paramIndex = 1;
+
+    // If user is a parent, only show consequences for their linked children
+    if (req.user.role === 'parent') {
+      query += ` AND s.parent_id = $${paramIndex++}`;
+      params.push(req.user.id);
+    }
 
     if (student_id) {
       query += ` AND sc.student_id = $${paramIndex++}`;
@@ -204,6 +211,9 @@ router.post('/assign', authenticateToken, requireRole('admin', 'teacher'), async
   try {
     const { student_id, consequence_id, incident_id, assigned_date, due_date, notes } = req.body;
     const schema = getSchema(req);
+    
+    console.log('Assign consequence request:', { student_id, consequence_id, incident_id, assigned_date, schema, userId: req.user?.userId });
+    
     if (!schema) {
       return res.status(403).json({ error: 'School context required' });
     }
@@ -212,41 +222,136 @@ router.post('/assign', authenticateToken, requireRole('admin', 'teacher'), async
       return res.status(400).json({ error: 'Student ID and assigned date are required' });
     }
 
+    if (!req.user || !req.user.id) {
+      console.error('User ID not found in request');
+      return res.status(401).json({ error: 'User authentication failed' });
+    }
+
     // Verify student exists in this school's schema
     const student = await schemaGet(req, 'SELECT id FROM students WHERE id = $1', [student_id]);
     if (!student) {
       return res.status(404).json({ error: 'Student not found' });
     }
 
+    // Get consequence details first to check if it's a suspension
+    const consequenceDetails = consequence_id ? await schemaGet(req, 
+      'SELECT * FROM consequences WHERE id = $1', 
+      [consequence_id]
+    ) : null;
+
+    // Determine consequence name - either from selected consequence or custom
+    const consequenceName = consequenceDetails ? consequenceDetails.name : (notes || 'Custom Consequence');
+
+    // Check if this is a suspension
+    const isSuspension = consequenceDetails && consequenceDetails.severity === 'high';
+    const initialStatus = 'pending';
+
     const result = await schemaRun(req,
-      `INSERT INTO student_consequences (student_id, consequence_id, incident_id, assigned_by, assigned_date, due_date, notes, parent_acknowledged, parent_acknowledged_at, parent_notes, completion_verified, completion_verified_by, completion_verified_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, false, NULL, NULL, false, NULL, NULL) RETURNING id`,
-      [student_id, consequence_id || null, incident_id || null, req.user.id, assigned_date, due_date || null, notes || null]
+      `INSERT INTO student_consequences (student_id, consequence_id, incident_id, consequence_name, assigned_by, assigned_date, due_date, notes, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+      [student_id, consequence_id || null, incident_id || null, consequenceName, req.user.id, assigned_date, due_date || null, notes || null, initialStatus]
     );
 
     const consequence = await schemaGet(req, 'SELECT * FROM student_consequences WHERE id = $1', [result.id]);
     
+    // Get student details for notifications
+    const studentDetails = await schemaGet(req, 
+      'SELECT s.*, s.first_name || \' \' || s.last_name as student_name FROM students s WHERE s.id = $1', 
+      [student_id]
+    );
+    
     // Create notification for parent
     try {
-      const studentWithParent = await schemaGet(req, 'SELECT parent_id FROM students WHERE id = $1', [student_id]);
-      if (studentWithParent && studentWithParent.parent_id) {
+      if (studentDetails && studentDetails.parent_id) {
         await createNotification(
-          studentWithParent.parent_id,
+          req,
+          studentDetails.parent_id,
           'consequence',
           'Consequence Assigned',
           `A consequence has been assigned to your child`,
           result.id,
-          'consequence',
-          req.app
+          'consequence'
         );
       }
     } catch (notifError) {
       console.error('Error creating notification:', notifError);
     }
 
+    // Notify admins for high severity consequences
+    try {
+      if (consequenceDetails && consequenceDetails.severity === 'high') {
+        await notifySchoolAdmins(
+          req,
+          'high_severity_consequence',
+          '⚠️ High Severity Consequence Assigned',
+          `${consequenceDetails.name} assigned to ${studentDetails.student_name}`,
+          result.id,
+          'consequence'
+        );
+      }
+    } catch (notifError) {
+      console.error('Error notifying admins:', notifError);
+    }
+
     res.status(201).json(consequence);
   } catch (error) {
     console.error('Error assigning consequence:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Assign suspension (admin only) with notifications
+router.post('/suspension', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const { student_id, start_date, end_date, reason, notes } = req.body;
+    const schema = getSchema(req);
+    
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+
+    if (!student_id || !start_date) {
+      return res.status(400).json({ error: 'Student ID and start date are required' });
+    }
+
+    // Verify student exists
+    const student = await schemaGet(req, 
+      'SELECT s.*, s.first_name || \' \' || s.last_name as student_name FROM students s WHERE s.id = $1', 
+      [student_id]
+    );
+
+    if (!student) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    // Create the suspension consequence
+    const result = await schemaRun(req,
+      `INSERT INTO student_consequences (student_id, consequence_name, assigned_by, assigned_date, due_date, notes, status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING id`,
+      [student_id, reason || 'Suspension', req.user.id, start_date, end_date || null, notes || null]
+    );
+
+    // Notify parent
+    if (student.parent_id) {
+      try {
+        await createNotification(
+          req,
+          student.parent_id,
+          'suspension',
+          '⚠️ Student Suspended',
+          `${student.student_name} has been suspended. Start date: ${start_date}${end_date ? `, End date: ${end_date}` : ''}.`,
+          result.id,
+          'consequence'
+        );
+      } catch (notifError) {
+        console.error('Error notifying parent:', notifError);
+      }
+    }
+
+    const consequence = await schemaGet(req, 'SELECT * FROM student_consequences WHERE id = $1', [result.id]);
+    res.status(201).json(consequence);
+  } catch (error) {
+    console.error('Error assigning suspension:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

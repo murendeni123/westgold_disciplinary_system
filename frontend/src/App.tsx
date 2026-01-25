@@ -3,6 +3,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { PlatformAuthProvider } from './contexts/PlatformAuthContext';
 import { SchoolThemeProvider } from './contexts/SchoolThemeContext';
+import { FeatureFlagsProvider } from './contexts/FeatureFlagsContext';
+import { ToastProvider } from './contexts/ToastContext';
 import Login from './pages/Login';
 import ParentSignup from './pages/ParentSignup';
 import AuthCallback from './pages/AuthCallback';
@@ -30,6 +32,8 @@ import UserManagement from './pages/admin/UserManagement';
 import DisciplineCenter from './pages/admin/DisciplineCenter';
 import DisciplineRules from './pages/admin/DisciplineRules';
 import DetentionSessions from './pages/admin/DetentionSessions';
+import AdminConsequences from './pages/admin/Consequences';
+import ConsequenceManagement from './pages/admin/ConsequenceManagement';
 import ReportsAnalytics from './pages/admin/ReportsAnalytics';
 import BehaviourDashboard from './pages/admin/BehaviourDashboard';
 import AdminNotifications from './pages/admin/NotificationsEnhanced';
@@ -48,6 +52,7 @@ import PlatformLogs from './pages/platform/PlatformLogs';
 import PlatformUsers from './pages/platform/PlatformUsers';
 import SchoolOnboardingWizard from './pages/platform/SchoolOnboardingWizard';
 import PlatformNotifications from './pages/platform/NotificationsPage';
+import FeatureFlagsManagement from './pages/platform/FeatureFlagsManagement';
 
 // Teacher pages
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
@@ -61,7 +66,9 @@ import TeacherDetentions from './pages/teacher/Detentions';
 import TeacherStudentProfile from './pages/teacher/StudentProfile';
 import TeacherSettings from './pages/teacher/TeacherSettings';
 import TeacherInterventions from './pages/teacher/Interventions';
+import GuidedIntervention from './pages/teacher/GuidedIntervention';
 import TeacherConsequences from './pages/teacher/Consequences';
+import AssignConsequence from './pages/teacher/AssignConsequence';
 import TeacherNotifications from './pages/teacher/NotificationsPage';
 
 // Parent pages
@@ -90,6 +97,8 @@ function App() {
         <SchoolThemeProvider>
           <NotificationProvider>
             <PlatformAuthProvider>
+              <FeatureFlagsProvider>
+                <ToastProvider>
             <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<ParentSignup />} />
@@ -105,9 +114,12 @@ function App() {
             <Route path="teachers" element={<Teachers />} />
             <Route path="teachers/:id" element={<AdminTeacherProfile />} />
             <Route path="parents" element={<Parents />} />
+            <Route path="behaviour-dashboard" element={<BehaviourDashboard />} />
             <Route path="discipline" element={<DisciplineCenter />} />
             <Route path="discipline-rules" element={<DisciplineRules />} />
             <Route path="detention-sessions" element={<DetentionSessions />} />
+            <Route path="consequences" element={<AdminConsequences />} />
+            <Route path="consequence-management" element={<ConsequenceManagement />} />
             <Route path="merits" element={<MeritsDemerits />} />
             <Route path="reports" element={<ReportsAnalytics />} />
             <Route path="bulk-import" element={<BulkImport />} />
@@ -126,7 +138,9 @@ function App() {
             <Route path="merits/award" element={<AwardMerit />} />
             <Route path="detentions" element={<TeacherDetentions />} />
             <Route path="interventions" element={<TeacherInterventions />} />
+            <Route path="interventions/guided" element={<GuidedIntervention />} />
             <Route path="consequences" element={<TeacherConsequences />} />
+            <Route path="assign-consequence" element={<AssignConsequence />} />
             <Route path="settings" element={<TeacherSettings />} />
             <Route path="students/:id" element={<TeacherStudentProfile />} />
             <Route path="notifications" element={<TeacherNotifications />} />
@@ -165,10 +179,13 @@ function App() {
             <Route path="billing" element={<PlatformBilling />} />
             <Route path="logs" element={<PlatformLogs />} />
             <Route path="notifications" element={<PlatformNotifications />} />
+            <Route path="feature-flags" element={<FeatureFlagsManagement />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
+                </ToastProvider>
+              </FeatureFlagsProvider>
             </PlatformAuthProvider>
           </NotificationProvider>
         </SchoolThemeProvider>

@@ -4,13 +4,15 @@ import { api } from '../../services/api';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { motion } from 'framer-motion';
-import { Save, Lock, User, Settings, Sparkles } from 'lucide-react';
+import { Save, Lock, User, Settings, Sparkles, Building2, Copy, Check } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 const AdminSettings: React.FC = () => {
   const { user, updateUser } = useAuth();
   const { success, error, ToastContainer } = useToast();
-  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'preferences'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'school' | 'preferences'>('profile');
+  const [schoolInfo, setSchoolInfo] = useState<any>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
   
   // Profile state
   const [profileData, setProfileData] = useState({
@@ -33,8 +35,27 @@ const AdminSettings: React.FC = () => {
         name: user.name || '',
         email: user.email || '',
       });
+      fetchSchoolInfo();
     }
   }, [user]);
+
+  const fetchSchoolInfo = async () => {
+    try {
+      const response = await api.getCurrentSchoolInfo();
+      setSchoolInfo(response.data);
+    } catch (err) {
+      console.error('Error fetching school info:', err);
+    }
+  };
+
+  const copySchoolCode = () => {
+    if (schoolInfo?.school_code) {
+      navigator.clipboard.writeText(schoolInfo.school_code);
+      setCopiedCode(true);
+      success('School code copied to clipboard!');
+      setTimeout(() => setCopiedCode(false), 2000);
+    }
+  };
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,6 +147,7 @@ const AdminSettings: React.FC = () => {
             {[
               { id: 'profile', label: 'Profile', icon: User },
               { id: 'password', label: 'Password', icon: Lock },
+              { id: 'school', label: 'School Info', icon: Building2 },
               { id: 'preferences', label: 'Preferences', icon: Settings },
             ].map((tab) => {
               const Icon = tab.icon;
@@ -248,6 +270,89 @@ const AdminSettings: React.FC = () => {
                 </Button>
               </motion.div>
             </form>
+          </motion.div>
+        )}
+
+        {/* School Information Tab */}
+        {activeTab === 'school' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">School Information</h2>
+              <Building2 className="text-amber-600" size={24} />
+            </div>
+            <div className="space-y-6">
+              {schoolInfo ? (
+                <>
+                  <div className="p-6 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
+                    <p className="text-sm font-medium text-gray-700 mb-2">School Name</p>
+                    <p className="text-2xl font-bold text-gray-900">{schoolInfo.name}</p>
+                  </div>
+                  
+                  <div className="p-6 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-medium text-gray-700">School Code</p>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={copySchoolCode}
+                        className="flex items-center space-x-2 px-3 py-1.5 bg-white rounded-lg shadow-sm hover:shadow-md transition-all"
+                      >
+                        {copiedCode ? (
+                          <>
+                            <Check size={16} className="text-green-600" />
+                            <span className="text-sm text-green-600 font-medium">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={16} className="text-blue-600" />
+                            <span className="text-sm text-blue-600 font-medium">Copy</span>
+                          </>
+                        )}
+                      </motion.button>
+                    </div>
+                    <p className="text-3xl font-bold text-blue-900 tracking-wider font-mono">
+                      {schoolInfo.school_code || 'N/A'}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-2">
+                      Share this code with parents to link their accounts
+                    </p>
+                  </div>
+
+                  {schoolInfo.email && (
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                      <p className="text-sm font-medium text-gray-700 mb-2">School Email</p>
+                      <p className="text-lg text-gray-900">{schoolInfo.email}</p>
+                    </div>
+                  )}
+
+                  {schoolInfo.phone && (
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                      <p className="text-sm font-medium text-gray-700 mb-2">School Phone</p>
+                      <p className="text-lg text-gray-900">{schoolInfo.phone}</p>
+                    </div>
+                  )}
+
+                  {schoolInfo.address && (
+                    <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
+                      <p className="text-sm font-medium text-gray-700 mb-2">School Address</p>
+                      <p className="text-lg text-gray-900">
+                        {schoolInfo.address}
+                        {schoolInfo.city && `, ${schoolInfo.city}`}
+                        {schoolInfo.postal_code && ` ${schoolInfo.postal_code}`}
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="p-8 rounded-xl bg-gray-50 border border-gray-200 text-center">
+                  <p className="text-gray-500">Loading school information...</p>
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
 

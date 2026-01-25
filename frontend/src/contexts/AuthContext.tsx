@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from 'axios';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { saveAccount } from '../utils/savedAccounts';
 import { supabase, isSupabaseConfigured, getSupabaseSession } from '../lib/supabase';
 import { Session } from '@supabase/supabase-js';
 
@@ -49,6 +51,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isSupabaseEnabled = isSupabaseConfigured();
 
   useEffect(() => {
+    // One-time fix: Clear potentially corrupted auth data
+    const needsReset = localStorage.getItem('auth_needs_reset');
+    if (needsReset !== 'false') {
+      console.log('Clearing auth data to fix refresh loop...');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.setItem('auth_needs_reset', 'false');
+    }
     initializeAuth();
   }, []);
 
@@ -100,10 +110,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (storedToken) {
         setToken(storedToken);
         axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-        await fetchUser();
-      } else {
-        setLoading(false);
+        
+        // Try to fetch user, but don't loop if it fails
+        try {
+          const response = await axios.get('/api/auth/me');
+          const userData = response.data.user;
+          setUser(userData);
+        } catch (error: any) {
+          console.error('Error fetching user on init:', error);
+          
+          // Handle outdated token - force re-login
+          if (error.response?.data?.code === 'TOKEN_OUTDATED' || 
+              error.response?.data?.code === 'TOKEN_MISSING_CONTEXT') {
+            console.log('Token outdated or missing context - clearing and requiring re-login');
+            handleSignOut();
+          } else if (error.response?.status === 401 || error.response?.status === 403) {
+            // Other auth errors - clear token
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            setToken(null);
+          }
+        }
       }
+      setLoading(false);
     } catch (error) {
       console.error('Error initializing auth:', error);
       setLoading(false);
@@ -150,10 +179,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const response = await axios.get('/api/auth/me');
       setUser(response.data.user);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching user:', error);
-      localStorage.removeItem('token');
-      setToken(null);
+      // Only clear token if it's actually invalid (401/403), not for network errors
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.log('Token invalid, clearing...');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -169,6 +204,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('token', newToken);
       localStorage.setItem('user', JSON.stringify(userData));
       axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+      
+      // Store school context for tenant-scoped API requests
+      if (userData.schoolId) {
+        localStorage.setItem('schoolId', userData.schoolId.toString());
+      }
+      if (userData.schemaName) {
+        localStorage.setItem('schemaName', userData.schemaName);
+      }
+      if (userData.schoolName) {
+        localStorage.setItem('schoolName', userData.schoolName);
+      }
+      if (userData.schoolCode) {
+        localStorage.setItem('schoolCode', userData.schoolCode);
+      }
+      
+      // For school admin users, fetch and store school-info immediately after login
+      // This ensures school context is available before any dashboard API calls
+      if (userData.role !== 'platform_admin' && userData.schoolId) {
+        try {
+          const schoolInfoResponse = await axios.get('/api/school-info');
+          if (schoolInfoResponse.data) {
+            localStorage.setItem('school_info', JSON.stringify(schoolInfoResponse.data));
+            // Dispatch event to notify components that school context is ready
+            window.dispatchEvent(new CustomEvent('schoolContextReady', { 
+              detail: { schoolId: userData.schoolId, schoolInfo: schoolInfoResponse.data }
+            }));
+          }
+        } catch (error) {
+          console.error('Error fetching school info after login:', error);
+          // Don't fail login if school-info fetch fails
+        }
+      }
+      
+      // Save email to saved accounts for quick login next time
+      saveAccount(email, userData.name);
+      
+      // Trigger event to refresh feature flags
+      window.dispatchEvent(new CustomEvent('userLoggedIn'));
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Login failed');
     }

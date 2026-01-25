@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import Table from '../../components/Table';
 import Select from '../../components/Select';
@@ -7,11 +8,13 @@ import Input from '../../components/Input';
 import Textarea from '../../components/Textarea';
 import Button from '../../components/Button';
 import ModernFilter from '../../components/ModernFilter';
+import InterventionProgressModal from '../../components/InterventionProgressModal';
 import { motion } from 'framer-motion';
-import { Filter, Sparkles } from 'lucide-react';
+import { Filter, Sparkles, Edit, CheckCircle, Lightbulb, ArrowRight } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 const TeacherInterventions: React.FC = () => {
+  const navigate = useNavigate();
   const { ToastContainer, success, error } = useToast();
   const [interventions, setInterventions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +27,8 @@ const TeacherInterventions: React.FC = () => {
   const [students, setStudents] = useState<any[]>([]);
   const [interventionTypes, setInterventionTypes] = useState<any[]>([]);
   const [assigning, setAssigning] = useState(false);
+  const [selectedIntervention, setSelectedIntervention] = useState<any>(null);
+  const [showProgressModal, setShowProgressModal] = useState(false);
   const [newIntervention, setNewIntervention] = useState({
     student_id: '',
     type: '',
@@ -91,6 +96,7 @@ const TeacherInterventions: React.FC = () => {
     { key: 'end_date', label: 'End Date' },
     { key: 'status', label: 'Status' },
     { key: 'assigned_by_name', label: 'Assigned By' },
+    { key: 'actions', label: 'Actions' },
   ];
 
   const tableData = interventions.map((intervention) => ({
@@ -105,6 +111,32 @@ const TeacherInterventions: React.FC = () => {
       }`}>
         {intervention.status}
       </span>
+    ),
+    actions: (
+      <div className="flex items-center space-x-2">
+        {intervention.status === 'active' && (
+          <>
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => handleUpdateProgress(intervention)}
+              className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+              title="Update Progress"
+            >
+              <Edit size={16} />
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => handleEndIntervention(intervention)}
+              className="p-2 rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
+              title="End Intervention"
+            >
+              <CheckCircle size={16} />
+            </motion.button>
+          </>
+        )}
+      </div>
     ),
   }));
 
@@ -143,6 +175,27 @@ const TeacherInterventions: React.FC = () => {
     }
   };
 
+  const [modalMode, setModalMode] = useState<'progress' | 'outcome'>('progress');
+
+  const handleUpdateProgress = (intervention: any) => {
+    setSelectedIntervention(intervention);
+    setModalMode('progress');
+    setShowProgressModal(true);
+  };
+
+  const handleEndIntervention = (intervention: any) => {
+    setSelectedIntervention(intervention);
+    setModalMode('outcome');
+    setShowProgressModal(true);
+  };
+
+  const handleProgressSaved = () => {
+    setShowProgressModal(false);
+    setSelectedIntervention(null);
+    fetchInterventions();
+    success('Intervention updated successfully');
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -171,7 +224,44 @@ const TeacherInterventions: React.FC = () => {
         <p className="text-gray-600 mt-2 text-lg">View interventions for students in your classes</p>
       </motion.div>
 
-      {/* Assign Intervention */}
+      {/* Guided Intervention CTA */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 shadow-xl p-6 text-white"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-start space-x-4">
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+              <Lightbulb className="text-white" size={24} />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold mb-2">✨ New: 2-Step Guided Intervention</h2>
+              <p className="text-blue-100 mb-4">
+                Evidence-based intervention planning with smart strategy suggestions. Choose from 50 research-backed strategies across 5 behaviour categories.
+              </p>
+              <ul className="text-sm text-blue-100 space-y-1 mb-4">
+                <li>• Smart suggestions prioritize untried strategies</li>
+                <li>• Track what works for each student</li>
+                <li>• PRIM/SIAS compliant documentation</li>
+                <li>• Support before punishment approach</li>
+              </ul>
+            </div>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.05, x: 5 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => navigate('/teacher/interventions/guided')}
+            className="flex items-center space-x-2 px-6 py-3 bg-white text-blue-600 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all"
+          >
+            <span>Try Guided Intervention</span>
+            <ArrowRight size={20} />
+          </motion.button>
+        </div>
+      </motion.div>
+
+      {/* Assign Intervention (Legacy) */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -315,6 +405,20 @@ const TeacherInterventions: React.FC = () => {
           </div>
           <Table columns={columns} data={tableData} />
         </motion.div>
+      )}
+
+      {/* Progress Modal */}
+      {showProgressModal && selectedIntervention && (
+        <InterventionProgressModal
+          intervention={selectedIntervention}
+          isOpen={showProgressModal}
+          mode={modalMode}
+          onClose={() => {
+            setShowProgressModal(false);
+            setSelectedIntervention(null);
+          }}
+          onSuccess={handleProgressSaved}
+        />
       )}
     </div>
   );

@@ -6,7 +6,7 @@ import Modal from '../../components/Modal';
 import Input from '../../components/Input';
 import Select from '../../components/Select';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, Users, GraduationCap, ChevronRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, GraduationCap, ChevronRight, Search } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 const Classes: React.FC = () => {
@@ -17,12 +17,19 @@ const Classes: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState({
     class_name: '',
     grade_level: '',
     teacher_id: '',
     academic_year: '2024-2025',
   });
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<any>(null);
+  const [students, setStudents] = useState<any[]>([]);
+  const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
+  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
     fetchClasses();
@@ -105,6 +112,85 @@ const Classes: React.FC = () => {
     navigate(`/admin/classes/${classItem.id}`);
   };
 
+  const handleOpenAssignModal = async (classItem: any) => {
+    setSelectedClass(classItem);
+    setSelectedStudents([]);
+    setStudentSearchQuery('');
+    
+    try {
+      const response = await api.getStudents();
+      // Filter out students already in this class
+      const availableStudents = response.data.filter((s: any) => s.class_id !== classItem.id);
+      setStudents(availableStudents);
+      setIsAssignModalOpen(true);
+    } catch (err) {
+      console.error('Error fetching students:', err);
+      error('Failed to load students');
+    }
+  };
+
+  const handleToggleStudent = (studentId: number) => {
+    setSelectedStudents(prev => 
+      prev.includes(studentId) 
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    const filtered = filteredStudents;
+    if (selectedStudents.length === filtered.length) {
+      setSelectedStudents([]);
+    } else {
+      setSelectedStudents(filtered.map(s => s.id));
+    }
+  };
+
+  const handleAssignStudents = async () => {
+    if (selectedStudents.length === 0) {
+      error('Please select at least one student');
+      return;
+    }
+
+    setAssigning(true);
+    try {
+      // Update each student's class_id
+      await Promise.all(
+        selectedStudents.map(studentId =>
+          api.updateStudent(studentId, { class_id: selectedClass.id })
+        )
+      );
+      
+      success(`${selectedStudents.length} student(s) assigned successfully`);
+      setIsAssignModalOpen(false);
+      fetchClasses();
+    } catch (err) {
+      console.error('Error assigning students:', err);
+      error('Failed to assign students');
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const filteredStudents = students.filter(s => {
+    const search = studentSearchQuery.toLowerCase();
+    return (
+      s.first_name?.toLowerCase().includes(search) ||
+      s.last_name?.toLowerCase().includes(search) ||
+      s.student_id?.toLowerCase().includes(search)
+    );
+  });
+
+  // Filter classes based on search query
+  const filteredClasses = classes.filter((classItem) => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      classItem.class_name?.toLowerCase().includes(searchLower) ||
+      classItem.grade_level?.toLowerCase().includes(searchLower) ||
+      classItem.teacher_name?.toLowerCase().includes(searchLower)
+    );
+  });
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -140,6 +226,25 @@ const Classes: React.FC = () => {
         </Button>
       </motion.div>
 
+      {/* Search Bar */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="relative"
+      >
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          <input
+            type="text"
+            placeholder="Search classes by name, grade level, or teacher..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+      </motion.div>
+
       {/* Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <motion.div
@@ -168,7 +273,7 @@ const Classes: React.FC = () => {
             <div>
               <p className="text-green-100 text-sm font-medium">Total Students</p>
               <p className="text-4xl font-bold mt-2">
-                {classes.reduce((sum, c) => sum + (c.student_count || 0), 0)}
+                {classes.reduce((sum, c) => sum + (Number(c.student_count) || 0), 0)}
               </p>
               <p className="text-green-100 text-sm mt-2">Across all classes</p>
             </div>
@@ -187,7 +292,7 @@ const Classes: React.FC = () => {
               <p className="text-purple-100 text-sm font-medium">Average Class Size</p>
               <p className="text-4xl font-bold mt-2">
                 {classes.length > 0
-                  ? Math.round(classes.reduce((sum, c) => sum + (c.student_count || 0), 0) / classes.length)
+                  ? Math.round(classes.reduce((sum, c) => sum + (Number(c.student_count) || 0), 0) / classes.length)
                   : 0}
               </p>
               <p className="text-purple-100 text-sm mt-2">Students per class</p>
@@ -206,17 +311,19 @@ const Classes: React.FC = () => {
       >
         <h2 className="text-2xl font-bold text-gray-900 mb-6">All Classes</h2>
         
-        {classes.length === 0 ? (
+        {filteredClasses.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <GraduationCap size={48} className="mx-auto mb-4 text-gray-300" />
-            <p>No classes found</p>
-            <Button onClick={handleCreate} className="mt-4">
-              Create Your First Class
-            </Button>
+            <p>{searchQuery ? 'No classes match your search' : 'No classes found'}</p>
+            {!searchQuery && (
+              <Button onClick={handleCreate} className="mt-4">
+                Create Your First Class
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {classes.map((classItem, index) => (
+            {filteredClasses.map((classItem, index) => (
               <motion.div
                 key={classItem.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -247,32 +354,44 @@ const Classes: React.FC = () => {
                   <div className="flex items-center justify-between py-2 border-t border-gray-100">
                     <span className="text-sm text-gray-600">Students</span>
                     <span className="text-sm font-semibold text-blue-600">
-                      {classItem.student_count || 0}
+                      {Number(classItem.student_count) || 0}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-100">
+                <div className="flex flex-col space-y-2 mt-4 pt-4 border-t border-gray-100">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleEdit(classItem);
+                      handleOpenAssignModal(classItem);
                     }}
-                    className="flex-1 px-3 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                    className="w-full px-3 py-2 text-sm bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
                   >
-                    <Edit size={16} className="inline mr-1" />
-                    Edit
+                    <Users size={16} className="inline mr-1" />
+                    Assign Students
                   </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(classItem.id);
-                    }}
-                    className="flex-1 px-3 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-                  >
-                    <Trash2 size={16} className="inline mr-1" />
-                    Delete
-                  </button>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(classItem);
+                      }}
+                      className="flex-1 px-3 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                    >
+                      <Edit size={16} className="inline mr-1" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(classItem.id);
+                      }}
+                      className="flex-1 px-3 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                    >
+                      <Trash2 size={16} className="inline mr-1" />
+                      Delete
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             ))}
@@ -333,6 +452,94 @@ const Classes: React.FC = () => {
             </motion.div>
           </div>
         </form>
+      </Modal>
+
+      {/* Assign Students Modal */}
+      <Modal
+        isOpen={isAssignModalOpen}
+        onClose={() => setIsAssignModalOpen(false)}
+        title={`Assign Students to ${selectedClass?.class_name || 'Class'}`}
+      >
+        <div className="space-y-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              placeholder="Search students by name or ID..."
+              value={studentSearchQuery}
+              onChange={(e) => setStudentSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Select All */}
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <span className="text-sm font-medium text-gray-700">
+              {selectedStudents.length} of {filteredStudents.length} selected
+            </span>
+            <button
+              onClick={handleSelectAll}
+              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+            >
+              {selectedStudents.length === filteredStudents.length ? 'Deselect All' : 'Select All'}
+            </button>
+          </div>
+
+          {/* Students List */}
+          <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
+            {filteredStudents.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Users size={48} className="mx-auto mb-2 text-gray-300" />
+                <p>No available students found</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {filteredStudents.map((student) => (
+                  <div
+                    key={student.id}
+                    onClick={() => handleToggleStudent(student.id)}
+                    className="p-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedStudents.includes(student.id)}
+                        onChange={() => {}}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {student.first_name} {student.last_name}
+                        </p>
+                        <p className="text-xs text-gray-500">ID: {student.student_id}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsAssignModalOpen(false)}
+              disabled={assigning}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAssignStudents}
+              disabled={assigning || selectedStudents.length === 0}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {assigning ? 'Assigning...' : `Assign ${selectedStudents.length} Student(s)`}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

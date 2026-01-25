@@ -654,26 +654,28 @@ const PlatformDashboard: React.FC = () => {
             </button>
           </div>
           <div className="space-y-4">
-            {[
-              { action: 'New school onboarded', school: 'Lincoln High', time: '2 hours ago', icon: Building2, color: 'bg-blue-100 text-blue-600' },
-              { action: 'Payment received', school: 'West Gold Academy', time: '4 hours ago', icon: DollarSign, color: 'bg-green-100 text-green-600' },
-              { action: 'Plan upgraded', school: 'Sunrise Elementary', time: '6 hours ago', icon: Crown, color: 'bg-purple-100 text-purple-600' },
-              { action: 'New admin added', school: 'Oak Valley School', time: '1 day ago', icon: Users, color: 'bg-amber-100 text-amber-600' },
-            ].map((activity, index) => {
-              const Icon = activity.icon;
-              return (
-                <div key={index} className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors">
-                  <div className={`w-10 h-10 rounded-lg ${activity.color} flex items-center justify-center`}>
-                    <Icon size={18} />
+            {stats?.recent_activity && stats.recent_activity.length > 0 ? (
+              stats.recent_activity.map((activity: any, index: number) => {
+                const Icon = activity.icon || Building2;
+                return (
+                  <div key={index} className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                    <div className={`w-10 h-10 rounded-lg ${activity.color || 'bg-blue-100 text-blue-600'} flex items-center justify-center`}>
+                      <Icon size={18} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-800">{activity.action}</p>
+                      <p className="text-sm text-gray-500">{activity.school}</p>
+                    </div>
+                    <span className="text-xs text-gray-400">{activity.time}</span>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-800">{activity.action}</p>
-                    <p className="text-sm text-gray-500">{activity.school}</p>
-                  </div>
-                  <span className="text-xs text-gray-400">{activity.time}</span>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <Activity size={48} className="mx-auto mb-3 opacity-20" />
+                <p>No recent activity</p>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -697,32 +699,36 @@ const PlatformDashboard: React.FC = () => {
             </button>
           </div>
           <div className="space-y-4">
-            {[
-              { name: 'West Gold Academy', students: 450, plan: 'Pro', growth: '+12%' },
-              { name: 'Lincoln High School', students: 380, plan: 'Starter', growth: '+8%' },
-              { name: 'Sunrise Elementary', students: 290, plan: 'Pro', growth: '+15%' },
-              { name: 'Oak Valley School', students: 210, plan: 'Trial', growth: '+5%' },
-            ].map((school, index) => (
-              <div key={index} className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">
-                  {school.name.charAt(0)}
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-gray-800">{school.name}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500">{school.students} students</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      school.plan === 'Pro' ? 'bg-purple-100 text-purple-700' :
-                      school.plan === 'Starter' ? 'bg-blue-100 text-blue-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {school.plan}
-                    </span>
+            {stats?.top_schools && stats.top_schools.length > 0 ? (
+              stats.top_schools.map((school: any, index: number) => (
+                <div key={index} className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold">
+                    {school.name.charAt(0)}
                   </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-800">{school.name}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500">{school.students} students</span>
+                      {school.plan && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          school.plan === 'Pro' ? 'bg-purple-100 text-purple-700' :
+                          school.plan === 'Starter' ? 'bg-blue-100 text-blue-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {school.plan}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {school.growth && <span className="text-sm text-green-600 font-medium">{school.growth}</span>}
                 </div>
-                <span className="text-sm text-green-600 font-medium">{school.growth}</span>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                <Building2 size={48} className="mx-auto mb-3 opacity-20" />
+                <p>No schools yet</p>
               </div>
-            ))}
+            )}
           </div>
         </motion.div>
       </div>

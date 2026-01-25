@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { api } from '../../services/api';
+import { useToast } from '../../contexts/ToastContext';
 import {
   BarChart3,
   TrendingUp,
@@ -30,6 +31,7 @@ interface Stats {
 }
 
 const ReportsAnalytics: React.FC = () => {
+  const { showSuccess, showError, showWarning } = useToast();
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('month');
   const [stats, setStats] = useState<Stats>({
@@ -42,6 +44,10 @@ const ReportsAnalytics: React.FC = () => {
     detentionCount: 0,
   });
   const [behaviourData, setBehaviourData] = useState<any[]>([]);
+  const [allIncidents, setAllIncidents] = useState<any[]>([]);
+  const [allMerits, setAllMerits] = useState<any[]>([]);
+  const [allDetentions, setAllDetentions] = useState<any[]>([]);
+  const [allStudents, setAllStudents] = useState<any[]>([]);
 
   useEffect(() => {
     fetchAnalytics();
@@ -61,19 +67,26 @@ const ReportsAnalytics: React.FC = () => {
       ]);
 
       const students = studentsRes.data || [];
+      const incidents = incidentsRes.data || [];
+      const merits = meritsRes.data || [];
+      const detentions = detentionsRes.data || [];
+
+      setAllStudents(students);
+      setAllIncidents(incidents);
+      setAllMerits(merits);
+      setAllDetentions(detentions);
 
       setStats({
         totalStudents: students.length,
         totalTeachers: teachersRes.data?.length || 0,
         totalParents: parentsRes.data?.length || 0,
         totalClasses: classesRes.data?.length || 0,
-        incidentCount: incidentsRes.data?.length || 0,
-        meritCount: meritsRes.data?.length || 0,
-        detentionCount: detentionsRes.data?.length || 0,
+        incidentCount: incidents.length,
+        meritCount: merits.length,
+        detentionCount: detentions.length,
       });
 
       // Process behaviour data
-      const incidents = incidentsRes.data || [];
       const behaviourByType: { [key: string]: number } = {};
       incidents.forEach((incident: any) => {
         const type = incident.incident_type || 'Other';
@@ -88,6 +101,194 @@ const ReportsAnalytics: React.FC = () => {
     }
   };
 
+  const exportToCSV = () => {
+    const timestamp = new Date().toISOString().split('T')[0];
+    
+    // Export Incidents
+    if (allIncidents.length > 0) {
+      const incidentHeaders = ['Date', 'Student', 'Type', 'Severity', 'Points', 'Status', 'Description'];
+      const incidentData = allIncidents.map(inc => [
+        inc.date || inc.incident_date,
+        inc.student_name,
+        inc.incident_type,
+        inc.severity,
+        inc.points || 0,
+        inc.status,
+        inc.description || ''
+      ]);
+      downloadCSV('incidents', incidentHeaders, incidentData, timestamp);
+    }
+
+    // Export Merits
+    if (allMerits.length > 0) {
+      const meritHeaders = ['Date', 'Student', 'Type', 'Points', 'Description'];
+      const meritData = allMerits.map(merit => [
+        merit.date || merit.merit_date,
+        merit.student_name,
+        merit.merit_type,
+        merit.points || 0,
+        merit.description || ''
+      ]);
+      downloadCSV('merits', meritHeaders, meritData, timestamp);
+    }
+
+    // Export Detentions
+    if (allDetentions.length > 0) {
+      const detentionHeaders = ['Date', 'Time', 'Duration', 'Status', 'Students', 'Location'];
+      const detentionData = allDetentions.map(det => [
+        det.detention_date,
+        det.detention_time || 'N/A',
+        `${det.duration || 60} min`,
+        det.status,
+        det.student_count || 0,
+        det.location || 'N/A'
+      ]);
+      downloadCSV('detentions', detentionHeaders, detentionData, timestamp);
+    }
+
+    // Export Student Summary
+    if (allStudents.length > 0) {
+      const studentHeaders = ['Student ID', 'Name', 'Class', 'Incidents', 'Merits', 'Net Points'];
+      const studentData = allStudents.map(student => {
+        const studentIncidents = allIncidents.filter(i => i.student_id === student.id);
+        const studentMerits = allMerits.filter(m => m.student_id === student.id);
+        const incidentPoints = studentIncidents.reduce((sum, i) => sum + (i.points || 0), 0);
+        const meritPoints = studentMerits.reduce((sum, m) => sum + (m.points || 0), 0);
+        return [
+          student.student_id,
+          `${student.first_name} ${student.last_name}`,
+          student.class_name || 'N/A',
+          studentIncidents.length,
+          studentMerits.length,
+          meritPoints - incidentPoints
+        ];
+      });
+      downloadCSV('student_summary', studentHeaders, studentData, timestamp);
+    }
+
+    showSuccess('Reports exported successfully! Check your downloads folder.');
+  };
+
+  const exportSingleReport = (reportType: string) => {
+    const timestamp = new Date().toISOString().split('T')[0];
+    
+    switch(reportType) {
+      case 'incidents':
+        if (allIncidents.length > 0) {
+          const headers = ['Date', 'Student', 'Type', 'Severity', 'Points', 'Status', 'Description'];
+          const data = allIncidents.map(inc => [
+            inc.date || inc.incident_date,
+            inc.student_name,
+            inc.incident_type,
+            inc.severity,
+            inc.points || 0,
+            inc.status,
+            inc.description || ''
+          ]);
+          downloadCSV('behaviour_report', headers, data, timestamp);
+        } else {
+          showWarning('No incident data available to export');
+        }
+        break;
+        
+      case 'merits':
+        if (allMerits.length > 0) {
+          const headers = ['Date', 'Student', 'Type', 'Points', 'Description'];
+          const data = allMerits.map(merit => [
+            merit.date || merit.merit_date,
+            merit.student_name,
+            merit.merit_type,
+            merit.points || 0,
+            merit.description || ''
+          ]);
+          downloadCSV('merit_report', headers, data, timestamp);
+        } else {
+          showWarning('No merit data available to export');
+        }
+        break;
+        
+      case 'student_summary':
+        if (allStudents.length > 0) {
+          const headers = ['Student ID', 'Name', 'Class', 'Incidents', 'Merits', 'Net Points'];
+          const data = allStudents.map(student => {
+            const studentIncidents = allIncidents.filter(i => i.student_id === student.id);
+            const studentMerits = allMerits.filter(m => m.student_id === student.id);
+            const incidentPoints = studentIncidents.reduce((sum, i) => sum + (i.points || 0), 0);
+            const meritPoints = studentMerits.reduce((sum, m) => sum + (m.points || 0), 0);
+            return [
+              student.student_id,
+              `${student.first_name} ${student.last_name}`,
+              student.class_name || 'N/A',
+              studentIncidents.length,
+              studentMerits.length,
+              meritPoints - incidentPoints
+            ];
+          });
+          downloadCSV('student_progress', headers, data, timestamp);
+        } else {
+          showWarning('No student data available to export');
+        }
+        break;
+        
+      case 'class_analytics':
+        if (allStudents.length > 0) {
+          const classSummary: { [key: string]: any } = {};
+          allStudents.forEach(student => {
+            const className = student.class_name || 'Unassigned';
+            if (!classSummary[className]) {
+              classSummary[className] = { students: 0, incidents: 0, merits: 0 };
+            }
+            classSummary[className].students++;
+            classSummary[className].incidents += allIncidents.filter(i => i.student_id === student.id).length;
+            classSummary[className].merits += allMerits.filter(m => m.student_id === student.id).length;
+          });
+          
+          const headers = ['Class', 'Students', 'Incidents', 'Merits', 'Incident Rate'];
+          const data = Object.entries(classSummary).map(([className, stats]: [string, any]) => [
+            className,
+            stats.students,
+            stats.incidents,
+            stats.merits,
+            stats.students > 0 ? (stats.incidents / stats.students).toFixed(2) : '0'
+          ]);
+          downloadCSV('class_analytics', headers, data, timestamp);
+        } else {
+          showWarning('No class data available to export');
+        }
+        break;
+        
+      case 'teacher_activity':
+        const headers = ['Report Type', 'Count'];
+        const data = [
+          ['Total Incidents Logged', allIncidents.length],
+          ['Total Merits Awarded', allMerits.length],
+          ['Total Detentions', allDetentions.length]
+        ];
+        downloadCSV('teacher_activity', headers, data, timestamp);
+        break;
+        
+      default:
+        showError('Report type not supported');
+    }
+  };
+
+  const downloadCSV = (reportName: string, headers: string[], data: any[][], timestamp: string) => {
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${reportName}_${timestamp}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const statCards = [
     { label: 'Total Students', value: stats.totalStudents, icon: Users, color: 'from-blue-500 to-cyan-500', change: '+12%', trend: 'up' },
     { label: 'Behaviour Incidents', value: stats.incidentCount, icon: AlertTriangle, color: 'from-red-500 to-orange-500', change: '-8%', trend: 'down' },
@@ -97,11 +298,11 @@ const ReportsAnalytics: React.FC = () => {
   ];
 
   const reportTypes = [
-    { name: 'Behaviour Report', description: 'Incident trends and severity analysis', icon: AlertTriangle, color: 'from-red-500 to-orange-500' },
-    { name: 'Merit Report', description: 'Recognition and achievement tracking', icon: Award, color: 'from-amber-500 to-yellow-500' },
-    { name: 'Student Progress', description: 'Individual student performance overview', icon: TrendingUp, color: 'from-blue-500 to-cyan-500' },
-    { name: 'Class Analytics', description: 'Class-wise performance comparison', icon: PieChart, color: 'from-purple-500 to-pink-500' },
-    { name: 'Teacher Activity', description: 'Teacher engagement and logging activity', icon: Activity, color: 'from-indigo-500 to-violet-500' },
+    { name: 'Behaviour Report', description: 'Incident trends and severity analysis', icon: AlertTriangle, color: 'from-red-500 to-orange-500', exportType: 'incidents' },
+    { name: 'Merit Report', description: 'Recognition and achievement tracking', icon: Award, color: 'from-amber-500 to-yellow-500', exportType: 'merits' },
+    { name: 'Student Progress', description: 'Individual student performance overview', icon: TrendingUp, color: 'from-blue-500 to-cyan-500', exportType: 'student_summary' },
+    { name: 'Class Analytics', description: 'Class-wise performance comparison', icon: PieChart, color: 'from-purple-500 to-pink-500', exportType: 'class_analytics' },
+    { name: 'Teacher Activity', description: 'Teacher engagement and logging activity', icon: Activity, color: 'from-indigo-500 to-violet-500', exportType: 'teacher_activity' },
   ];
 
   return (
@@ -143,10 +344,12 @@ const ReportsAnalytics: React.FC = () => {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
+            onClick={exportToCSV}
+            disabled={loading || (allIncidents.length === 0 && allMerits.length === 0 && allDetentions.length === 0)}
+            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download size={18} />
-            <span>Export</span>
+            <span>Export All Reports</span>
           </motion.button>
         </div>
       </motion.div>
@@ -257,18 +460,25 @@ const ReportsAnalytics: React.FC = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.4 + index * 0.05 }}
-              whileHover={{ scale: 1.02, y: -2 }}
-              className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100 cursor-pointer group"
+              className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100 group"
             >
               <div className="flex items-start space-x-4">
                 <div className={`w-12 h-12 bg-gradient-to-br ${report.color} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
                   <report.icon className="text-white" size={22} />
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{report.name}</h4>
+                  <h4 className="font-semibold text-gray-900">{report.name}</h4>
                   <p className="text-sm text-gray-500 mt-1">{report.description}</p>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => exportSingleReport(report.exportType)}
+                    className="mt-3 flex items-center space-x-2 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all shadow-md"
+                  >
+                    <Download size={14} />
+                    <span>Export Excel</span>
+                  </motion.button>
                 </div>
-                <FileText size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
               </div>
             </motion.div>
           ))}

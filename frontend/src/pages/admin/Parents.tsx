@@ -4,13 +4,14 @@ import Table from '../../components/Table';
 import Button from '../../components/Button';
 import ParentProfileModal from '../../components/ParentProfileModal';
 import { motion } from 'framer-motion';
-import { Eye, Mail, Users } from 'lucide-react';
+import { Eye, Mail, Users, Search } from 'lucide-react';
 
 const Parents: React.FC = () => {
   const [parents, setParents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedParent, setSelectedParent] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchParents();
@@ -31,6 +32,15 @@ const Parents: React.FC = () => {
     setSelectedParent(parent);
     setIsModalOpen(true);
   };
+
+  // Filter parents based on search query
+  const filteredParents = parents.filter((parent) => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      parent.name?.toLowerCase().includes(searchLower) ||
+      parent.email?.toLowerCase().includes(searchLower)
+    );
+  });
 
   const columns = [
     { key: 'name', label: 'Name' },
@@ -61,6 +71,25 @@ const Parents: React.FC = () => {
             Parents
           </h1>
           <p className="text-gray-600 mt-2 text-lg">Manage all parents in the system</p>
+        </div>
+      </motion.div>
+
+      {/* Search Bar */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="relative"
+      >
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          <input
+            type="text"
+            placeholder="Search parents by name or email..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          />
         </div>
       </motion.div>
 
@@ -134,14 +163,14 @@ const Parents: React.FC = () => {
               </div>
             </div>
 
-            {parents.length === 0 ? (
+            {filteredParents.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <Users size={48} className="mx-auto mb-4 text-gray-300" />
-                <p>No parents found</p>
+                <p>{searchQuery ? 'No parents match your search' : 'No parents found'}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {parents.map((parent, index) => (
+                {filteredParents.map((parent, index) => (
                   <motion.div
                     key={parent.id}
                     initial={{ opacity: 0, y: 20 }}

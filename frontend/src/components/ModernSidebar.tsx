@@ -197,7 +197,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
                   )}
                   <div>
                     <span className="font-bold text-xl text-white tracking-tight">
-                      PDS
+                      DMS
                     </span>
                     <div className="flex items-center space-x-1">
                       <Sparkles size={10} className="text-yellow-300" />

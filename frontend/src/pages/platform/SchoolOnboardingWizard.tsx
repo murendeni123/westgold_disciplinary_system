@@ -19,10 +19,12 @@ import Button from '../../components/Button';
 interface OnboardingData {
   // Step 1: School Details
   school_name: string;
+  school_code: string;
   school_email: string;
   school_phone: string;
   school_address: string;
   school_city: string;
+  school_province: string;
   school_postal_code: string;
   
   // Step 2: Admin Account
@@ -51,10 +53,12 @@ const SchoolOnboardingWizard: React.FC = () => {
 
   const [formData, setFormData] = useState<OnboardingData>({
     school_name: '',
+    school_code: '',
     school_email: '',
     school_phone: '',
     school_address: '',
     school_city: '',
+    school_province: '',
     school_postal_code: '',
     admin_name: '',
     admin_email: '',
@@ -82,6 +86,11 @@ const SchoolOnboardingWizard: React.FC = () => {
       case 1:
         if (!formData.school_name.trim()) {
           setError('School name is required');
+          return false;
+        }
+        // School code is optional - will be auto-generated if not provided
+        if (formData.school_code.trim() && !/^[A-Z0-9]{2,10}$/i.test(formData.school_code)) {
+          setError('School code must be 2-10 alphanumeric characters (e.g., WGS2025)');
           return false;
         }
         if (!formData.school_email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.school_email)) {
@@ -149,10 +158,12 @@ const SchoolOnboardingWizard: React.FC = () => {
     try {
       const response = await api.onboardSchool({
         school_name: formData.school_name,
+        school_code: formData.school_code.trim() ? formData.school_code.toUpperCase() : undefined, // Will be auto-generated if empty
         school_email: formData.school_email,
         school_phone: formData.school_phone,
         school_address: formData.school_address,
         school_city: formData.school_city,
+        school_province: formData.school_province,
         school_postal_code: formData.school_postal_code,
         admin_name: formData.admin_name,
         admin_email: formData.admin_email,
@@ -168,7 +179,7 @@ const SchoolOnboardingWizard: React.FC = () => {
       setSuccess(true);
       setCurrentStep(5);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Failed to onboard school');
+      setError(err.response?.data?.error || err.response?.data?.message || 'Failed to onboard school');
     } finally {
       setLoading(false);
     }
@@ -186,6 +197,22 @@ const SchoolOnboardingWizard: React.FC = () => {
               required
               placeholder="Enter school name"
             />
+            <div>
+              <Input
+                label="School Code (Optional)"
+                value={formData.school_code}
+                onChange={(e) => setFormData({ ...formData, school_code: e.target.value.toUpperCase() })}
+                placeholder="Leave empty to auto-generate"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                If left empty, a unique code will be auto-generated (e.g., LEAR-2041)
+              </p>
+            </div>
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-xs text-green-700">
+                ✨ <strong>Auto-generated school codes</strong> are created using your school name + random digits, making them easy to share with parents and teachers.
+              </p>
+            </div>
             <Input
               label="School Email"
               type="email"
@@ -207,12 +234,18 @@ const SchoolOnboardingWizard: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, school_address: e.target.value })}
               placeholder="Street address"
             />
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <Input
                 label="City"
                 value={formData.school_city}
                 onChange={(e) => setFormData({ ...formData, school_city: e.target.value })}
                 placeholder="City"
+              />
+              <Input
+                label="Province"
+                value={formData.school_province}
+                onChange={(e) => setFormData({ ...formData, school_province: e.target.value })}
+                placeholder="Province"
               />
               <Input
                 label="Postal Code"
@@ -420,10 +453,12 @@ const SchoolOnboardingWizard: React.FC = () => {
                   setResult(null);
                   setFormData({
                     school_name: '',
+                    school_code: '',
                     school_email: '',
                     school_phone: '',
                     school_address: '',
                     school_city: '',
+                    school_province: '',
                     school_postal_code: '',
                     admin_name: '',
                     admin_email: '',

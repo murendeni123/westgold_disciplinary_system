@@ -132,7 +132,7 @@ const PlatformLogin: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="superadmin@pds.com"
+                  placeholder="superadmin@dms.com"
                   className="pl-12 bg-white/10 border-white/20 text-white placeholder:text-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500"
                 />
               </div>
@@ -189,7 +189,7 @@ const PlatformLogin: React.FC = () => {
             className="mt-6 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10"
           >
             <p className="text-xs text-purple-200 text-center">
-              Default: superadmin@pds.com / superadmin123
+              Default: superadmin@dms.com / superadmin123
             </p>
           </motion.div>
         </motion.div>

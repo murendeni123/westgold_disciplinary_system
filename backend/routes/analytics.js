@@ -31,10 +31,11 @@ router.get('/critical-alerts', authenticateToken, async (req, res) => {
         // Classes that haven't submitted attendance today
         const today = new Date().toISOString().split('T')[0];
         const classesWithoutAttendance = await schemaAll(req, `
-            SELECT c.id, c.class_name, t.name as teacher_name,
+            SELECT c.id, c.class_name, u.name as teacher_name,
                    (SELECT COUNT(*) FROM students WHERE class_id = c.id AND is_active = true) as student_count
             FROM classes c
             LEFT JOIN teachers t ON c.teacher_id = t.id
+            LEFT JOIN public.users u ON t.user_id = u.id
             WHERE c.is_active = true
             AND c.id NOT IN (
                 SELECT DISTINCT s.class_id 
@@ -50,10 +51,11 @@ router.get('/critical-alerts', authenticateToken, async (req, res) => {
         const pendingIncidents = await schemaAll(req, `
             SELECT bi.id, bi.description, bi.points_deducted, bi.created_at,
                    s.first_name || ' ' || s.last_name as student_name,
-                   t.name as teacher_name
+                   u.name as teacher_name
             FROM behaviour_incidents bi
             INNER JOIN students s ON bi.student_id = s.id
             INNER JOIN teachers t ON bi.teacher_id = t.id
+            LEFT JOIN public.users u ON t.user_id = u.id
             WHERE bi.follow_up_required = true
             ORDER BY bi.created_at DESC
             LIMIT 5
@@ -221,7 +223,7 @@ router.get('/class-profile/:classId', authenticateToken, async (req, res) => {
 
         const classInfo = await schemaGet(req, `
             SELECT c.id, c.class_name, c.grade_level, c.academic_year,
-                   t.id as teacher_id, t.name as teacher_name
+                   t.id as teacher_id, u.name as teacher_name
             FROM classes c
             LEFT JOIN teachers t ON c.teacher_id = t.id
             WHERE c.id = $1

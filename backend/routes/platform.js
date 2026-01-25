@@ -1,8 +1,9 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { dbAll, dbGet, dbRun } = require('../database/db');
+const { dbAll, dbGet, dbRun, pool } = require('../database/db');
 const { authenticateToken } = require('../middleware/auth');
+const { createSchoolSchema, generateSchemaName } = require('../database/schemaManager');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -212,27 +213,28 @@ router.get('/schools', requirePlatformAdmin, async (req, res) => {
         
         let query = `
             SELECT s.*, 
-                   (SELECT COUNT(*) FROM users WHERE school_id = s.id) as user_count,
-                   (SELECT COUNT(*) FROM students WHERE school_id = s.id) as student_count
-            FROM schools s
+                   (SELECT COUNT(*) FROM public.user_schools us WHERE us.school_id = s.id) as user_count
+            FROM public.schools s
             WHERE 1=1
         `;
         const params = [];
+        let paramIndex = 1;
 
         if (status) {
-            query += ' AND s.status = ?';
+            query += ` AND s.status = $${paramIndex++}`;
             params.push(status);
         }
         if (search) {
-            query += ' AND (s.name LIKE ? OR s.email LIKE ?)';
-            params.push(`%${search}%`, `%${search}%`);
+            query += ` AND (s.name ILIKE $${paramIndex} OR s.email ILIKE $${paramIndex})`;
+            params.push(`%${search}%`);
+            paramIndex++;
         }
         if (start_date) {
-            query += ' AND s.created_at >= ?';
+            query += ` AND s.created_at >= $${paramIndex++}`;
             params.push(start_date);
         }
         if (end_date) {
-            query += ' AND s.created_at <= ?';
+            query += ` AND s.created_at <= $${paramIndex++}`;
             params.push(end_date);
         }
 
@@ -249,7 +251,7 @@ router.get('/schools', requirePlatformAdmin, async (req, res) => {
 // Get school details
 router.get('/schools/:id', requirePlatformAdmin, async (req, res) => {
     try {
-        const school = await dbGet('SELECT * FROM schools WHERE id = ?', [req.params.id]);
+        const school = await dbGet('SELECT * FROM public.schools WHERE id = $1', [req.params.id]);
         
         if (!school) {
             return res.status(404).json({ error: 'School not found' });
@@ -272,29 +274,34 @@ router.get('/schools/:id', requirePlatformAdmin, async (req, res) => {
 // Get school statistics
 router.get('/schools/:id/stats', requirePlatformAdmin, async (req, res) => {
     try {
-        const school = await dbGet('SELECT * FROM schools WHERE id = ?', [req.params.id]);
+        const school = await dbGet('SELECT * FROM public.schools WHERE id = $1', [req.params.id]);
         
         if (!school) {
             return res.status(404).json({ error: 'School not found' });
         }
 
-        // Get detailed counts
-        const userCount = await dbGet('SELECT COUNT(*) as count FROM users WHERE school_id = ?', [req.params.id]);
-        const studentCount = await dbGet('SELECT COUNT(*) as count FROM students WHERE school_id = ?', [req.params.id]);
-        const classCount = await dbGet('SELECT COUNT(*) as count FROM classes WHERE school_id = ?', [req.params.id]);
-        const teacherCount = await dbGet('SELECT COUNT(*) as count FROM users WHERE school_id = ? AND role = ?', [req.params.id, 'teacher']);
-        const adminCount = await dbGet('SELECT COUNT(*) as count FROM users WHERE school_id = ? AND role = ?', [req.params.id, 'admin']);
-        const parentCount = await dbGet('SELECT COUNT(*) as count FROM users WHERE school_id = ? AND role = ?', [req.params.id, 'parent']);
+        // Get user count from user_schools junction table
+        const userCount = await dbGet('SELECT COUNT(*) as count FROM public.user_schools WHERE school_id = $1', [req.params.id]);
         
-        // Get activity metrics
-        const incidentCount = await dbGet('SELECT COUNT(*) as count FROM behaviour_incidents WHERE school_id = ?', [req.params.id]);
-        const meritCount = await dbGet('SELECT COUNT(*) as count FROM merits WHERE school_id = ?', [req.params.id]);
+        // For school-specific data, query the school's schema
+        const schemaName = school.schema_name;
+        let studentCount = { count: 0 };
+        let classCount = { count: 0 };
+        let teacherCount = { count: 0 };
+        let incidentCount = { count: 0 };
+        let meritCount = { count: 0 };
         
-        // Get last activity
-        const lastUserLogin = await dbGet(
-            'SELECT MAX(last_login) as last_login FROM users WHERE school_id = ?',
-            [req.params.id]
-        );
+        if (schemaName) {
+            try {
+                studentCount = await dbGet('SELECT COUNT(*) as count FROM students', [], schemaName);
+                classCount = await dbGet('SELECT COUNT(*) as count FROM classes', [], schemaName);
+                teacherCount = await dbGet('SELECT COUNT(*) as count FROM teachers', [], schemaName);
+                incidentCount = await dbGet('SELECT COUNT(*) as count FROM behaviour_incidents', [], schemaName);
+                meritCount = await dbGet('SELECT COUNT(*) as count FROM merits', [], schemaName);
+            } catch (err) {
+                console.error('Error fetching school schema stats:', err);
+            }
+        }
 
         res.json({
             school_id: school.id,
@@ -303,11 +310,11 @@ router.get('/schools/:id/stats', requirePlatformAdmin, async (req, res) => {
             total_students: parseInt(studentCount?.count || 0),
             total_classes: parseInt(classCount?.count || 0),
             total_teachers: parseInt(teacherCount?.count || 0),
-            total_admins: parseInt(adminCount?.count || 0),
-            total_parents: parseInt(parentCount?.count || 0),
+            total_admins: 0, // Would need to query users by role
+            total_parents: 0, // Would need to query users by role
             total_incidents: parseInt(incidentCount?.count || 0),
             total_merits: parseInt(meritCount?.count || 0),
-            last_activity: lastUserLogin?.last_login || null,
+            last_activity: null,
             status: school.status,
             created_at: school.created_at
         });
@@ -323,10 +330,12 @@ router.post('/schools/onboard', requirePlatformAdmin, async (req, res) => {
         const {
             // Step 1: School details
             school_name,
+            school_code: providedSchoolCode, // Optional - will auto-generate if not provided
             school_email,
             school_phone,
             school_address,
             school_city,
+            school_province,
             school_postal_code,
             
             // Step 2: Initial admin
@@ -353,36 +362,47 @@ router.post('/schools/onboard', requirePlatformAdmin, async (req, res) => {
         }
 
         // Check if school email already exists
-        const existingSchool = await dbGet('SELECT id FROM schools WHERE email = ?', [school_email]);
+        const existingSchool = await dbGet('SELECT id FROM public.schools WHERE email = $1', [school_email]);
         if (existingSchool) {
             return res.status(400).json({ error: 'School with this email already exists' });
         }
 
         // Check if admin email already exists
-        const existingAdmin = await dbGet('SELECT id FROM users WHERE email = ?', [admin_email]);
+        const existingAdmin = await dbGet('SELECT id FROM public.users WHERE email = $1', [admin_email]);
         if (existingAdmin) {
             return res.status(400).json({ error: 'Admin email already in use' });
         }
 
-        // Generate unique school code (e.g., WEST-4831)
-        const generateSchoolCode = () => {
+        // Generate unique school code (e.g., WEST-4831) if not provided
+        const generateSchoolCodeFn = () => {
             const prefix = school_name.substring(0, 4).toUpperCase().replace(/[^A-Z]/g, 'X');
             const suffix = Math.floor(1000 + Math.random() * 9000);
             return `${prefix}-${suffix}`;
         };
         
-        let school_code = generateSchoolCode();
-        let codeExists = await dbGet('SELECT id FROM schools WHERE school_code = ?', [school_code]);
+        let school_code = providedSchoolCode ? providedSchoolCode.toUpperCase() : generateSchoolCodeFn();
+        
+        // Check if provided code already exists
+        let codeExists = await dbGet('SELECT id FROM public.schools WHERE school_code = $1', [school_code]);
+        
+        if (providedSchoolCode && codeExists) {
+            return res.status(400).json({ error: 'School code already exists. Please choose a different code or leave empty for auto-generation.' });
+        }
+        
+        // If auto-generating, ensure uniqueness
         while (codeExists) {
-            school_code = generateSchoolCode();
-            codeExists = await dbGet('SELECT id FROM schools WHERE school_code = ?', [school_code]);
+            school_code = generateSchoolCodeFn();
+            codeExists = await dbGet('SELECT id FROM public.schools WHERE school_code = $1', [school_code]);
         }
 
-        // 1. Create school
+        // Generate schema name from school code
+        const schemaName = generateSchemaName(school_code);
+
+        // 1. Create school with schema_name
         const schoolResult = await dbRun(
-            `INSERT INTO schools (name, email, phone, address, city, postal_code, code, school_code, status, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'trial', CURRENT_TIMESTAMP) RETURNING id`,
-            [school_name, school_email, school_phone || null, school_address || null, school_city || null, school_postal_code || null, school_code, school_code]
+            `INSERT INTO public.schools (name, email, phone, address, city, postal_code, code, school_code, schema_name, status, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'trial', CURRENT_TIMESTAMP) RETURNING id`,
+            [school_name, school_email, school_phone || null, school_address || null, school_city || null, school_postal_code || null, school_code, school_code, schemaName]
         );
         const school_id = schoolResult.id;
         
@@ -390,11 +410,20 @@ router.post('/schools/onboard', requirePlatformAdmin, async (req, res) => {
             throw new Error('Failed to create school - no ID returned');
         }
 
-        // 2. Create initial admin account
+        // 2. Create the database schema for the school
+        const schemaResult = await createSchoolSchema(school_code);
+        if (!schemaResult.success) {
+            // Rollback: delete the school record
+            await dbRun('DELETE FROM public.schools WHERE id = $1', [school_id]);
+            throw new Error(`Failed to create school schema: ${schemaResult.error}`);
+        }
+        console.log(`✅ Created schema: ${schemaName} for school: ${school_name}`);
+
+        // 4. Create initial admin account
         const hashedPassword = await bcrypt.hash(admin_password, 10);
         const adminResult = await dbRun(
-            `INSERT INTO users (email, password, name, role, school_id, created_at)
-             VALUES (?, ?, ?, 'admin', ?, CURRENT_TIMESTAMP) RETURNING id`,
+            `INSERT INTO public.users (email, password_hash, name, role, primary_school_id, created_at)
+             VALUES ($1, $2, $3, 'admin', $4, CURRENT_TIMESTAMP) RETURNING id`,
             [admin_email, hashedPassword, admin_name, school_id]
         );
         
@@ -402,62 +431,90 @@ router.post('/schools/onboard', requirePlatformAdmin, async (req, res) => {
             throw new Error('Failed to create admin user - no ID returned');
         }
 
-        // 3. Set trial/subscription
+        // 5. Link admin to school in user_schools
+        await dbRun(
+            `INSERT INTO public.user_schools (user_id, school_id, role_in_school, is_primary)
+             VALUES ($1, $2, 'admin', true)`,
+            [adminResult.id, school_id]
+        );
+
+        // 6. Create admin record in school schema teachers table
+        try {
+            await dbRun(`
+                INSERT INTO teachers (user_id, is_active, department)
+                VALUES ($1, $2, $3)
+            `, [adminResult.id, true, 'Administration'], schemaName);
+        } catch (teacherError) {
+            console.warn('Warning: Could not create teacher record in schema:', teacherError.message);
+            // Non-fatal - admin can still log in
+        }
+
+        // 8. Set trial/subscription
         const trial_end_date = new Date();
         trial_end_date.setDate(trial_end_date.getDate() + trial_days);
         
         if (plan_id) {
             await dbRun(
-                `INSERT INTO school_subscriptions (school_id, plan_id, start_date, end_date, status, created_at)
-                 VALUES (?, ?, CURRENT_TIMESTAMP, ?, 'trial', CURRENT_TIMESTAMP)`,
+                `INSERT INTO public.school_subscriptions (school_id, plan_id, start_date, end_date, status, created_at)
+                 VALUES ($1, $2, CURRENT_TIMESTAMP, $3, 'trial', CURRENT_TIMESTAMP)`,
                 [school_id, plan_id, trial_end_date.toISOString()]
             );
         }
 
-        // 4. Apply default branding
-        await dbRun(
-            `INSERT INTO school_branding (school_id, primary_color, secondary_color, logo_url, updated_at, updated_by)
-             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?)`,
-            [
-                school_id,
-                primary_color || '#3B82F6',
-                secondary_color || '#8B5CF6',
-                logo_url || null,
-                req.platformAdmin.userId
-            ]
-        );
+        // 9. Apply default branding (skip if table doesn't exist)
+        try {
+            await dbRun(
+                `INSERT INTO public.school_branding (school_id, primary_color, secondary_color, logo_url, updated_at, updated_by)
+                 VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5)`,
+                [
+                    school_id,
+                    primary_color || '#3B82F6',
+                    secondary_color || '#8B5CF6',
+                    logo_url || null,
+                    req.platformAdmin?.userId || adminResult.id
+                ]
+            );
+        } catch (brandingError) {
+            console.warn('Warning: Could not create branding record:', brandingError.message);
+        }
 
-        // 5. Create activity log
-        await dbRun(
-            `INSERT INTO activity_logs (school_id, user_id, action, details, created_at)
-             VALUES (?, ?, 'school_onboarded', ?, CURRENT_TIMESTAMP)`,
-            [
-                school_id,
-                adminResult.id,
-                JSON.stringify({
-                    school_name,
-                    admin_email,
-                    school_code,
-                    trial_days,
-                    onboarded_by: req.platformAdmin.userId
-                })
-            ]
-        );
+        // 10. Create activity log (skip if table doesn't exist)
+        try {
+            await dbRun(
+                `INSERT INTO public.activity_logs (school_id, user_id, action, details, created_at)
+                 VALUES ($1, $2, 'school_onboarded', $3, CURRENT_TIMESTAMP)`,
+                [
+                    school_id,
+                    adminResult.id,
+                    JSON.stringify({
+                        school_name,
+                        admin_email,
+                        school_code,
+                        schema_name: schemaName,
+                        trial_days,
+                        onboarded_by: req.platformAdmin?.userId
+                    })
+                ]
+            );
+        } catch (logError) {
+            console.warn('Warning: Could not create activity log:', logError.message);
+        }
 
         // Fetch complete school data
-        const school = await dbGet('SELECT * FROM schools WHERE id = ?', [school_id]);
-        const admin = await dbGet('SELECT id, name, email, role FROM users WHERE id = ?', [adminResult.id]);
+        const school = await dbGet('SELECT * FROM public.schools WHERE id = $1', [school_id]);
+        const admin = await dbGet('SELECT id, name, email, role FROM public.users WHERE id = $1', [adminResult.id]);
 
         res.status(201).json({
             success: true,
             message: 'School onboarded successfully',
             school: {
                 ...school,
-                school_code
+                school_code,
+                schema_name: schemaName
             },
             admin,
             next_steps: [
-                'Share school code with teachers and parents for registration',
+                `Share school code ${school_code} with teachers and parents for registration`,
                 'Admin should login and customize school settings',
                 'Import students and create classes',
                 'Set up behaviour policies and merit systems',
@@ -485,10 +542,24 @@ router.post('/schools', requirePlatformAdmin, async (req, res) => {
             return res.status(400).json({ error: 'School with this email already exists' });
         }
 
+        // Auto-generate unique school code (e.g., WEST-4831)
+        const generateSchoolCode = () => {
+            const prefix = name.substring(0, 4).toUpperCase().replace(/[^A-Z]/g, 'X');
+            const suffix = Math.floor(1000 + Math.random() * 9000);
+            return `${prefix}-${suffix}`;
+        };
+        
+        let school_code = generateSchoolCode();
+        let codeExists = await dbGet('SELECT id FROM schools WHERE school_code = ?', [school_code]);
+        while (codeExists) {
+            school_code = generateSchoolCode();
+            codeExists = await dbGet('SELECT id FROM schools WHERE school_code = ?', [school_code]);
+        }
+
         const result = await dbRun(
-            `INSERT INTO schools (name, email, status, created_at)
-             VALUES (?, ?, ?, CURRENT_TIMESTAMP)`,
-            [name, email, status]
+            `INSERT INTO schools (name, email, code, school_code, status, created_at)
+             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+            [name, email, school_code, school_code, status]
         );
 
         const school = await dbGet('SELECT * FROM schools WHERE id = ?', [result.id]);
@@ -916,41 +987,52 @@ router.get('/analytics', requirePlatformAdmin, async (req, res) => {
         let usersByRole = [];
 
         try {
-            const totalSchoolsResult = await dbGet('SELECT COUNT(*) as count FROM schools');
-            totalSchools = parseInt(totalSchoolsResult?.count || 0, 10);
+            const totalSchoolsResult = await pool.query('SELECT COUNT(*) as count FROM public.schools');
+            totalSchools = parseInt(totalSchoolsResult.rows[0]?.count || 0, 10);
         } catch (err) {
             console.error('Error fetching total schools:', err.message);
         }
 
         try {
-            const activeSchoolsResult = await dbGet("SELECT COUNT(*) as count FROM schools WHERE status = 'active'");
-            activeSchools = parseInt(activeSchoolsResult?.count || 0, 10);
+            const activeSchoolsResult = await pool.query("SELECT COUNT(*) as count FROM public.schools WHERE status = 'active'");
+            activeSchools = parseInt(activeSchoolsResult.rows[0]?.count || 0, 10);
         } catch (err) {
             console.error('Error fetching active schools:', err.message);
         }
 
         try {
-            const totalUsersResult = await dbGet('SELECT COUNT(*) as count FROM users');
-            totalUsers = parseInt(totalUsersResult?.count || 0, 10);
+            const totalUsersResult = await pool.query('SELECT COUNT(*) as count FROM public.users');
+            totalUsers = parseInt(totalUsersResult.rows[0]?.count || 0, 10);
         } catch (err) {
             console.error('Error fetching total users:', err.message);
         }
 
         try {
-            const totalStudentsResult = await dbGet('SELECT COUNT(*) as count FROM students');
-            totalStudents = parseInt(totalStudentsResult?.count || 0, 10);
+            // Get all active schools and count students from each schema
+            const schools = await pool.query("SELECT schema_name FROM public.schools WHERE status = 'active'");
+            let studentCount = 0;
+            
+            for (const school of schools.rows) {
+                try {
+                    const result = await pool.query(`SELECT COUNT(*) as count FROM ${school.schema_name}.students`);
+                    studentCount += parseInt(result.rows[0]?.count || 0, 10);
+                } catch (schemaErr) {
+                    console.error(`Error counting students in ${school.schema_name}:`, schemaErr.message);
+                }
+            }
+            totalStudents = studentCount;
         } catch (err) {
             console.error('Error fetching total students:', err.message);
         }
 
         try {
-            const totalRevenueResult = await dbGet(`
+            const totalRevenueResult = await pool.query(`
                 SELECT COALESCE(SUM(sp.price), 0) as total 
-                FROM school_subscriptions ss
-                INNER JOIN subscription_plans sp ON ss.plan_id = sp.id
+                FROM public.school_subscriptions ss
+                INNER JOIN public.subscription_plans sp ON ss.plan_id = sp.id
                 WHERE ss.status = 'active'
             `);
-            totalRevenue = parseFloat(totalRevenueResult?.total || 0);
+            totalRevenue = parseFloat(totalRevenueResult.rows[0]?.total || 0);
         } catch (err) {
             console.error('Error fetching total revenue:', err.message);
         }
@@ -982,8 +1064,8 @@ router.get('/analytics', requirePlatformAdmin, async (req, res) => {
 
             revenueQuery += ' GROUP BY TO_CHAR(ss.created_at, \'YYYY-MM\') ORDER BY month';
 
-            const revenueByMonthRaw = await dbAll(revenueQuery, params);
-            revenueByMonth = (revenueByMonthRaw || []).map((item) => ({
+            const revenueByMonthRaw = await pool.query(revenueQuery, params);
+            revenueByMonth = (revenueByMonthRaw.rows || []).map((item) => ({
                 month: item.month || '',
                 revenue: parseFloat(String(item.revenue || 0))
             }));
@@ -995,12 +1077,12 @@ router.get('/analytics', requirePlatformAdmin, async (req, res) => {
 
         // Schools by status
         try {
-            const schoolsByStatusRaw = await dbAll(`
+            const schoolsByStatusRaw = await pool.query(`
                 SELECT status, COUNT(*) as count
-                FROM schools
+                FROM public.schools
                 GROUP BY status
             `);
-            schoolsByStatus = (schoolsByStatusRaw || []).map((item) => ({
+            schoolsByStatus = (schoolsByStatusRaw.rows || []).map((item) => ({
                 status: item.status || '',
                 count: parseInt(String(item.count || 0), 10)
             }));
@@ -1011,18 +1093,45 @@ router.get('/analytics', requirePlatformAdmin, async (req, res) => {
 
         // Users by role
         try {
-            const usersByRoleRaw = await dbAll(`
+            const usersByRoleRaw = await pool.query(`
                 SELECT role, COUNT(*) as count
-                FROM users
+                FROM public.users
                 GROUP BY role
             `);
-            usersByRole = (usersByRoleRaw || []).map((item) => ({
+            usersByRole = (usersByRoleRaw.rows || []).map((item) => ({
                 role: item.role || '',
                 count: parseInt(String(item.count || 0), 10)
             }));
         } catch (err) {
             console.error('Error fetching users by role:', err.message);
             usersByRole = [];
+        }
+
+        // Get top schools by student count
+        let topSchools = [];
+        try {
+            const schools = await pool.query("SELECT id, name, schema_name, status FROM public.schools WHERE status = 'active' ORDER BY created_at DESC");
+            const schoolsWithStudents = [];
+            
+            for (const school of schools.rows) {
+                try {
+                    const result = await pool.query(`SELECT COUNT(*) as count FROM ${school.schema_name}.students`);
+                    const studentCount = parseInt(result.rows[0]?.count || 0, 10);
+                    schoolsWithStudents.push({
+                        name: school.name,
+                        students: studentCount,
+                        plan: null, // No subscription data yet
+                        growth: null
+                    });
+                } catch (schemaErr) {
+                    console.error(`Error counting students in ${school.schema_name}:`, schemaErr.message);
+                }
+            }
+            
+            // Sort by student count and take top 4
+            topSchools = schoolsWithStudents.sort((a, b) => b.students - a.students).slice(0, 4);
+        } catch (err) {
+            console.error('Error fetching top schools:', err.message);
         }
 
         res.json({
@@ -1033,7 +1142,9 @@ router.get('/analytics', requirePlatformAdmin, async (req, res) => {
             total_revenue: totalRevenue,
             revenue_by_month: revenueByMonth,
             schools_by_status: schoolsByStatus,
-            users_by_role: usersByRole
+            users_by_role: usersByRole,
+            top_schools: topSchools,
+            recent_activity: [] // No activity tracking yet
         });
     } catch (error) {
         console.error('Error fetching analytics:', error);

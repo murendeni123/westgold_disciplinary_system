@@ -18,13 +18,22 @@ const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) => {
       // Check if AuthCallback is handling the redirect
       const authCallbackRedirect = sessionStorage.getItem('auth_callback_redirect');
       
+      // Check if onboarding was already completed
+      const onboardingCompleted = localStorage.getItem('parent_onboarding_completed') === 'true';
+      
       // Check actual data - user needs school AND children to be considered complete
       const needsSchool = !user.school_id;
       const needsChildren = !user.children || user.children.length === 0;
       
+      // If parent has both school and children, automatically mark onboarding as complete
+      if (user.role === 'parent' && !needsSchool && !needsChildren && !onboardingCompleted) {
+        localStorage.setItem('parent_onboarding_completed', 'true');
+      }
+      
       if (
         isMounted &&
         !authCallbackRedirect &&
+        !onboardingCompleted &&
         user.role === 'parent' &&
         (needsSchool || needsChildren) &&
         window.location.pathname !== '/parent/onboarding' &&

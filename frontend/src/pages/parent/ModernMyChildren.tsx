@@ -17,6 +17,7 @@ const ModernMyChildren: React.FC = () => {
 
   useEffect(() => {
     if (user?.children) {
+      console.log('User children from context:', user.children);
       setChildren(user.children);
       fetchChildrenStats();
     }
@@ -253,7 +254,14 @@ const ModernMyChildren: React.FC = () => {
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => navigate(`/parent/children/${child.id}`)}
+                    onClick={() => {
+                      console.log('Navigating to child profile:', {
+                        childId: child.id,
+                        childName: `${child.first_name} ${child.last_name}`,
+                        fullChildObject: child
+                      });
+                      navigate(`/parent/children/${child.id}`);
+                    }}
                     className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center space-x-2"
                   >
                     <span>View Profile</span>

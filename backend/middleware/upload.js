@@ -32,17 +32,46 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only image files are allowed'), false);
+  const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+  const allowedExcelTypes = [
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/csv'
+  ];
+  
+  const routePath = req.originalUrl || req.path || '';
+  
+  // Check if it's a photo upload route
+  if (routePath.includes('/photo')) {
+    if (allowedImageTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'), false);
+    }
+  }
+  // Check if it's a bulk import route
+  else if (routePath.includes('/bulk-import')) {
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    if (allowedExcelTypes.includes(file.mimetype) || ['.xls', '.xlsx', '.csv'].includes(fileExtension)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only Excel (.xls, .xlsx) and CSV files are allowed.'), false);
+    }
+  }
+  // Default to image validation
+  else {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
   }
 };
 
 const upload = multer({
   storage: storage,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 10 * 1024 * 1024 // 10MB limit (increased for Excel files)
   },
   fileFilter: fileFilter
 });

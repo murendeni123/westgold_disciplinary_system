@@ -66,16 +66,16 @@ router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
       return res.status(403).json({ error: 'School context required' });
     }
 
-    const { name, default_points, description } = req.body;
+    const { name, points, description, category } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
     }
 
     const result = await schemaRun(req,
-      `INSERT INTO merit_types (name, default_points, description)
-       VALUES ($1, $2, $3) RETURNING id`,
-      [name, default_points || 1, description || null]
+      `INSERT INTO merit_types (name, points, description, category, is_active)
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [name, points || 1, description || null, category || null, true]
     );
 
     const type = await schemaGet(req, 'SELECT * FROM merit_types WHERE id = $1', [result.id]);
@@ -97,13 +97,13 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
       return res.status(403).json({ error: 'School context required' });
     }
 
-    const { name, default_points, description, is_active } = req.body;
+    const { name, points, description, category, is_active } = req.body;
 
     await schemaRun(req,
       `UPDATE merit_types 
-       SET name = $1, default_points = $2, description = $3, is_active = $4
-       WHERE id = $5`,
-      [name, default_points || 1, description || null, is_active !== undefined ? is_active : true, req.params.id]
+       SET name = $1, points = $2, description = $3, category = $4, is_active = $5
+       WHERE id = $6`,
+      [name, points || 1, description || null, category || null, is_active !== undefined ? is_active : true, req.params.id]
     );
 
     const type = await schemaGet(req, 'SELECT * FROM merit_types WHERE id = $1', [req.params.id]);

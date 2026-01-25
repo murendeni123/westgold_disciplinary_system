@@ -125,4 +125,30 @@ const createNotification = async (req, userId, type, title, message, relatedId =
   }
 };
 
-module.exports = { router, createNotification };
+// Helper function to get all school admins
+const getSchoolAdmins = async (schoolId) => {
+  try {
+    const admins = await dbAll(
+      'SELECT id FROM public.users WHERE role = $1 AND school_id = $2',
+      ['admin', schoolId]
+    );
+    return admins || [];
+  } catch (error) {
+    console.error('Error getting school admins:', error);
+    return [];
+  }
+};
+
+// Helper function to notify all school admins
+const notifySchoolAdmins = async (req, type, title, message, relatedId = null, relatedType = null) => {
+  try {
+    const admins = await getSchoolAdmins(req.schoolId);
+    for (const admin of admins) {
+      await createNotification(req, admin.id, type, title, message, relatedId, relatedType);
+    }
+  } catch (error) {
+    console.error('Error notifying school admins:', error);
+  }
+};
+
+module.exports = { router, createNotification, getSchoolAdmins, notifySchoolAdmins };

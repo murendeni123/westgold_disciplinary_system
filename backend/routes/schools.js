@@ -13,7 +13,7 @@ router.get('/current', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'No school associated with your account' });
         }
 
-        const school = await dbGet('SELECT * FROM schools WHERE id = ?', [schoolId]);
+        const school = await dbGet('SELECT * FROM public.schools WHERE id = $1', [schoolId]);
         
         if (!school) {
             return res.status(404).json({ error: 'School not found' });
@@ -37,7 +37,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
             return res.status(403).json({ error: 'Access denied' });
         }
 
-        const school = await dbGet('SELECT * FROM schools WHERE id = ?', [schoolId]);
+        const school = await dbGet('SELECT * FROM public.schools WHERE id = $1', [schoolId]);
         
         if (!school) {
             return res.status(404).json({ error: 'School not found' });

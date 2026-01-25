@@ -20,26 +20,58 @@ const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
 });
 
-// Request interceptor - add JWT token
+// Request interceptor - add JWT token and school context
 axiosInstance.interceptors.request.use(
   (config) => {
-    // Check for platform token first (for Super Admin), then regular token
+    // Check for platform token first (for platform routes), then regular token
     const platformToken = localStorage.getItem('platform_token');
-    const token = localStorage.getItem('token');
+    const regularToken = localStorage.getItem('token');
+    const token = platformToken || regularToken;
     
-    if (platformToken) {
-      config.headers.Authorization = `Bearer ${platformToken}`;
-    } else if (token) {
+    // DIAGNOSTIC: Check if token exists and is valid
+    if (!token) {
+      console.error('❌ No token found in localStorage for request:', config.url);
+    } else {
+      // Check if token is expired
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const expiresAt = payload.exp * 1000; // Convert to milliseconds
+        const now = Date.now();
+        const isExpired = now > expiresAt;
+        
+        if (isExpired) {
+          console.error('❌ Token is EXPIRED:', {
+            url: config.url,
+            expiredAt: new Date(expiresAt).toISOString(),
+            now: new Date(now).toISOString(),
+            expiredAgo: Math.round((now - expiresAt) / 1000 / 60) + ' minutes ago'
+          });
+        } else {
+          const expiresIn = Math.round((expiresAt - now) / 1000 / 60);
+          console.log('✅ Token valid, expires in:', expiresIn, 'minutes');
+        }
+      } catch (e) {
+        console.error('❌ Error decoding token:', e);
+      }
+      
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // Add x-school-id header for school-scoped requests (not for platform routes)
+    const schoolId = localStorage.getItem('schoolId');
+    if (schoolId && !config.url?.includes('/platform/')) {
+      config.headers['x-school-id'] = schoolId;
     }
     
     // Log request in development
     if (import.meta.env.DEV) {
-      console.log('API Request:', {
+      console.log('📤 API Request:', {
         method: config.method?.toUpperCase(),
         url: config.url,
+        hasToken: !!token,
+        hasAuthHeader: !!config.headers.Authorization,
+        schoolId: schoolId,
         data: config.data,
-        headers: config.headers,
       });
     }
     
@@ -50,6 +82,21 @@ axiosInstance.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+// Track if we're currently refreshing the token
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
 
 // Response interceptor - log responses and handle errors
 axiosInstance.interceptors.response.use(
@@ -64,7 +111,7 @@ axiosInstance.interceptors.response.use(
     }
     return response;
   },
-  (error) => {
+  async (error) => {
     console.error('API Error:', {
       status: error.response?.status,
       url: error.config?.url,
@@ -72,11 +119,74 @@ axiosInstance.interceptors.response.use(
       data: error.response?.data,
     });
     
-    // Handle 401 - Unauthorized
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+    const originalRequest = error.config;
+    
+    // Handle 401 - Unauthorized - Try to refresh token
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // If already refreshing, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return axiosInstance(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const platformToken = localStorage.getItem('platform_token');
+      const token = localStorage.getItem('token');
+      const currentToken = platformToken || token;
+
+      if (!currentToken) {
+        // No token to refresh, redirect to login
+        localStorage.removeItem('token');
+        localStorage.removeItem('platform_token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+
+      try {
+        // Attempt to refresh the token
+        const response = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {}, {
+          headers: { Authorization: `Bearer ${currentToken}` }
+        });
+
+        const newToken = response.data.token;
+        
+        // Update stored token
+        if (platformToken) {
+          localStorage.setItem('platform_token', newToken);
+        } else {
+          localStorage.setItem('token', newToken);
+        }
+
+        // Update the failed request with new token
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        
+        // Process queued requests
+        processQueue(null, newToken);
+        isRefreshing = false;
+
+        // Retry the original request
+        return axiosInstance(originalRequest);
+      } catch (refreshError) {
+        // Token refresh failed, logout user
+        processQueue(refreshError, null);
+        isRefreshing = false;
+        
+        localStorage.removeItem('token');
+        localStorage.removeItem('platform_token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        
+        return Promise.reject(refreshError);
+      }
     }
     
     return Promise.reject(error);
@@ -141,7 +251,10 @@ export const api = {
   createIncident: (data: any) => axiosInstance.post('/behaviour', data),
   updateIncident: (id: number, data: any) => axiosInstance.put(`/behaviour/${id}`, data),
   deleteIncident: (id: number) => axiosInstance.delete(`/behaviour/${id}`),
+  approveIncident: (id: number) => axiosInstance.put(`/behaviour/${id}/approve`),
+  declineIncident: (id: number, reason?: string) => axiosInstance.put(`/behaviour/${id}/decline`, { reason }),
   getBehaviourTimeline: (studentId: number) => axiosInstance.get(`/behaviour/timeline/${studentId}`),
+  getBehaviourAnalytics: (params?: any) => axiosInstance.get('/behaviour/analytics', { params }),
 
   // Attendance
   getAttendance: (params?: any) => axiosInstance.get('/attendance', { params }),
@@ -190,12 +303,22 @@ export const api = {
   getDetentions: (params?: any) => axiosInstance.get('/detentions', { params }),
   getDetention: (id: number) => axiosInstance.get(`/detentions/${id}`),
   createDetention: (data: any) => axiosInstance.post('/detentions', data),
+  createRecurringDetentions: (data: any) => axiosInstance.post('/detentions/recurring', data),
   updateDetention: (id: number, data: any) => axiosInstance.put(`/detentions/${id}`, data),
   assignToDetention: (id: number, data: any) => axiosInstance.post(`/detentions/${id}/assign`, data),
   autoAssignDetention: (data: any) => axiosInstance.post('/detentions/auto-assign', data),
+  evaluateDetentionRules: (studentId: number) => axiosInstance.post('/detentions/evaluate-rules', { student_id: studentId }),
+  getStudentDetentionHistory: (studentId: number) => axiosInstance.get(`/detentions/student/${studentId}/history`),
   updateDetentionAttendance: (assignmentId: number, data: { status: string; attendance_time?: string; notes?: string }) => 
     axiosInstance.put(`/detentions/assignments/${assignmentId}`, data),
+  updateDetentionSessionStatus: (sessionId: number, status: string) => 
+    axiosInstance.put(`/detentions/sessions/${sessionId}/status`, { status }),
+  markDetentionAttendance: (assignmentId: number, attendance_status: string, notes?: string) => 
+    axiosInstance.put(`/detentions/assignments/${assignmentId}/attendance`, { attendance_status, notes }),
   deleteDetention: (id: number) => axiosInstance.delete(`/detentions/${id}`),
+  getDetentionQueue: () => axiosInstance.get('/detentions/queue'),
+  processDetentionQueue: (detentionId: number) => axiosInstance.post(`/detentions/${detentionId}/process-queue`),
+  getQualifyingStudents: () => axiosInstance.get('/detentions/qualifying-students'),
 
   // Merits
   getMerits: (params?: any) => axiosInstance.get('/merits', { params }),
@@ -340,6 +463,8 @@ export const api = {
   // User Management (Admin)
   getUsers: () => axiosInstance.get('/users'),
   getUser: (id: number) => axiosInstance.get(`/users/${id}`),
+  createUser: (data: { name: string; email: string; password: string; role: string }) => 
+    axiosInstance.post('/users', data),
   updateUserRole: (id: number, role: string) => axiosInstance.put(`/users/${id}/role`, { role }),
   deleteUser: (id: number) => axiosInstance.delete(`/users/${id}`),
 
@@ -369,6 +494,18 @@ export const api = {
   deleteInterventionType: (id: number) => axiosInstance.delete(`/interventions/types/${id}`),
   getInterventionSessions: (id: number) => axiosInstance.get(`/interventions/${id}/sessions`),
   createInterventionSession: (id: number, data: any) => axiosInstance.post(`/interventions/${id}/sessions`, data),
+  updateInterventionProgress: (id: number, data: any) => axiosInstance.put(`/interventions/${id}/progress`, data),
+  recordInterventionOutcome: (id: number, data: any) => axiosInstance.put(`/interventions/${id}/outcome`, data),
+  getInterventionStats: () => axiosInstance.get('/interventions/stats/overview'),
+
+  // Guided Interventions
+  getBehaviourCategories: () => axiosInstance.get('/guided-interventions/categories'),
+  getInterventionStrategies: (category?: string) => axiosInstance.get('/guided-interventions/strategies', { params: { category } }),
+  getSuggestedStrategies: (studentId: number, category: string) => axiosInstance.get('/guided-interventions/suggested-strategies', { params: { student_id: studentId, category } }),
+  getStudentInterventionHistory: (studentId: number) => axiosInstance.get(`/guided-interventions/student-history/${studentId}`),
+  createGuidedIntervention: (data: any) => axiosInstance.post('/guided-interventions', data),
+  updateInterventionOutcome: (id: number, data: any) => axiosInstance.put(`/guided-interventions/${id}/outcome`, data),
+  getInterventionStatistics: (params?: any) => axiosInstance.get('/guided-interventions/statistics', { params }),
 
   // Consequences
   getConsequenceDefinitions: () => axiosInstance.get('/consequences/definitions'),
@@ -380,9 +517,19 @@ export const api = {
   getStudentConsequences: (studentId: number) => axiosInstance.get(`/consequences/student/${studentId}`),
   assignConsequence: (data: any) => axiosInstance.post('/consequences/assign', data),
   updateConsequence: (id: number, data: any) => axiosInstance.put(`/consequences/${id}`, data),
+  approveSuspension: (id: number, data: { approval_status: 'approved' | 'denied', approval_notes?: string }) => axiosInstance.put(`/consequences/${id}/approval`, data),
   completeConsequence: (id: number) => axiosInstance.put(`/consequences/${id}/complete`),
   acknowledgeConsequence: (id: number, data?: { parent_notes?: string }) => axiosInstance.put(`/consequences/${id}/acknowledge`, data || {}),
   deleteConsequence: (id: number) => axiosInstance.delete(`/consequences/${id}`),
+
+  // Consequence Assignments (Role-based)
+  getConsequenceAssignments: (params?: any) => axiosInstance.get('/consequence-assignments', { params }),
+  getAvailableConsequences: () => axiosInstance.get('/consequence-assignments/available-consequences'),
+  assignConsequenceToStudent: (data: any) => axiosInstance.post('/consequence-assignments/assign', data),
+  updateConsequenceAssignment: (id: number, data: any) => axiosInstance.put(`/consequence-assignments/${id}`, data),
+  deleteConsequenceAssignment: (id: number) => axiosInstance.delete(`/consequence-assignments/${id}`),
+  evaluateStudentConsequences: (studentId: number) => axiosInstance.post('/consequence-assignments/evaluate-student', { student_id: studentId }),
+  getConsequenceStatistics: () => axiosInstance.get('/consequence-assignments/statistics'),
 
   // Platform (Super Admin)
   platformLogin: (email: string, password: string) => axiosInstance.post('/platform/login', { email, password }),
@@ -418,6 +565,9 @@ export const api = {
   createPlatformUser: (data: any) => axiosInstance.post('/platform/users', data),
   updatePlatformUser: (id: number, data: any) => axiosInstance.put(`/platform/users/${id}`, data),
   deletePlatformUser: (id: number) => axiosInstance.delete(`/platform/users/${id}`),
+
+  // School Information
+  getCurrentSchoolInfo: () => axiosInstance.get('/school-info'),
 
   // School Customizations
   getSchoolCustomizations: (schoolId: number) => axiosInstance.get(`/school-customizations/${schoolId}`),
@@ -495,5 +645,22 @@ export const api = {
   getAttendanceFlags: (params?: any) => axiosInstance.get('/period-register/flags', { params }),
   resolveAttendanceFlag: (flagId: number, data: any) => axiosInstance.put(`/period-register/flags/${flagId}/resolve`, data),
   getAttendanceReport: (params: any) => axiosInstance.get('/period-register/reports/attendance', { params }),
+
+  // Feature Flags
+  getAllFeatureFlags: () => axiosInstance.get('/feature-flags/all'),
+  getSchoolFeatureFlags: (schoolId: number) => axiosInstance.get(`/feature-flags/school/${schoolId}`),
+  getCurrentFeatureFlags: () => axiosInstance.get('/feature-flags/current'),
+  checkFeatureFlag: (featureName: string) => axiosInstance.get(`/feature-flags/check/${featureName}`),
+  toggleFeatureFlag: (schoolId: number, featureName: string, enabled: boolean) => 
+    axiosInstance.put(`/feature-flags/toggle/${schoolId}/${featureName}`, { enabled }),
+  bulkToggleFeatureFlag: (featureName: string, schoolIds: number[], enabled: boolean) => 
+    axiosInstance.put(`/feature-flags/bulk-toggle/${featureName}`, { schoolIds, enabled }),
+
+  // Goldie Badge Configuration
+  getGoldieBadgeConfig: () => axiosInstance.get('/goldie-badge/config'),
+  updateGoldieBadgeConfig: (pointsThreshold: number) => 
+    axiosInstance.put('/goldie-badge/config', { points_threshold: pointsThreshold }),
+  checkBadgeEligibility: (studentId: number) => 
+    axiosInstance.get(`/goldie-badge/check-eligibility/${studentId}`),
 };
 

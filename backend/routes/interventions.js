@@ -18,7 +18,8 @@ router.get('/', authenticateToken, async (req, res) => {
     let query = `
       SELECT i.*, 
              s.first_name || ' ' || s.last_name as student_name,
-             s.student_id,
+             s.student_id as student_number,
+             s.id as student_id,
              u.name as assigned_by_name,
              it.name as intervention_type_name
       FROM interventions i
@@ -29,6 +30,12 @@ router.get('/', authenticateToken, async (req, res) => {
     `;
     const params = [];
     let paramIndex = 1;
+
+    // If user is a parent, only show interventions for their linked children
+    if (req.user.role === 'parent') {
+      query += ` AND s.parent_id = $${paramIndex++}`;
+      params.push(req.user.id);
+    }
 
     if (student_id) {
       query += ` AND i.student_id = $${paramIndex++}`;
@@ -123,13 +130,13 @@ router.post('/', authenticateToken, requireRole('admin', 'teacher'), async (req,
       const studentWithParent = await schemaGet(req, 'SELECT parent_id FROM students WHERE id = $1', [student_id]);
       if (studentWithParent && studentWithParent.parent_id) {
         await createNotification(
+          req,
           studentWithParent.parent_id,
           'intervention',
           'New Intervention Assigned',
           `An intervention has been assigned to your child`,
           result.id,
-          'intervention',
-          req.app
+          'intervention'
         );
       }
     } catch (notifError) {
@@ -314,6 +321,190 @@ router.post('/:id/sessions', authenticateToken, requireRole('admin'), async (req
     res.status(201).json(session);
   } catch (error) {
     console.error('Error creating session:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update intervention progress (admin and teacher)
+router.put('/:id/progress', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
+  try {
+    const { 
+      progress_status, 
+      progress_percentage, 
+      progress_notes, 
+      next_session_date,
+      sessions_completed,
+      sessions_planned 
+    } = req.body;
+    
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+
+    // Build dynamic update query
+    const updates = [];
+    const params = [];
+    let paramIndex = 1;
+
+    if (progress_status !== undefined) {
+      updates.push(`progress_status = $${paramIndex++}`);
+      params.push(progress_status);
+    }
+    if (progress_percentage !== undefined) {
+      updates.push(`progress_percentage = $${paramIndex++}`);
+      params.push(progress_percentage);
+    }
+    if (progress_notes !== undefined) {
+      updates.push(`progress_notes = $${paramIndex++}`);
+      params.push(progress_notes);
+    }
+    if (next_session_date !== undefined) {
+      updates.push(`next_session_date = $${paramIndex++}`);
+      params.push(next_session_date);
+    }
+    if (sessions_completed !== undefined) {
+      updates.push(`sessions_completed = $${paramIndex++}`);
+      params.push(sessions_completed);
+    }
+    if (sessions_planned !== undefined) {
+      updates.push(`sessions_planned = $${paramIndex++}`);
+      params.push(sessions_planned);
+    }
+
+    // Always update last_progress_update
+    updates.push(`last_progress_update = CURRENT_TIMESTAMP`);
+
+    if (updates.length === 1) {
+      return res.status(400).json({ error: 'No progress fields to update' });
+    }
+
+    params.push(req.params.id);
+    const query = `
+      UPDATE interventions 
+      SET ${updates.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+
+    await schemaRun(req, query, params);
+    const intervention = await schemaGet(req, 'SELECT * FROM interventions WHERE id = $1', [req.params.id]);
+
+    res.json({
+      message: 'Progress updated successfully',
+      intervention
+    });
+  } catch (error) {
+    console.error('Error updating intervention progress:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Record intervention outcome (admin and teacher)
+router.put('/:id/outcome', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
+  try {
+    const { 
+      outcome, 
+      outcome_notes, 
+      effectiveness_rating,
+      follow_up_required,
+      follow_up_notes
+    } = req.body;
+    
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+
+    if (!outcome) {
+      return res.status(400).json({ error: 'Outcome is required' });
+    }
+
+    // Update intervention with outcome
+    await schemaRun(req, `
+      UPDATE interventions 
+      SET outcome = $1,
+          outcome_date = CURRENT_DATE,
+          outcome_notes = $2,
+          effectiveness_rating = $3,
+          follow_up_required = $4,
+          follow_up_notes = $5,
+          completed_by = $6,
+          progress_status = 'completed',
+          progress_percentage = 100
+      WHERE id = $7
+    `, [
+      outcome,
+      outcome_notes || null,
+      effectiveness_rating || null,
+      follow_up_required || false,
+      follow_up_notes || null,
+      req.user.id,
+      req.params.id
+    ]);
+
+    const intervention = await schemaGet(req, `
+      SELECT i.*, 
+             s.first_name || ' ' || s.last_name as student_name,
+             u.name as completed_by_name
+      FROM interventions i
+      INNER JOIN students s ON i.student_id = s.id
+      LEFT JOIN public.users u ON i.completed_by = u.id
+      WHERE i.id = $1
+    `, [req.params.id]);
+
+    res.json({
+      message: 'Outcome recorded successfully',
+      intervention
+    });
+  } catch (error) {
+    console.error('Error recording intervention outcome:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get intervention statistics (admin only)
+router.get('/stats/overview', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+
+    // Get overall stats
+    const stats = await schemaGet(req, `
+      SELECT 
+        COUNT(*) as total_interventions,
+        COUNT(CASE WHEN progress_status = 'completed' THEN 1 END) as completed,
+        COUNT(CASE WHEN progress_status = 'in_progress' THEN 1 END) as in_progress,
+        COUNT(CASE WHEN progress_status = 'not_started' THEN 1 END) as not_started,
+        COUNT(CASE WHEN outcome = 'successful' THEN 1 END) as successful_outcomes,
+        COUNT(CASE WHEN outcome = 'partially_successful' THEN 1 END) as partially_successful,
+        COUNT(CASE WHEN outcome = 'unsuccessful' THEN 1 END) as unsuccessful_outcomes,
+        ROUND(AVG(effectiveness_rating), 2) as avg_effectiveness_rating,
+        COUNT(CASE WHEN follow_up_required = true THEN 1 END) as follow_ups_needed
+      FROM interventions
+    `);
+
+    // Get outcome breakdown by type
+    const outcomesByType = await schemaAll(req, `
+      SELECT 
+        type,
+        COUNT(*) as total,
+        COUNT(CASE WHEN outcome = 'successful' THEN 1 END) as successful,
+        ROUND(AVG(effectiveness_rating), 2) as avg_rating
+      FROM interventions
+      WHERE outcome IS NOT NULL
+      GROUP BY type
+      ORDER BY total DESC
+    `);
+
+    res.json({
+      overall: stats,
+      by_type: outcomesByType
+    });
+  } catch (error) {
+    console.error('Error fetching intervention stats:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -5,10 +5,11 @@ import { api } from '../../services/api';
 import ModernCard from '../../components/ModernCard';
 import AnimatedStatCard from '../../components/AnimatedStatCard';
 import { motion } from 'framer-motion';
-import { AlertTriangle, TrendingDown, BarChart3 } from 'lucide-react';
+import { AlertTriangle, TrendingDown, BarChart3, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import Table from '../../components/Table';
 import Select from '../../components/Select';
+import Button from '../../components/Button';
 
 const ModernBehaviourReport: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -83,6 +84,35 @@ const ModernBehaviourReport: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const exportToCSV = () => {
+    if (incidents.length === 0) return;
+
+    const headers = ['Date', 'Type', 'Severity', 'Demerit Points', 'Status', 'Description'];
+    const csvData = incidents.map(incident => [
+      incident.incident_date,
+      incident.incident_type,
+      incident.severity,
+      incident.points || 0,
+      incident.status,
+      incident.description || ''
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `behaviour_report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const columns = [
@@ -176,18 +206,29 @@ const ModernBehaviourReport: React.FC = () => {
           }}
         />
         <div className="relative z-10">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="flex items-center space-x-3 mb-4"
-          >
-            <AlertTriangle className="text-yellow-300" size={32} />
-            <h1 className="text-4xl font-bold">Behaviour Reports</h1>
-          </motion.div>
-          <p className="text-xl text-white/90">
-            Monitor your child's behaviour incidents and patterns
-          </p>
+          <div className="flex items-center justify-between">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="flex items-center space-x-3 mb-4">
+                <AlertTriangle className="text-yellow-300" size={32} />
+                <h1 className="text-4xl font-bold">Behaviour Reports</h1>
+              </div>
+              <p className="text-xl text-white/90">
+                Monitor your child's behaviour incidents and patterns
+              </p>
+            </motion.div>
+            <Button
+              onClick={exportToCSV}
+              disabled={incidents.length === 0}
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
+            >
+              <Download size={18} className="mr-2" />
+              Export CSV
+            </Button>
+          </div>
         </div>
       </motion.div>
 

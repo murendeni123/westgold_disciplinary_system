@@ -51,7 +51,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
         }
 
         const classData = await schemaGet(req, `
-            SELECT c.*, t.name as teacher_name, t.email as teacher_email
+            SELECT c.*, u.name as teacher_name, t.email as teacher_email
             FROM classes c
             LEFT JOIN teachers t ON c.teacher_id = t.id
             WHERE c.id = $1

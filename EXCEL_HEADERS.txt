@@ -1,0 +1,80 @@
+EXCEL IMPORT HEADERS FOR WESTGOLD DISCIPLINARY SYSTEM
+=====================================================
+
+STUDENTS IMPORT
+---------------
+Required: student_id, first_name, last_name, class_name, date_of_birth, gender
+Optional: grade_level, parent_email, parent_name, parent_phone, medical_info
+
+Example:
+student_id | first_name | last_name | class_name | date_of_birth | gender | grade_level | parent_email
+2024001    | John       | Smith     | 5A         | 2014-05-15    | Male   | 5           | parent@email.com
+
+
+TEACHERS IMPORT
+---------------
+Required: name, email
+Optional: phone, employee_id, department, subjects, is_admin
+
+Example:
+name         | email                    | phone      | department   | subjects
+John Teacher | john.teacher@school.com  | 0821234567 | Mathematics  | Math, Science
+
+
+PARENTS IMPORT
+--------------
+Required: name, email
+Optional: phone, relationship_to_child, home_address, city, postal_code
+
+Example:
+name        | email                | phone      | relationship_to_child
+Jane Smith  | jane.smith@email.com | 0821234567 | Mother
+
+
+CLASSES IMPORT
+--------------
+Required: class_name, grade_level
+Optional: teacher_email, academic_year
+
+Example:
+class_name | grade_level | teacher_email           | academic_year
+5A         | 5           | teacher@school.com      | 2024
+
+
+ATTENDANCE IMPORT
+-----------------
+Required: student_id, date, status
+Optional: notes
+
+Example:
+student_id | date       | status  | notes
+2024001    | 2024-01-25 | present |
+2024002    | 2024-01-25 | absent  | Sick
+
+
+BEHAVIOUR INCIDENTS
+-------------------
+Required: student_id, teacher_email, description, date
+Optional: incident_type, severity, points_deducted
+
+Example:
+student_id | teacher_email          | description      | date       | points_deducted
+2024001    | teacher@school.com     | Disrupting class | 2024-01-25 | 5
+
+
+MERITS
+------
+Required: student_id, teacher_email, description, points, date
+Optional: merit_type
+
+Example:
+student_id | teacher_email      | description        | points | date
+2024001    | teacher@school.com | Excellent homework | 5      | 2024-01-25
+
+
+IMPORTANT NOTES:
+- Headers are case-sensitive and must match exactly
+- Use YYYY-MM-DD format for dates
+- First row must be headers
+- No empty rows between headers and data
+- Save as .xlsx or .csv format

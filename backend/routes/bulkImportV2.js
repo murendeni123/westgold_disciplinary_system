@@ -97,16 +97,34 @@ const isValidEmail = (email) => {
 const parseDate = (dateValue) => {
   if (!dateValue) return null;
   
-  // Handle Excel date serial numbers
-  if (typeof dateValue === 'number') {
-    const excelEpoch = new Date(1899, 11, 30);
-    const date = new Date(excelEpoch.getTime() + dateValue * 86400000);
+  try {
+    // Handle Excel date serial numbers
+    if (typeof dateValue === 'number') {
+      // Validate the number is reasonable (between 1900 and 2100)
+      if (dateValue < 0 || dateValue > 73050) {
+        console.warn(`Invalid Excel date serial: ${dateValue}`);
+        return null;
+      }
+      const excelEpoch = new Date(1899, 11, 30);
+      const date = new Date(excelEpoch.getTime() + dateValue * 86400000);
+      if (isNaN(date.getTime())) {
+        console.warn(`Invalid date from Excel serial: ${dateValue}`);
+        return null;
+      }
+      return date.toISOString().split('T')[0];
+    }
+    
+    // Handle string dates
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
+      console.warn(`Invalid date string: ${dateValue}`);
+      return null;
+    }
     return date.toISOString().split('T')[0];
+  } catch (error) {
+    console.warn(`Error parsing date: ${dateValue}`, error.message);
+    return null;
   }
-  
-  // Handle string dates
-  const date = new Date(dateValue);
-  return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
 };
 
 // Get current academic year
@@ -863,7 +881,10 @@ async function validateTeachersWorkbook(req, workbook) {
       rowResult.action = 'update';
       validation.summary.toUpdate++;
     } else {
-      if (!password) rowResult.errors.push('Password required for new teachers');
+      // Set default password if not provided
+      if (!password) {
+        row.password = 'teacher123'; // Default password for new teachers
+      }
       if (password && password.length < 6) rowResult.errors.push('Password must be at least 6 characters');
       validation.summary.toCreate++;
     }
@@ -943,7 +964,9 @@ async function importTeachersWorkbook(req, workbook, options) {
     // Extract and sanitize input data
     const email = sanitizeEmail(String(row.getCell(emailCol)?.value || '').trim());
     const name = sanitizeString(String(row.getCell(nameCol)?.value || '').trim());
-    const password = passwordCol ? String(row.getCell(passwordCol)?.value || '').trim() : ''; // Don't sanitize passwords
+    let password = passwordCol ? String(row.getCell(passwordCol)?.value || '').trim() : ''; // Don't sanitize passwords
+    // Set default password if not provided
+    if (!password) password = 'teacher123';
     const employeeId = employeeIdCol ? sanitizeIdNumber(String(row.getCell(employeeIdCol)?.value || '').trim()) : '';
     const phone = phoneCol ? sanitizePhone(String(row.getCell(phoneCol)?.value || '').trim()) : '';
 
@@ -1019,8 +1042,9 @@ async function importTeachersWorkbook(req, workbook, options) {
               continue;
             }
 
-            if (!password || password.length < 6) {
-              throw new Error('Password required (min 6 chars) for new teachers');
+            // Password is already set to 'teacher123' if not provided
+            if (password.length < 6) {
+              throw new Error('Password must be at least 6 characters');
             }
 
             const hashedPassword = await bcrypt.hash(password, 10);
@@ -1583,10 +1607,16 @@ router.post('/export-errors', authenticateToken, requireRole('admin'), async (re
 
 // Create import history record
 const createImportHistory = async (req, userId, data) => {
+  const schoolId = req.schoolId || req.user?.schoolId;
+  
+  if (!schoolId) {
+    throw new Error('School context is required for import history');
+  }
+  
   const result = await schemaRun(req,
-    `INSERT INTO import_history (user_id, import_type, file_name, mode, academic_year, status)
-     VALUES ($1, $2, $3, $4, $5, 'processing') RETURNING id`,
-    [userId, data.type, data.fileName, data.mode, data.academicYear]
+    `INSERT INTO import_history (school_id, user_id, import_type, file_name, mode, academic_year, status)
+     VALUES ($1, $2, $3, $4, $5, $6, 'processing') RETURNING id`,
+    [schoolId, userId, data.type, data.fileName, data.mode, data.academicYear]
   );
   return result.id;
 };

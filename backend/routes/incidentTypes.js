@@ -66,16 +66,16 @@ router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
       return res.status(403).json({ error: 'School context required' });
     }
 
-    const { name, default_points, default_severity, description } = req.body;
+    const { name, points, severity, description, category } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
     }
 
     const result = await schemaRun(req,
-      `INSERT INTO incident_types (name, default_points, severity, description)
-       VALUES ($1, $2, $3, $4) RETURNING id`,
-      [name, default_points || 0, default_severity || 'minor', description || null]
+      `INSERT INTO incident_types (name, points, severity, description, category, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [name, points || 0, severity || 'low', description || null, category || null, true]
     );
 
     const type = await schemaGet(req, 'SELECT * FROM incident_types WHERE id = $1', [result.id]);
@@ -97,13 +97,13 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
       return res.status(403).json({ error: 'School context required' });
     }
 
-    const { name, default_points, default_severity, description, is_active } = req.body;
+    const { name, points, severity, description, category, is_active } = req.body;
 
     await schemaRun(req,
       `UPDATE incident_types 
-       SET name = $1, default_points = $2, severity = $3, description = $4, is_active = $5
-       WHERE id = $6`,
-      [name, default_points || 0, default_severity || 'minor', description || null, is_active !== undefined ? is_active : true, req.params.id]
+       SET name = $1, points = $2, severity = $3, description = $4, category = $5, is_active = $6
+       WHERE id = $7`,
+      [name, points || 0, severity || 'low', description || null, category || null, is_active !== undefined ? is_active : true, req.params.id]
     );
 
     const type = await schemaGet(req, 'SELECT * FROM incident_types WHERE id = $1', [req.params.id]);

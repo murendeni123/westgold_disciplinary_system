@@ -113,7 +113,7 @@ const Onboarding: React.FC = () => {
   const steps = [
     {
       id: 0,
-      title: 'Welcome to PDS Parent Portal',
+      title: 'Welcome to DMS Parent Portal',
       icon: GraduationCap,
       description: 'Your one-stop portal to track your child\'s progress, attendance, and behavior at school.',
       content: (
@@ -429,7 +429,7 @@ const Onboarding: React.FC = () => {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-4">
             <CheckCircle className="text-green-600" size={40} />
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">Welcome to PDS!</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">Welcome to DMS!</h3>
           <p className="text-gray-600 mb-6">
             You're all set up and ready to start tracking your child's progress. 
             {!hasChild && ' Don\'t forget to link your child if you haven\'t already!'}

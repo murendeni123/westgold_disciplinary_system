@@ -15,6 +15,7 @@ import {
   Shield,
   Sparkles,
   Bell,
+  ToggleLeft,
 } from 'lucide-react';
 import Button from '../components/Button';
 
@@ -40,6 +41,7 @@ const PlatformLayout: React.FC = () => {
     { path: '/platform/analytics', label: 'Analytics', icon: BarChart3, color: 'from-orange-500 to-red-500' },
     { path: '/platform/billing', label: 'Billing', icon: CreditCard, color: 'from-teal-500 to-blue-500' },
     { path: '/platform/logs', label: 'Activity Logs', icon: FileText, color: 'from-gray-500 to-slate-500' },
+    { path: '/platform/feature-flags', label: 'Feature Flags', icon: ToggleLeft, color: 'from-amber-500 to-orange-500' },
     { path: '/platform/notifications', label: 'Notifications', icon: Bell, color: 'from-blue-500 to-indigo-500' },
     { path: '/platform/settings', label: 'Settings', icon: Settings, color: 'from-violet-500 to-purple-500' },
   ];

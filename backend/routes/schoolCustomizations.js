@@ -68,17 +68,17 @@ const upload = multer({
 // Get school customizations
 router.get('/:schoolId', requirePlatformAdmin, async (req, res) => {
   try {
-    const { schoolId } = req.params;
+    const schoolId = parseInt(req.params.schoolId);
 
     // Verify school exists
-    const school = await dbGet('SELECT id FROM schools WHERE id = ?', [schoolId]);
+    const school = await dbGet('SELECT id FROM public.schools WHERE id = $1', [schoolId]);
     if (!school) {
       return res.status(404).json({ error: 'School not found' });
     }
 
     // Get customizations
     let customizations = await dbGet(
-      'SELECT * FROM school_customizations WHERE school_id = ?',
+      'SELECT * FROM public.school_customizations WHERE school_id = $1',
       [schoolId]
     );
 
@@ -147,52 +147,54 @@ router.put('/:schoolId', requirePlatformAdmin, async (req, res) => {
       email_signature,
     } = req.body;
 
+    const parsedSchoolId = parseInt(schoolId);
+    
     // Verify school exists
-    const school = await dbGet('SELECT id FROM schools WHERE id = ?', [schoolId]);
+    const school = await dbGet('SELECT id FROM public.schools WHERE id = $1', [parsedSchoolId]);
     if (!school) {
       return res.status(404).json({ error: 'School not found' });
     }
 
     // Check if customizations exist
     const existing = await dbGet(
-      'SELECT id FROM school_customizations WHERE school_id = ?',
-      [schoolId]
+      'SELECT id FROM public.school_customizations WHERE school_id = $1',
+      [parsedSchoolId]
     );
 
     if (existing) {
       // Update existing
       await dbRun(
-        `UPDATE school_customizations SET
-          primary_color = ?,
-          secondary_color = ?,
-          success_color = ?,
-          warning_color = ?,
-          danger_color = ?,
-          background_color = ?,
-          text_primary_color = ?,
-          text_secondary_color = ?,
-          primary_font = ?,
-          secondary_font = ?,
-          base_font_size = ?,
-          button_border_radius = ?,
-          card_border_radius = ?,
-          sidebar_background = ?,
-          header_background = ?,
-          login_welcome_message = ?,
-          login_tagline = ?,
-          login_background_color = ?,
-          contact_email = ?,
-          contact_phone = ?,
-          support_email = ?,
-          terms_url = ?,
-          privacy_url = ?,
-          custom_css = ?,
-          custom_js = ?,
-          email_header_html = ?,
-          email_footer_html = ?,
-          email_signature = ?,
+        `UPDATE public.school_customizations SET
+          primary_color = $1,
+          secondary_color = $2,
+          success_color = $3,
+          warning_color = $4,
+          danger_color = $5,
+          background_color = $6,
+          text_primary_color = $7,
+          text_secondary_color = $8,
+          primary_font = $9,
+          secondary_font = $10,
+          base_font_size = $11,
+          button_border_radius = $12,
+          card_border_radius = $13,
+          sidebar_background = $14,
+          header_background = $15,
+          login_welcome_message = $16,
+          login_tagline = $17,
+          login_background_color = $18,
+          contact_email = $19,
+          contact_phone = $20,
+          support_email = $21,
+          terms_url = $22,
+          privacy_url = $23,
+          custom_css = $24,
+          custom_js = $25,
+          email_header_html = $26,
+          email_footer_html = $27,
+          email_signature = $28,
           updated_at = CURRENT_TIMESTAMP
-        WHERE school_id = ?`,
+        WHERE school_id = $29`,
         [
           primary_color,
           secondary_color,
@@ -222,13 +224,13 @@ router.put('/:schoolId', requirePlatformAdmin, async (req, res) => {
           email_header_html,
           email_footer_html,
           email_signature,
-          schoolId,
+          parsedSchoolId,
         ]
       );
     } else {
       // Create new
       await dbRun(
-        `INSERT INTO school_customizations (
+        `INSERT INTO public.school_customizations (
           school_id,
           primary_color,
           secondary_color,
@@ -258,9 +260,9 @@ router.put('/:schoolId', requirePlatformAdmin, async (req, res) => {
           email_header_html,
           email_footer_html,
           email_signature
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)`,
         [
-          schoolId,
+          parsedSchoolId,
           primary_color || '#3b82f6',
           secondary_color || '#8b5cf6',
           success_color || '#10b981',
@@ -294,8 +296,8 @@ router.put('/:schoolId', requirePlatformAdmin, async (req, res) => {
     }
 
     const updated = await dbGet(
-      'SELECT * FROM school_customizations WHERE school_id = ?',
-      [schoolId]
+      'SELECT * FROM public.school_customizations WHERE school_id = $1',
+      [parsedSchoolId]
     );
 
     res.json(updated);
@@ -308,14 +310,14 @@ router.put('/:schoolId', requirePlatformAdmin, async (req, res) => {
 // Upload logo
 router.post('/:schoolId/logo', requirePlatformAdmin, upload.single('logo'), async (req, res) => {
   try {
-    const { schoolId } = req.params;
+    const schoolId = parseInt(req.params.schoolId);
 
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
     // Verify school exists
-    const school = await dbGet('SELECT id FROM schools WHERE id = ?', [schoolId]);
+    const school = await dbGet('SELECT id FROM public.schools WHERE id = $1', [schoolId]);
     if (!school) {
       return res.status(404).json({ error: 'School not found' });
     }
@@ -324,14 +326,14 @@ router.post('/:schoolId/logo', requirePlatformAdmin, upload.single('logo'), asyn
 
     // Update or create customizations
     const existing = await dbGet(
-      'SELECT id FROM school_customizations WHERE school_id = ?',
+      'SELECT id FROM public.school_customizations WHERE school_id = $1',
       [schoolId]
     );
 
     if (existing) {
       // Delete old logo if exists
       const oldCustomizations = await dbGet(
-        'SELECT logo_path FROM school_customizations WHERE school_id = ?',
+        'SELECT logo_path FROM public.school_customizations WHERE school_id = $1',
         [schoolId]
       );
       if (oldCustomizations?.logo_path) {
@@ -342,12 +344,12 @@ router.post('/:schoolId/logo', requirePlatformAdmin, upload.single('logo'), asyn
       }
 
       await dbRun(
-        'UPDATE school_customizations SET logo_path = ?, updated_at = CURRENT_TIMESTAMP WHERE school_id = ?',
+        'UPDATE public.school_customizations SET logo_path = $1, updated_at = CURRENT_TIMESTAMP WHERE school_id = $2',
         [logoPath, schoolId]
       );
     } else {
       await dbRun(
-        `INSERT INTO school_customizations (school_id, logo_path) VALUES (?, ?)`,
+        `INSERT INTO public.school_customizations (school_id, logo_path) VALUES ($1, $2)`,
         [schoolId, logoPath]
       );
     }
@@ -362,13 +364,13 @@ router.post('/:schoolId/logo', requirePlatformAdmin, upload.single('logo'), asyn
 // Upload favicon
 router.post('/:schoolId/favicon', requirePlatformAdmin, upload.single('favicon'), async (req, res) => {
   try {
-    const { schoolId } = req.params;
+    const schoolId = parseInt(req.params.schoolId);
 
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const school = await dbGet('SELECT id FROM schools WHERE id = ?', [schoolId]);
+    const school = await dbGet('SELECT id FROM public.schools WHERE id = $1', [schoolId]);
     if (!school) {
       return res.status(404).json({ error: 'School not found' });
     }
@@ -376,13 +378,13 @@ router.post('/:schoolId/favicon', requirePlatformAdmin, upload.single('favicon')
     const faviconPath = `/uploads/schools/${schoolId}/${req.file.filename}`;
 
     const existing = await dbGet(
-      'SELECT id FROM school_customizations WHERE school_id = ?',
+      'SELECT id FROM public.school_customizations WHERE school_id = $1',
       [schoolId]
     );
 
     if (existing) {
       const oldCustomizations = await dbGet(
-        'SELECT favicon_path FROM school_customizations WHERE school_id = ?',
+        'SELECT favicon_path FROM public.school_customizations WHERE school_id = $1',
         [schoolId]
       );
       if (oldCustomizations?.favicon_path) {
@@ -393,12 +395,12 @@ router.post('/:schoolId/favicon', requirePlatformAdmin, upload.single('favicon')
       }
 
       await dbRun(
-        'UPDATE school_customizations SET favicon_path = ?, updated_at = CURRENT_TIMESTAMP WHERE school_id = ?',
+        'UPDATE public.school_customizations SET favicon_path = $1, updated_at = CURRENT_TIMESTAMP WHERE school_id = $2',
         [faviconPath, schoolId]
       );
     } else {
       await dbRun(
-        `INSERT INTO school_customizations (school_id, favicon_path) VALUES (?, ?)`,
+        `INSERT INTO public.school_customizations (school_id, favicon_path) VALUES ($1, $2)`,
         [schoolId, faviconPath]
       );
     }
@@ -413,13 +415,13 @@ router.post('/:schoolId/favicon', requirePlatformAdmin, upload.single('favicon')
 // Upload login background
 router.post('/:schoolId/login-background', requirePlatformAdmin, upload.single('background'), async (req, res) => {
   try {
-    const { schoolId } = req.params;
+    const schoolId = parseInt(req.params.schoolId);
 
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const school = await dbGet('SELECT id FROM schools WHERE id = ?', [schoolId]);
+    const school = await dbGet('SELECT id FROM public.schools WHERE id = $1', [schoolId]);
     if (!school) {
       return res.status(404).json({ error: 'School not found' });
     }
@@ -427,13 +429,13 @@ router.post('/:schoolId/login-background', requirePlatformAdmin, upload.single('
     const backgroundPath = `/uploads/schools/${schoolId}/${req.file.filename}`;
 
     const existing = await dbGet(
-      'SELECT id FROM school_customizations WHERE school_id = ?',
+      'SELECT id FROM public.school_customizations WHERE school_id = $1',
       [schoolId]
     );
 
     if (existing) {
       const oldCustomizations = await dbGet(
-        'SELECT login_background_path FROM school_customizations WHERE school_id = ?',
+        'SELECT login_background_path FROM public.school_customizations WHERE school_id = $1',
         [schoolId]
       );
       if (oldCustomizations?.login_background_path) {
@@ -444,12 +446,12 @@ router.post('/:schoolId/login-background', requirePlatformAdmin, upload.single('
       }
 
       await dbRun(
-        'UPDATE school_customizations SET login_background_path = ?, updated_at = CURRENT_TIMESTAMP WHERE school_id = ?',
+        'UPDATE public.school_customizations SET login_background_path = $1, updated_at = CURRENT_TIMESTAMP WHERE school_id = $2',
         [backgroundPath, schoolId]
       );
     } else {
       await dbRun(
-        `INSERT INTO school_customizations (school_id, login_background_path) VALUES (?, ?)`,
+        `INSERT INTO public.school_customizations (school_id, login_background_path) VALUES ($1, $2)`,
         [schoolId, backgroundPath]
       );
     }
@@ -464,13 +466,13 @@ router.post('/:schoolId/login-background', requirePlatformAdmin, upload.single('
 // Upload dashboard background
 router.post('/:schoolId/dashboard-background', requirePlatformAdmin, upload.single('background'), async (req, res) => {
   try {
-    const { schoolId } = req.params;
+    const schoolId = parseInt(req.params.schoolId);
 
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const school = await dbGet('SELECT id FROM schools WHERE id = ?', [schoolId]);
+    const school = await dbGet('SELECT id FROM public.schools WHERE id = $1', [schoolId]);
     if (!school) {
       return res.status(404).json({ error: 'School not found' });
     }
@@ -478,13 +480,13 @@ router.post('/:schoolId/dashboard-background', requirePlatformAdmin, upload.sing
     const backgroundPath = `/uploads/schools/${schoolId}/${req.file.filename}`;
 
     const existing = await dbGet(
-      'SELECT id FROM school_customizations WHERE school_id = ?',
+      'SELECT id FROM public.school_customizations WHERE school_id = $1',
       [schoolId]
     );
 
     if (existing) {
       const oldCustomizations = await dbGet(
-        'SELECT dashboard_background_path FROM school_customizations WHERE school_id = ?',
+        'SELECT dashboard_background_path FROM public.school_customizations WHERE school_id = $1',
         [schoolId]
       );
       if (oldCustomizations?.dashboard_background_path) {
@@ -495,12 +497,12 @@ router.post('/:schoolId/dashboard-background', requirePlatformAdmin, upload.sing
       }
 
       await dbRun(
-        'UPDATE school_customizations SET dashboard_background_path = ?, updated_at = CURRENT_TIMESTAMP WHERE school_id = ?',
+        'UPDATE public.school_customizations SET dashboard_background_path = $1, updated_at = CURRENT_TIMESTAMP WHERE school_id = $2',
         [backgroundPath, schoolId]
       );
     } else {
       await dbRun(
-        `INSERT INTO school_customizations (school_id, dashboard_background_path) VALUES (?, ?)`,
+        `INSERT INTO public.school_customizations (school_id, dashboard_background_path) VALUES ($1, $2)`,
         [schoolId, backgroundPath]
       );
     }
@@ -515,10 +517,10 @@ router.post('/:schoolId/dashboard-background', requirePlatformAdmin, upload.sing
 // Delete logo
 router.delete('/:schoolId/logo', requirePlatformAdmin, async (req, res) => {
   try {
-    const { schoolId } = req.params;
+    const schoolId = parseInt(req.params.schoolId);
 
     const customizations = await dbGet(
-      'SELECT logo_path FROM school_customizations WHERE school_id = ?',
+      'SELECT logo_path FROM public.school_customizations WHERE school_id = $1',
       [schoolId]
     );
 
@@ -529,7 +531,7 @@ router.delete('/:schoolId/logo', requirePlatformAdmin, async (req, res) => {
       }
 
       await dbRun(
-        'UPDATE school_customizations SET logo_path = NULL, updated_at = CURRENT_TIMESTAMP WHERE school_id = ?',
+        'UPDATE public.school_customizations SET logo_path = NULL, updated_at = CURRENT_TIMESTAMP WHERE school_id = $1',
         [schoolId]
       );
     }
@@ -544,10 +546,10 @@ router.delete('/:schoolId/logo', requirePlatformAdmin, async (req, res) => {
 // Delete favicon
 router.delete('/:schoolId/favicon', requirePlatformAdmin, async (req, res) => {
   try {
-    const { schoolId } = req.params;
+    const schoolId = parseInt(req.params.schoolId);
 
     const customizations = await dbGet(
-      'SELECT favicon_path FROM school_customizations WHERE school_id = ?',
+      'SELECT favicon_path FROM public.school_customizations WHERE school_id = $1',
       [schoolId]
     );
 
@@ -558,7 +560,7 @@ router.delete('/:schoolId/favicon', requirePlatformAdmin, async (req, res) => {
       }
 
       await dbRun(
-        'UPDATE school_customizations SET favicon_path = NULL, updated_at = CURRENT_TIMESTAMP WHERE school_id = ?',
+        'UPDATE public.school_customizations SET favicon_path = NULL, updated_at = CURRENT_TIMESTAMP WHERE school_id = $1',
         [schoolId]
       );
     }
@@ -573,10 +575,10 @@ router.delete('/:schoolId/favicon', requirePlatformAdmin, async (req, res) => {
 // Delete login background
 router.delete('/:schoolId/login-background', requirePlatformAdmin, async (req, res) => {
   try {
-    const { schoolId } = req.params;
+    const schoolId = parseInt(req.params.schoolId);
 
     const customizations = await dbGet(
-      'SELECT login_background_path FROM school_customizations WHERE school_id = ?',
+      'SELECT login_background_path FROM public.school_customizations WHERE school_id = $1',
       [schoolId]
     );
 
@@ -587,7 +589,7 @@ router.delete('/:schoolId/login-background', requirePlatformAdmin, async (req, r
       }
 
       await dbRun(
-        'UPDATE school_customizations SET login_background_path = NULL, updated_at = CURRENT_TIMESTAMP WHERE school_id = ?',
+        'UPDATE public.school_customizations SET login_background_path = NULL, updated_at = CURRENT_TIMESTAMP WHERE school_id = $1',
         [schoolId]
       );
     }
@@ -602,10 +604,10 @@ router.delete('/:schoolId/login-background', requirePlatformAdmin, async (req, r
 // Delete dashboard background
 router.delete('/:schoolId/dashboard-background', requirePlatformAdmin, async (req, res) => {
   try {
-    const { schoolId } = req.params;
+    const schoolId = parseInt(req.params.schoolId);
 
     const customizations = await dbGet(
-      'SELECT dashboard_background_path FROM school_customizations WHERE school_id = ?',
+      'SELECT dashboard_background_path FROM public.school_customizations WHERE school_id = $1',
       [schoolId]
     );
 
@@ -616,7 +618,7 @@ router.delete('/:schoolId/dashboard-background', requirePlatformAdmin, async (re
       }
 
       await dbRun(
-        'UPDATE school_customizations SET dashboard_background_path = NULL, updated_at = CURRENT_TIMESTAMP WHERE school_id = ?',
+        'UPDATE public.school_customizations SET dashboard_background_path = NULL, updated_at = CURRENT_TIMESTAMP WHERE school_id = $1',
         [schoolId]
       );
     }

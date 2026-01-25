@@ -30,17 +30,19 @@ router.get('/students/:id', authenticateToken, requireRole('admin'), async (req,
     }
 
     const incidents = await schemaAll(req, `
-      SELECT bi.*, t.name as teacher_name
+      SELECT bi.*, u.name as teacher_name
       FROM behaviour_incidents bi
       INNER JOIN teachers t ON bi.teacher_id = t.id
+            LEFT JOIN public.users u ON t.user_id = u.id
       WHERE bi.student_id = $1
       ORDER BY bi.created_at DESC
     `, [studentId]);
 
     const merits = await schemaAll(req, `
-      SELECT m.*, t.name as teacher_name
+      SELECT m.*, u.name as teacher_name
       FROM merits m
       INNER JOIN teachers t ON m.teacher_id = t.id
+            LEFT JOIN public.users u ON t.user_id = u.id
       WHERE m.student_id = $1
       ORDER BY m.created_at DESC
     `, [studentId]);

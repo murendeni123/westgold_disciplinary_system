@@ -192,10 +192,13 @@ const LinkSchool: React.FC = () => {
               value={schoolCode}
               onChange={(e) => setSchoolCode(e.target.value.toUpperCase().replace(/\s/g, ''))}
               required
-              placeholder="Enter school code (e.g., SCH001)"
+              placeholder="e.g., LEAR-2041"
               className="font-mono text-lg tracking-wider"
               maxLength={20}
             />
+            <p className="text-xs text-gray-500">
+              The school code looks like XXXX-1234 (ask your school administrator)
+            </p>
           </div>
 
           <Button

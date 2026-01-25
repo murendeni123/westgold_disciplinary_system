@@ -65,7 +65,12 @@ app.set('io', io);
 app.set('userSockets', userSockets);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3001', 'http://192.168.0.108:3001', 'http://192.168.18.160:3001'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-School-Id', 'X-Schema-Name']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -87,6 +92,9 @@ app.use('/api/auth', require('./routes/auth'));
 
 // Routes - Platform Admin (school onboarding)
 app.use('/api/schools', require('./routes/schoolOnboarding'));
+
+// Routes - School Information (requires auth but not schema context)
+app.use('/api/school-info', authenticateToken, require('./routes/schoolInfo'));
 
 // Routes - School-specific (schema context + security enforcement applied)
 // SECURITY: enforceSchemaAccess prevents cross-schema access attacks
@@ -111,11 +119,15 @@ app.use('/api/notifications', authenticateToken, setSchemaFromToken, enforceSche
 app.use('/api/incident-types', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/incidentTypes'));
 app.use('/api/merit-types', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/meritTypes'));
 app.use('/api/interventions', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/interventions'));
+app.use('/api/guided-interventions', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/guidedInterventions'));
 app.use('/api/consequences', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/consequences'));
+app.use('/api/consequence-assignments', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/consequence_assignments'));
 app.use('/api/push', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/push').router);
 app.use('/api/platform', require('./routes/platform'));
-app.use('/api/school-customizations', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/schoolCustomizations'));
+app.use('/api/school-customizations', require('./routes/schoolCustomizations'));
 app.use('/api/users', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/users'));
+app.use('/api/feature-flags', require('./routes/featureFlags'));
+app.use('/api/goldie-badge', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/goldieBadge'));
 
 // Health check
 app.get('/api/health', (req, res) => {

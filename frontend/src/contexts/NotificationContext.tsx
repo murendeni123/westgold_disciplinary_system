@@ -43,6 +43,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
+    // Skip notifications for platform admin (no school context)
+    if (user.role === 'platform_admin') {
+      setLoading(false);
+      return;
+    }
     try {
       const response = await api.getNotifications();
       setNotifications(response.data);
@@ -57,6 +62,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const fetchUnreadCount = useCallback(async () => {
     if (!user) return;
+    // Skip notifications for platform admin (no school context)
+    if (user.role === 'platform_admin') return;
     try {
       const response = await api.getUnreadCount();
       setUnreadCount(response.data.count);
@@ -70,6 +77,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       fetchNotifications();
       const interval = setInterval(fetchUnreadCount, 30000); // Poll every 30 seconds
       return () => clearInterval(interval);
+    } else {
+      setLoading(false);
     }
   }, [user, fetchNotifications, fetchUnreadCount]);
 

@@ -19,11 +19,12 @@ router.get('/', authenticateToken, async (req, res) => {
                    s.first_name || ' ' || s.last_name as student_name,
                    s.student_id,
                    c.class_name,
-                   t.name as teacher_name
+                   u.name as teacher_name
             FROM attendance a
             INNER JOIN students s ON a.student_id = s.id
             LEFT JOIN classes c ON s.class_id = c.id
             LEFT JOIN teachers t ON a.recorded_by = t.id
+            LEFT JOIN public.users u ON t.user_id = u.id
             WHERE 1=1
         `;
         const params = [];
@@ -77,7 +78,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
                    s.first_name || ' ' || s.last_name as student_name,
                    s.student_id,
                    c.class_name,
-                   t.name as teacher_name
+                   u.name as teacher_name
             FROM attendance a
             INNER JOIN students s ON a.student_id = s.id
             LEFT JOIN classes c ON s.class_id = c.id

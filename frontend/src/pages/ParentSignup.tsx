@@ -354,7 +354,7 @@ const ParentSignup: React.FC = () => {
               <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
                 <GraduationCap size={32} />
               </div>
-              <span className="text-2xl font-bold">PDS</span>
+              <span className="text-2xl font-bold">DMS</span>
             </div>
 
             <h1 className="text-5xl font-bold mb-6 leading-tight">
@@ -417,7 +417,7 @@ const ParentSignup: React.FC = () => {
                   <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl mb-6 shadow-lg shadow-emerald-500/30">
                     <GraduationCap className="text-white" size={40} />
                   </div>
-                  <h2 className="text-3xl font-bold text-gray-900 mb-3">Welcome to PDS!</h2>
+                  <h2 className="text-3xl font-bold text-gray-900 mb-3">Welcome to DMS!</h2>
                   <p className="text-gray-600 text-lg">
                     Your one-stop portal to track your child's progress, attendance, and behavior at school.
                   </p>

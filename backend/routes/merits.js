@@ -2,6 +2,7 @@ const express = require('express');
 const { schemaAll, schemaGet, schemaRun, getSchema } = require('../utils/schemaHelper');
 const { authenticateToken } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
+const { calculateBadgeEligibility, checkBadgeStatusChange } = require('../utils/goldieBadgeHelper');
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     let query = `
       SELECT m.id,
-             m.student_id as student_db_id,
+             m.student_id,
              m.teacher_id,
              m.merit_type_id,
              m.description,
@@ -32,19 +33,26 @@ router.get('/', authenticateToken, async (req, res) => {
              m.date as merit_date,
              m.created_at,
              s.first_name || ' ' || s.last_name as student_name,
-             s.student_id,
-             t.name as teacher_name,
+             s.student_id as student_identifier,
+             u.name as teacher_name,
              c.class_name,
              mt.name as merit_type
       FROM merits m
       INNER JOIN students s ON m.student_id = s.id
-      INNER JOIN teachers t ON m.teacher_id = t.id
+      LEFT JOIN teachers t ON m.teacher_id = t.id
+            LEFT JOIN public.users u ON t.user_id = u.id
       LEFT JOIN classes c ON s.class_id = c.id
       LEFT JOIN merit_types mt ON m.merit_type_id = mt.id
       WHERE 1=1
     `;
     const params = [];
     let paramIndex = 1;
+
+    // If user is a parent, only show merits for their linked children
+    if (req.user.role === 'parent') {
+      query += ` AND s.parent_id = $${paramIndex++}`;
+      params.push(req.user.id);
+    }
 
     if (student_id) {
       query += ` AND m.student_id = $${paramIndex++}`;
@@ -99,6 +107,9 @@ router.post('/', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'Teacher record not found' });
     }
 
+    // Check badge eligibility BEFORE awarding merit
+    const beforeEligibility = await calculateBadgeEligibility(req, student_id);
+
     const result = await schemaRun(req,
       `INSERT INTO merits (student_id, teacher_id, date, merit_type_id, description, points)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
@@ -106,6 +117,9 @@ router.post('/', authenticateToken, async (req, res) => {
     );
 
     const merit = await schemaGet(req, 'SELECT * FROM merits WHERE id = $1', [result.id]);
+    
+    // Check badge eligibility AFTER awarding merit
+    const afterEligibility = await calculateBadgeEligibility(req, student_id);
     
     // Get student details for notification
     const student = await schemaGet(req, 
@@ -125,8 +139,26 @@ router.post('/', authenticateToken, async (req, res) => {
         'merit'
       );
     }
+
+    // Check if badge status changed and send notifications
+    const badgeStatusChange = await checkBadgeStatusChange(
+      req, 
+      student_id, 
+      beforeEligibility.isEligible, 
+      afterEligibility.isEligible
+    );
     
-    res.status(201).json(merit);
+    // Return merit with badge status information
+    res.status(201).json({
+      ...merit,
+      badgeStatusChange: badgeStatusChange.statusChanged ? {
+        badgeEarned: badgeStatusChange.badgeEarned || false,
+        badgeLost: badgeStatusChange.badgeLost || false,
+        studentName: badgeStatusChange.studentName,
+        cleanPoints: afterEligibility.cleanPoints,
+        totalMerits: afterEligibility.totalMerits
+      } : null
+    });
   } catch (error) {
     console.error('Error creating merit:', error);
     res.status(500).json({ error: 'Internal server error' });

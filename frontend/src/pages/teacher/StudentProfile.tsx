@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
+import ParentProfileModal from '../../components/ParentProfileModal';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Camera, Upload, User, TrendingUp } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -18,6 +19,8 @@ const StudentProfile: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [timeline, setTimeline] = useState<any[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
+  const [parentData, setParentData] = useState<any>(null);
+  const [isParentModalOpen, setIsParentModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -33,6 +36,16 @@ const StudentProfile: React.FC = () => {
     try {
       const response = await api.getStudent(Number(id));
       setStudent(response.data);
+      
+      // Fetch parent data if parent_id exists
+      if (response.data.parent_id) {
+        try {
+          const parentResponse = await api.getParent(response.data.parent_id);
+          setParentData(parentResponse.data);
+        } catch (error) {
+          console.error('Error fetching parent:', error);
+        }
+      }
     } catch (error) {
       console.error('Error fetching student:', error);
     } finally {
@@ -304,11 +317,46 @@ const StudentProfile: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Quick Stats */}
+        {/* Parent Information */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
+          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Parent Information</h2>
+            <User className="text-emerald-600" size={24} />
+          </div>
+          <div className="space-y-4">
+            <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+              <p className="text-sm text-gray-600 mb-1">Parent Name</p>
+              <p className="text-lg font-semibold text-emerald-700">{student.parent_name || 'Not linked'}</p>
+            </div>
+            <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+              <p className="text-sm text-gray-600 mb-1">Parent Email</p>
+              <p className="text-lg font-semibold text-emerald-700">{student.parent_email || 'N/A'}</p>
+            </div>
+            {student.parent_id && parentData && (
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setIsParentModalOpen(true)}
+                  className="mt-2 rounded-xl w-full"
+                >
+                  <User size={16} className="mr-2" />
+                  View Parent Profile
+                </Button>
+              </motion.div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Quick Stats */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4 }}
           className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
         >
           <div className="flex items-center justify-between mb-6">
@@ -457,6 +505,12 @@ const StudentProfile: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      <ParentProfileModal
+        isOpen={isParentModalOpen}
+        onClose={() => setIsParentModalOpen(false)}
+        parent={parentData}
+      />
     </div>
   );
 };

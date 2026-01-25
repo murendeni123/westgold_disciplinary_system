@@ -12,12 +12,16 @@ import {
   X,
   Save,
   AlertCircle,
+  AlertTriangle,
   CheckCircle,
   Search,
   Filter,
   ChevronDown,
   Bell,
   Eye,
+  Users,
+  Zap,
+  Loader2,
 } from 'lucide-react';
 
 interface DetentionSession {
@@ -51,10 +55,28 @@ const DetentionSessions: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [autoAssignLoading, setAutoAssignLoading] = useState<number | null>(null);
+  const [queuedStudents, setQueuedStudents] = useState<any[]>([]);
+  const [qualifyingStudents, setQualifyingStudents] = useState<any[]>([]);
+  const [showQueueModal, setShowQueueModal] = useState(false);
 
   useEffect(() => {
     fetchData();
+    fetchQueueAndQualifying();
   }, []);
+
+  const fetchQueueAndQualifying = async () => {
+    try {
+      const [queueResponse, qualifyingResponse] = await Promise.all([
+        api.getDetentionQueue(),
+        api.getQualifyingStudents()
+      ]);
+      setQueuedStudents(queueResponse.data || []);
+      setQualifyingStudents(qualifyingResponse.data || []);
+    } catch (error) {
+      console.error('Error fetching queue/qualifying students:', error);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -104,25 +126,35 @@ const DetentionSessions: React.FC = () => {
 
   const handleCreateSession = async (sessionData: Partial<DetentionSession>) => {
     try {
-      const newSession: DetentionSession = {
-        id: Date.now(),
-        date: sessionData.date || '',
-        start_time: sessionData.start_time || '',
-        end_time: sessionData.end_time || '',
+      // Call API to create detention session
+      const response = await api.createDetention({
+        detention_date: sessionData.date || '',
+        detention_time: sessionData.start_time || '',
+        duration: sessionData.end_time ? calculateDuration(sessionData.start_time || '', sessionData.end_time) : 60,
         location: sessionData.location || '',
-        max_students: sessionData.max_students || 20,
-        assigned_students: 0,
-        teacher_id: null,
-        teacher_name: null,
-        status: 'scheduled',
+        teacher_on_duty_id: sessionData.teacher_id || null,
+        max_capacity: sessionData.max_students || 20,
         notes: sessionData.notes || '',
-      };
-      setSessions([...sessions, newSession]);
+      });
+
+      // Refresh sessions from database
+      await fetchData();
+      
       setMessage({ type: 'success', text: 'Detention session created successfully' });
       setShowCreateModal(false);
     } catch (error) {
+      console.error('Error creating detention:', error);
       setMessage({ type: 'error', text: 'Failed to create detention session' });
     }
+  };
+
+  // Helper to calculate duration in minutes
+  const calculateDuration = (startTime: string, endTime: string): number => {
+    const [startHours, startMinutes] = startTime.split(':').map(Number);
+    const [endHours, endMinutes] = endTime.split(':').map(Number);
+    const startTotalMinutes = startHours * 60 + startMinutes;
+    const endTotalMinutes = endHours * 60 + endMinutes;
+    return endTotalMinutes - startTotalMinutes;
   };
 
   const handleAssignTeacher = async (sessionId: number, teacherId: number) => {
@@ -130,13 +162,25 @@ const DetentionSessions: React.FC = () => {
       const teacher = teachers.find(t => t.id === teacherId);
       if (!teacher) return;
 
-      setSessions(sessions.map(s => 
-        s.id === sessionId 
-          ? { ...s, teacher_id: teacherId, teacher_name: teacher.name }
-          : s
-      ));
+      // Get the session to update
+      const session = sessions.find(s => s.id === sessionId);
+      if (!session) return;
 
-      // In real app, send notification to teacher via API
+      // Call API to update detention session with teacher
+      await api.updateDetention(sessionId, {
+        detention_date: session.date,
+        detention_time: session.start_time,
+        duration: calculateDuration(session.start_time, session.end_time),
+        location: session.location,
+        teacher_on_duty_id: teacherId,
+        max_capacity: session.max_students,
+        status: session.status,
+        notes: session.notes,
+      });
+
+      // Refresh sessions from database
+      await fetchData();
+
       setMessage({ 
         type: 'success', 
         text: `${teacher.name} has been assigned and will be notified` 
@@ -144,13 +188,73 @@ const DetentionSessions: React.FC = () => {
       setShowAssignModal(false);
       setSelectedSession(null);
     } catch (error) {
+      console.error('Error assigning teacher:', error);
       setMessage({ type: 'error', text: 'Failed to assign teacher' });
     }
   };
 
-  const handleDeleteSession = (id: number) => {
-    setSessions(sessions.filter(s => s.id !== id));
-    setMessage({ type: 'success', text: 'Session deleted successfully' });
+  const handleDeleteSession = async (id: number) => {
+    try {
+      // Call API to delete detention session
+      await api.deleteDetention(id);
+      
+      // Refresh sessions from database
+      await fetchData();
+      
+      setMessage({ type: 'success', text: 'Session deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting detention:', error);
+      setMessage({ type: 'error', text: 'Failed to delete session' });
+    }
+  };
+
+  const handleAutoAssign = async (sessionId: number) => {
+    try {
+      setAutoAssignLoading(sessionId);
+      
+      // Call API to auto-assign students based on detention rules
+      const response = await api.autoAssignDetention({ detention_id: sessionId });
+      const result = response.data;
+      
+      // Refresh sessions and queue/qualifying data from database
+      await Promise.all([fetchData(), fetchQueueAndQualifying()]);
+      
+      // Build detailed message
+      let messageText = '';
+      if (result.assigned_count > 0) {
+        messageText = `✅ ${result.assigned_count} student(s) auto-assigned! `;
+        messageText += `Total: ${result.total_count}/${result.capacity}`;
+        
+        if (result.queued_count > 0) {
+          messageText += ` | ${result.queued_count} student(s) queued for next session`;
+        }
+        
+        if (result.qualifying_students > result.assigned_count + result.queued_count) {
+          const remaining = result.qualifying_students - result.assigned_count - result.queued_count;
+          messageText += ` | ${remaining} already have upcoming detentions`;
+        }
+      } else if (result.total_count >= result.capacity) {
+        messageText = '⚠️ Session at full capacity. ';
+        if (result.queued_count > 0) {
+          messageText += `${result.queued_count} student(s) added to queue for next session.`;
+        }
+      } else {
+        messageText = 'No eligible students found. Students need 10+ demerit points since their last completed detention.';
+      }
+      
+      setMessage({ 
+        type: result.assigned_count > 0 || result.queued_count > 0 ? 'success' : 'success', 
+        text: messageText
+      });
+    } catch (error: any) {
+      console.error('Error auto-assigning students:', error);
+      setMessage({ 
+        type: 'error', 
+        text: error.response?.data?.error || 'Failed to auto-assign students' 
+      });
+    } finally {
+      setAutoAssignLoading(null);
+    }
   };
 
   const filteredSessions = sessions.filter(session => {
@@ -230,6 +334,70 @@ const DetentionSessions: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Detention System Status Dashboard */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-1 md:grid-cols-3 gap-4"
+      >
+        {/* Qualifying Students */}
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 shadow-lg text-white cursor-pointer"
+          onClick={() => {
+            if (qualifyingStudents.length > 0) {
+              setMessage({
+                type: 'success',
+                text: `${qualifyingStudents.length} students currently qualify for detention (10+ demerit points since last detention)`
+              });
+            }
+          }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+              <AlertTriangle size={24} />
+            </div>
+            <span className="text-3xl font-bold">{qualifyingStudents.length}</span>
+          </div>
+          <h3 className="text-lg font-semibold mb-1">Qualifying Students</h3>
+          <p className="text-white/80 text-sm">Students eligible for detention assignment</p>
+        </motion.div>
+
+        {/* Queued Students */}
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 shadow-lg text-white cursor-pointer"
+          onClick={() => setShowQueueModal(true)}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+              <Users size={24} />
+            </div>
+            <span className="text-3xl font-bold">{queuedStudents.length}</span>
+          </div>
+          <h3 className="text-lg font-semibold mb-1">Queued Students</h3>
+          <p className="text-white/80 text-sm">Waiting for next available session</p>
+        </motion.div>
+
+        {/* Total Sessions */}
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl p-6 shadow-lg text-white"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+              <Calendar size={24} />
+            </div>
+            <span className="text-3xl font-bold">{sessions.length}</span>
+          </div>
+          <h3 className="text-lg font-semibold mb-1">Total Sessions</h3>
+          <p className="text-white/80 text-sm">
+            {sessions.filter(s => s.status === 'scheduled').length} scheduled
+          </p>
+        </motion.div>
+      </motion.div>
 
       {/* Filters */}
       <motion.div
@@ -374,6 +542,25 @@ const DetentionSessions: React.FC = () => {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
+                onClick={() => handleAutoAssign(session.id)}
+                disabled={autoAssignLoading === session.id || session.status !== 'scheduled'}
+                className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {autoAssignLoading === session.id ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Assigning...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap size={16} />
+                    <span>Auto-Assign</span>
+                  </>
+                )}
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   setSelectedSession(session);
                   setShowDetailsModal(true);
@@ -438,6 +625,26 @@ const DetentionSessions: React.FC = () => {
               setShowDetailsModal(false);
               setSelectedSession(null);
             }}
+            onAutoAssign={async (sessionId) => {
+              await handleAutoAssign(sessionId);
+              // Refresh the modal by closing and reopening
+              setShowDetailsModal(false);
+              setTimeout(() => {
+                setShowDetailsModal(true);
+              }, 100);
+            }}
+            autoAssignLoading={autoAssignLoading === selectedSession.id}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Queue Modal */}
+      <AnimatePresence>
+        {showQueueModal && (
+          <QueueModal
+            isOpen={showQueueModal}
+            onClose={() => setShowQueueModal(false)}
+            queuedStudents={queuedStudents}
           />
         )}
       </AnimatePresence>
@@ -703,7 +910,9 @@ const AssignTeacherModal: React.FC<{
 const SessionDetailsModal: React.FC<{
   session: DetentionSession;
   onClose: () => void;
-}> = ({ session, onClose }) => {
+  onAutoAssign?: (sessionId: number) => Promise<void>;
+  autoAssignLoading?: boolean;
+}> = ({ session, onClose, onAutoAssign, autoAssignLoading }) => {
   const [assignedStudents, setAssignedStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -792,7 +1001,7 @@ const SessionDetailsModal: React.FC<{
                 <span className="text-sm font-medium text-blue-900">Time</span>
               </div>
               <p className="text-lg font-bold text-blue-900">
-                {session.start_time} - {session.end_time}
+                {session.start_time || 'N/A'} - {session.end_time || 'N/A'}
               </p>
             </div>
 
@@ -801,7 +1010,7 @@ const SessionDetailsModal: React.FC<{
                 <Calendar className="text-purple-600" size={20} />
                 <span className="text-sm font-medium text-purple-900">Location</span>
               </div>
-              <p className="text-lg font-bold text-purple-900">{session.location}</p>
+              <p className="text-lg font-bold text-purple-900">{session.location || 'Not specified'}</p>
             </div>
 
             <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-4">
@@ -867,9 +1076,30 @@ const SessionDetailsModal: React.FC<{
             </div>
           ) : assignedStudents.length === 0 ? (
             <div className="text-center py-12 bg-gray-50 rounded-xl">
-              <UserCheck className="mx-auto text-gray-300 mb-4" size={48} />
-              <p className="text-gray-500">No students assigned yet</p>
-              <p className="text-gray-400 text-sm">Students will be auto-assigned based on detention rules</p>
+              <Users className="mx-auto text-gray-300 mb-4" size={48} />
+              <p className="text-gray-500 mb-2">No students assigned yet</p>
+              <p className="text-gray-400 text-sm mb-4">Click below to auto-assign students based on detention rules</p>
+              {onAutoAssign && session.status === 'scheduled' && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => onAutoAssign(session.id)}
+                  disabled={autoAssignLoading}
+                  className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
+                >
+                  {autoAssignLoading ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      <span>Assigning Students...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap size={18} />
+                      <span>Auto-Assign Students</span>
+                    </>
+                  )}
+                </motion.button>
+              )}
             </div>
           ) : (
             <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -904,14 +1134,145 @@ const SessionDetailsModal: React.FC<{
 
         {/* Footer */}
         <div className="p-6 border-t border-gray-100 bg-gray-50">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onClose}
-            className="w-full px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-medium shadow-lg"
-          >
-            Close
-          </motion.button>
+          <div className="flex items-center space-x-3">
+            {onAutoAssign && session.status === 'scheduled' && (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => onAutoAssign(session.id)}
+                disabled={autoAssignLoading}
+                className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium shadow-lg hover:from-green-600 hover:to-emerald-700 transition-all disabled:opacity-50"
+              >
+                {autoAssignLoading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    <span>Assigning...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap size={18} />
+                    <span>Auto-Assign More Students</span>
+                  </>
+                )}
+              </motion.button>
+            )}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={onClose}
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-medium shadow-lg"
+            >
+              Close
+            </motion.button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// Queue Modal Component
+const QueueModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  queuedStudents: any[];
+}> = ({ isOpen, onClose, queuedStudents }) => {
+  if (!isOpen) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden"
+      >
+        <div className="bg-gradient-to-r from-purple-500 to-pink-600 p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">Detention Queue</h2>
+              <p className="text-white/80 text-sm mt-1">
+                Students waiting for next available detention session
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+            >
+              <X size={24} />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
+          {queuedStudents.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="mx-auto text-gray-300 mb-4" size={64} />
+              <p className="text-gray-500 text-lg font-medium">No students in queue</p>
+              <p className="text-gray-400 text-sm mt-2">
+                Students will be queued when detention sessions reach capacity
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {queuedStudents.map((student, index) => (
+                <motion.div
+                  key={student.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 border border-purple-200"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center text-white font-bold">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{student.student_name}</h3>
+                          <p className="text-sm text-gray-600">
+                            {student.student_number} • {student.class_name || 'No class'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="flex items-center space-x-2">
+                        <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-bold">
+                          {student.points_at_queue} points
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Queued: {new Date(student.queued_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-gray-50 p-6 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              <strong>{queuedStudents.length}</strong> student{queuedStudents.length !== 1 ? 's' : ''} in queue
+            </p>
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </motion.div>
     </motion.div>

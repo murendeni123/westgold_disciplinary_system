@@ -7,13 +7,16 @@ import Button from '../../components/Button';
 import Textarea from '../../components/Textarea';
 import AssignConsequenceModal from '../../components/AssignConsequenceModal';
 import ModernFilter from '../../components/ModernFilter';
+import GoldieBadge from '../../components/GoldieBadge';
 import { motion } from 'framer-motion';
-import { Filter, Download, AlertTriangle, Check, X, Eye, Edit2, Save, Scale, TrendingUp, Sparkles } from 'lucide-react';
+import { Filter, Download, AlertTriangle, Check, X, Eye, Edit2, Save, Scale, TrendingUp, Sparkles, Award } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { useToast } from '../../hooks/useToast';
+import { useFeatureFlags } from '../../contexts/FeatureFlagsContext';
 
 const BehaviourDashboard: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
+  const { isFeatureEnabled } = useFeatureFlags();
   const [incidents, setIncidents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIncident, setSelectedIncident] = useState<any | null>(null);
@@ -21,6 +24,7 @@ const BehaviourDashboard: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<any>({});
   const [isAssignConsequenceModalOpen, setIsAssignConsequenceModalOpen] = useState(false);
+  const [topStudents, setTopStudents] = useState<any[]>([]);
   const [filters, setFilters] = useState({
     status: '',
     severity: '',
@@ -32,9 +36,57 @@ const BehaviourDashboard: React.FC = () => {
     fetchIncidents();
   }, [filters]);
 
+  useEffect(() => {
+    if (isFeatureEnabled('goldie_badge')) {
+      fetchTopStudents();
+    }
+  }, [isFeatureEnabled]);
+
   const [severityData, setSeverityData] = useState<any[]>([]);
   const [typeData, setTypeData] = useState<any[]>([]);
   const [trendData, setTrendData] = useState<any[]>([]);
+  const [analyticsStats, setAnalyticsStats] = useState<any>(null);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [filters]);
+
+  const fetchAnalytics = async () => {
+    try {
+      const params: any = { days: 30 };
+      if (filters.start_date) params.start_date = filters.start_date;
+      if (filters.end_date) params.end_date = filters.end_date;
+
+      const response = await api.getBehaviourAnalytics(params);
+      const data = response.data;
+
+      setAnalyticsStats(data.stats);
+
+      // Set severity data from analytics
+      setSeverityData([
+        { name: 'High', value: data.severityBreakdown.high || 0 },
+        { name: 'Medium', value: data.severityBreakdown.medium || 0 },
+        { name: 'Low', value: data.severityBreakdown.low || 0 },
+      ]);
+
+      // Set type data from analytics
+      setTypeData(data.topIncidentTypes.map((item: any) => ({
+        name: item.type,
+        value: item.count
+      })));
+
+      // Set trend data from analytics
+      setTrendData(data.trends.map((item: any) => ({
+        date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        high: item.high,
+        medium: item.medium,
+        low: item.low,
+        total: item.total
+      })));
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    }
+  };
 
   const fetchIncidents = async () => {
     try {
@@ -80,6 +132,75 @@ const BehaviourDashboard: React.FC = () => {
       console.error('Error fetching incidents:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTopStudents = async () => {
+    try {
+      const [meritsRes, studentsRes, incidentsRes] = await Promise.all([
+        api.getMerits(),
+        api.getStudents(),
+        api.getIncidents()
+      ]);
+
+      const merits = meritsRes.data || [];
+      const students = studentsRes.data || [];
+      const incidents = incidentsRes.data || [];
+
+      console.log('=== RAW DATA DEBUG ===');
+      console.log('Total merits fetched:', merits.length);
+      console.log('Total students fetched:', students.length);
+      console.log('Total incidents fetched:', incidents.length);
+      console.log('Sample merit:', merits[0]);
+      console.log('Sample student:', students[0]);
+      console.log('Sample incident:', incidents[0]);
+      console.log('======================');
+
+      // Calculate merit and demerit counts per student
+      const studentStats = students.map((student: any) => {
+        // Match using student.id (primary key in students table)
+        const studentMerits = merits.filter((m: any) => m.student_id === student.id);
+        const studentIncidents = incidents.filter((i: any) => i.student_id === student.id);
+        
+        const totalMerits = studentMerits.reduce((sum: number, m: any) => sum + (m.points || 0), 0);
+        const totalDemerits = studentIncidents.reduce((sum: number, i: any) => sum + (i.points_deducted || 0), 0);
+        const cleanPoints = totalMerits - totalDemerits;
+
+        console.log(`Student ${student.first_name} ${student.last_name}:`, {
+          id: student.id,
+          student_id: student.student_id,
+          totalMerits,
+          totalDemerits,
+          cleanPoints,
+          meritCount: studentMerits.length,
+          incidentCount: studentIncidents.length,
+          merits: studentMerits,
+          incidents: studentIncidents
+        });
+
+        return {
+          ...student,
+          totalMerits,
+          totalDemerits,
+          cleanPoints
+        };
+      });
+
+      // Filter students with 10+ merits and sort by clean points
+      const eligible = studentStats
+        .filter((s: any) => s.totalMerits >= 10)
+        .sort((a: any, b: any) => b.cleanPoints - a.cleanPoints)
+        .slice(0, 5); // Top 5 students
+
+      console.log('=== GOLDIE BADGE LEADERBOARD DEBUG ===');
+      console.log('Total students:', students.length);
+      console.log('Students with 10+ merits:', eligible.length);
+      console.log('Eligible students:', eligible);
+      console.log('======================================');
+
+      setTopStudents(eligible);
+    } catch (error) {
+      console.error('Error fetching top students:', error);
     }
   };
 
@@ -350,6 +471,71 @@ const BehaviourDashboard: React.FC = () => {
         onClear={() => setFilters({ status: '', severity: '', start_date: '', end_date: '' })}
       />
 
+      {/* Goldie Badge Section - Only shown when feature is enabled */}
+      {isFeatureEnabled('goldie_badge') && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-3 bg-gradient-to-r from-yellow-500 to-amber-500 rounded-xl">
+                <Award className="text-white" size={24} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Goldie Badge Leaderboard</h2>
+                <p className="text-sm text-gray-600">Top students with 10+ merits</p>
+              </div>
+            </div>
+            <motion.div
+              animate={{ rotate: [0, 10, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <Sparkles className="text-yellow-500" size={32} />
+            </motion.div>
+          </div>
+
+          {topStudents.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {topStudents.map((student, index) => (
+                <motion.div
+                  key={student.student_id || student.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 + index * 0.1 }}
+                >
+                  <GoldieBadge
+                    totalMerits={student.totalMerits}
+                    totalDemerits={student.totalDemerits}
+                    studentName={`${student.first_name} ${student.last_name}`}
+                    showDetails={true}
+                    size="md"
+                  />
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+                className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r from-yellow-100 to-amber-100 mb-4"
+              >
+                <Award className="text-yellow-600" size={40} />
+              </motion.div>
+              <h3 className="text-xl font-semibold text-gray-700 mb-2">No Badge Holders Yet</h3>
+              <p className="text-gray-500 max-w-md mx-auto">
+                Students need to earn at least 10 merit points to qualify for a Goldie Badge. 
+                Keep awarding merits to see students appear on this leaderboard!
+              </p>
+            </div>
+          )}
+        </motion.div>
+      )}
+
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div
@@ -469,13 +655,10 @@ const BehaviourDashboard: React.FC = () => {
                 }}
               />
               <Legend />
-              <Line type="monotone" dataKey="count" stroke="url(#trendGradient)" name="Incidents" strokeWidth={3} />
-              <defs>
-                <linearGradient id="trendGradient" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="#EF4444" />
-                  <stop offset="100%" stopColor="#F87171" />
-                </linearGradient>
-              </defs>
+              <Line type="monotone" dataKey="high" stroke="#EF4444" name="High Severity" strokeWidth={2} />
+              <Line type="monotone" dataKey="medium" stroke="#F59E0B" name="Medium Severity" strokeWidth={2} />
+              <Line type="monotone" dataKey="low" stroke="#10B981" name="Low Severity" strokeWidth={2} />
+              <Line type="monotone" dataKey="total" stroke="#6366F1" name="Total" strokeWidth={3} strokeDasharray="5 5" />
             </LineChart>
           </ResponsiveContainer>
         </motion.div>

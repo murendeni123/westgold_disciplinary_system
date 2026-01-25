@@ -5,7 +5,7 @@ import Button from '../../components/Button';
 import Modal from '../../components/Modal';
 import Input from '../../components/Input';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, UserCheck, Sparkles } from 'lucide-react';
+import { Plus, Edit, Trash2, UserCheck, Sparkles, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
 
@@ -16,6 +16,7 @@ const Teachers: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -93,6 +94,16 @@ const Teachers: React.FC = () => {
     }
   };
 
+  // Filter teachers based on search query
+  const filteredTeachers = teachers.filter((teacher) => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      teacher.name?.toLowerCase().includes(searchLower) ||
+      teacher.email?.toLowerCase().includes(searchLower) ||
+      teacher.employee_id?.toLowerCase().includes(searchLower)
+    );
+  });
+
   const columns = [
     {
       key: 'photo_path',
@@ -113,7 +124,11 @@ const Teachers: React.FC = () => {
     { key: 'name', label: 'Name' },
     { key: 'email', label: 'Email' },
     { key: 'phone', label: 'Phone' },
-    { key: 'class_count', label: 'Classes' },
+    { 
+      key: 'class_count', 
+      label: 'Classes',
+      render: (value: any) => typeof value === 'number' ? value : Number(value) || 0
+    },
     {
       key: 'actions',
       label: 'Actions',
@@ -182,11 +197,30 @@ const Teachers: React.FC = () => {
         </motion.div>
       </motion.div>
 
-      {/* Stats Cards */}
+      {/* Search Bar */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
+        className="relative"
+      >
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          <input
+            type="text"
+            placeholder="Search teachers by name, email, or employee ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+          />
+        </div>
+      </motion.div>
+
+      {/* Stats Cards */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
         className="grid grid-cols-1 md:grid-cols-3 gap-6"
       >
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg">
@@ -204,7 +238,7 @@ const Teachers: React.FC = () => {
             <div>
               <p className="text-green-100 text-sm font-medium">Total Classes</p>
               <p className="text-4xl font-bold mt-2">
-                {teachers.reduce((sum, t) => sum + (t.class_count || 0), 0)}
+                {teachers.reduce((sum, t) => sum + (Number(t.class_count) || 0), 0)}
               </p>
             </div>
             <UserCheck size={48} className="text-green-200 opacity-50" />
@@ -242,17 +276,19 @@ const Teachers: React.FC = () => {
           </div>
         </div>
 
-        {teachers.length === 0 ? (
+        {filteredTeachers.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <UserCheck size={48} className="mx-auto mb-4 text-gray-300" />
-            <p>No teachers found</p>
-            <Button onClick={handleCreate} className="mt-4">
-              Add Your First Teacher
-            </Button>
+            <p>{searchQuery ? 'No teachers match your search' : 'No teachers found'}</p>
+            {!searchQuery && (
+              <Button onClick={handleCreate} className="mt-4">
+                Add Your First Teacher
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {teachers.map((teacher, index) => (
+            {filteredTeachers.map((teacher, index) => (
               <motion.div
                 key={teacher.id}
                 initial={{ opacity: 0, y: 20 }}

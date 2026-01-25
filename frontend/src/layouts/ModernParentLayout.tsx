@@ -99,7 +99,7 @@ const ModernParentLayout: React.FC = () => {
       
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-80">
         {/* Premium Header - Aligned with Sidebar */}
-        <header className="relative overflow-hidden">
+        <header className="relative overflow-hidden z-50">
           {/* Gradient Background matching sidebar */}
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700" />
           
@@ -126,7 +126,7 @@ const ModernParentLayout: React.FC = () => {
           />
 
           {/* Header Content */}
-          <div className="relative z-10 flex items-center justify-between px-6 py-4 gap-4">
+          <div className="relative z-50 flex items-center justify-between px-6 py-4 gap-4">
             {/* Left Section - Menu & Title */}
             <div className="flex items-center space-x-4">
               <motion.button

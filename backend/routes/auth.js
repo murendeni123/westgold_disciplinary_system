@@ -28,6 +28,36 @@ const {
 const router = express.Router();
 
 /**
+ * GET /api/auth/debug-context
+ * Debug endpoint to check current authentication state
+ */
+router.get('/debug-context', authenticateToken, async (req, res) => {
+    try {
+        res.json({
+            user: {
+                id: req.user?.id,
+                email: req.user?.email,
+                role: req.user?.role,
+                schoolId: req.user?.schoolId,
+                schemaName: req.user?.schemaName,
+                primary_school_id: req.user?.primary_school_id
+            },
+            request: {
+                schemaName: req.schemaName,
+                schoolId: req.schoolId
+            },
+            school: req.school ? {
+                id: req.school.id,
+                name: req.school.name,
+                schema_name: req.school.schema_name
+            } : null
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
  * POST /api/auth/login
  * Multi-tenant login with school context
  * SECURITY: Rate limited to prevent brute force attacks
@@ -120,8 +150,16 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
             return res.status(403).json({ error: 'Account is deactivated' });
         }
 
+        // Check if user has a password set
+        if (!user.password) {
+            return res.status(401).json({ 
+                error: 'Password not set',
+                message: 'Please contact your administrator to set up your password'
+            });
+        }
+
         // Verify password
-        const isValidPassword = await verifyPassword(password, user.password_hash);
+        const isValidPassword = await verifyPassword(password, user.password);
         if (!isValidPassword) {
             // Track failed login attempt
             const lockStatus = trackFailedLogin(email.toLowerCase());
@@ -222,25 +260,35 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
         };
 
         // Get role-specific info from school schema
-        if (user.role === 'teacher' || user.role === 'admin') {
-            const teacher = await dbGet(
-                'SELECT * FROM teachers WHERE user_id = $1',
-                [user.id],
-                selectedSchool.schema_name
-            );
-            userInfo.teacher = teacher;
+        try {
+            if (user.role === 'teacher' || user.role === 'admin') {
+                const teacher = await dbGet(
+                    'SELECT * FROM teachers WHERE user_id = $1',
+                    [user.id],
+                    selectedSchool.schema_name
+                );
+                userInfo.teacher = teacher;
+            }
+        } catch (error) {
+            console.log('Could not fetch teacher data:', error.message);
+            userInfo.teacher = null;
         }
 
-        if (user.role === 'parent') {
-            const children = await dbAll(
-                `SELECT s.*, c.class_name 
-                 FROM students s 
-                 LEFT JOIN classes c ON s.class_id = c.id 
-                 WHERE s.parent_id = $1`,
-                [user.id],
-                selectedSchool.schema_name
-            );
-            userInfo.children = children;
+        try {
+            if (user.role === 'parent') {
+                const children = await dbAll(
+                    `SELECT s.*, c.class_name 
+                     FROM students s 
+                     LEFT JOIN classes c ON s.class_id = c.id 
+                     WHERE s.parent_id = $1`,
+                    [user.id],
+                    selectedSchool.schema_name
+                );
+                userInfo.children = children;
+            }
+        } catch (error) {
+            console.log('Could not fetch children data:', error.message);
+            userInfo.children = [];
         }
 
         res.json({
@@ -365,6 +413,16 @@ router.get('/me', async (req, res) => {
 
         const decoded = jwt.verify(token, JWT_SECRET);
 
+        // TEMPORARILY DISABLED: Token version check
+        // Allow old tokens to work while users migrate
+        // if (!decoded.version || decoded.version < 2) {
+        //     return res.status(401).json({ 
+        //         error: 'Token outdated',
+        //         code: 'TOKEN_OUTDATED',
+        //         message: 'Please log in again to continue'
+        //     });
+        // }
+
         // Handle platform admin
         if (decoded.isPlatformAdmin) {
             const platformUser = await dbGet(
@@ -389,23 +447,48 @@ router.get('/me', async (req, res) => {
             return res.status(401).json({ error: 'Invalid token' });
         }
 
-        let userInfo = {
-            ...user,
-            schoolId: decoded.schoolId,
-            schemaName: decoded.schemaName
-        };
+        // Get school context from token or fallback to database
+        let schoolId = decoded.schoolId || user.primary_school_id;
+        let schemaName = decoded.schemaName;
+        let school = null;
 
-        // Get school info
-        if (decoded.schoolId) {
-            const school = await getCachedSchool(decoded.schoolId, 'id');
+        // FALLBACK: If old token doesn't have schema context, fetch from database
+        if (!schemaName && schoolId) {
+            school = await getCachedSchool(schoolId, 'id');
             if (school) {
-                userInfo.schoolName = school.name;
-                userInfo.schoolCode = school.code;
+                schemaName = school.schema_name;
             }
         }
 
-        // Get role-specific info from school schema
-        const schemaName = decoded.schemaName;
+        // If still no school context, try user_schools
+        if (!schoolId || !schemaName) {
+            const userSchool = await dbGet(`
+                SELECT s.id, s.schema_name, s.name, s.code, s.school_code
+                FROM public.schools s
+                JOIN public.user_schools us ON s.id = us.school_id
+                WHERE us.user_id = $1 AND us.is_primary = true
+                LIMIT 1
+            `, [user.id]);
+            
+            if (userSchool) {
+                schoolId = userSchool.id;
+                schemaName = userSchool.schema_name;
+                school = userSchool;
+            }
+        }
+
+        // Get full school info if we have schoolId but not school object
+        if (schoolId && !school) {
+            school = await getCachedSchool(schoolId, 'id');
+        }
+
+        let userInfo = {
+            ...user,
+            schoolId: schoolId,
+            schemaName: schemaName,
+            schoolName: school?.name,
+            schoolCode: school?.code || school?.school_code || decoded.schoolCode
+        };
 
         if ((user.role === 'teacher' || user.role === 'admin') && schemaName) {
             const teacher = await dbGet(
@@ -745,93 +828,228 @@ router.post('/supabase-sync', async (req, res) => {
             return res.status(400).json({ error: 'Supabase user ID and email required' });
         }
 
-        // Check if user already exists by supabase_user_id
-        let user = await dbGet(
-            'SELECT * FROM users WHERE supabase_user_id = ?',
-            [supabase_user_id]
-        );
+        const { Pool } = require('pg');
+        const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: false });
 
-        console.log('User by supabase_user_id:', user);
+        try {
+            // Check if user already exists by supabase_user_id
+            let userResult = await pool.query(
+                'SELECT * FROM public.users WHERE supabase_user_id = $1',
+                [supabase_user_id]
+            );
+            let user = userResult.rows[0];
 
-        if (!user) {
-            // Check if user exists by email (for linking existing accounts)
-            user = await dbGet('SELECT * FROM users WHERE email = ?', [email]);
-            console.log('User by email:', user);
-            
-            if (user) {
-                // Link existing account to Supabase
-                await dbRun(
-                    'UPDATE users SET supabase_user_id = ?, auth_provider = ?, last_sign_in = CURRENT_TIMESTAMP WHERE id = ?',
-                    [supabase_user_id, auth_provider || 'google', user.id]
-                );
-                // Refresh user data
-                user = await dbGet('SELECT * FROM users WHERE id = ?', [user.id]);
-            } else {
-                // Create new parent user (password is NULL for OAuth users)
-                const result = await dbRun(
-                    `INSERT INTO users (email, name, role, supabase_user_id, auth_provider, password, created_at, last_sign_in)
-                     VALUES (?, ?, 'parent', ?, ?, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                     RETURNING id`,
-                    [email, name || email.split('@')[0], supabase_user_id, auth_provider || 'google']
-                );
+            console.log('User by supabase_user_id:', user);
+
+            if (!user) {
+                // Check if user exists by email (for linking existing accounts)
+                userResult = await pool.query('SELECT * FROM public.users WHERE email = $1', [email]);
+                user = userResult.rows[0];
+                console.log('User by email:', user);
                 
-                console.log('Insert result:', result);
-                
-                if (!result.id) {
-                    console.error('Failed to get user ID from insert');
-                    return res.status(500).json({ error: 'Failed to create user account' });
+                if (user) {
+                    // Link existing account to Supabase
+                    await pool.query(
+                        'UPDATE public.users SET supabase_user_id = $1, auth_provider = $2, last_sign_in = CURRENT_TIMESTAMP WHERE id = $3',
+                        [supabase_user_id, auth_provider || 'google', user.id]
+                    );
+                    // Refresh user data
+                    userResult = await pool.query('SELECT * FROM public.users WHERE id = $1', [user.id]);
+                    user = userResult.rows[0];
+                } else {
+                    // Create new parent user (password is NULL for OAuth users)
+                    const insertResult = await pool.query(
+                        `INSERT INTO public.users (email, name, role, supabase_user_id, auth_provider, password, created_at, last_sign_in)
+                         VALUES ($1, $2, 'parent', $3, $4, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                         RETURNING id`,
+                        [email, name || email.split('@')[0], supabase_user_id, auth_provider || 'google']
+                    );
+                    
+                    console.log('Insert result:', insertResult.rows[0]);
+                    
+                    if (!insertResult.rows[0] || !insertResult.rows[0].id) {
+                        console.error('Failed to get user ID from insert');
+                        return res.status(500).json({ error: 'Failed to create user account' });
+                    }
+                    
+                    userResult = await pool.query('SELECT * FROM public.users WHERE id = $1', [insertResult.rows[0].id]);
+                    user = userResult.rows[0];
                 }
-                
-                user = await dbGet('SELECT * FROM users WHERE id = ?', [result.id]);
+            } else {
+                // Update last sign in
+                await pool.query(
+                    'UPDATE public.users SET last_sign_in = CURRENT_TIMESTAMP WHERE id = $1',
+                    [user.id]
+                );
             }
-        } else {
-            // Update last sign in
-            await dbRun(
-                'UPDATE users SET last_sign_in = CURRENT_TIMESTAMP WHERE id = ?',
+
+            if (!user) {
+                console.error('Failed to create or find user');
+                await pool.end();
+                return res.status(500).json({ error: 'Failed to create user account' });
+            }
+
+            // Get user's school and schema
+            let schoolInfo = null;
+            let schemaName = null;
+            
+            // First check user_schools table
+            const userSchoolsResult = await pool.query(
+                `SELECT s.id, s.name, s.code, s.schema_name 
+                 FROM public.schools s 
+                 JOIN public.user_schools us ON s.id = us.school_id 
+                 WHERE us.user_id = $1 AND s.status = 'active'
+                 ORDER BY us.is_primary DESC
+                 LIMIT 1`,
                 [user.id]
             );
-        }
+            
+            if (userSchoolsResult.rows.length > 0) {
+                schoolInfo = userSchoolsResult.rows[0];
+                schemaName = schoolInfo.schema_name;
+            } else if (user.primary_school_id) {
+                // Fall back to primary_school_id
+                const primarySchoolResult = await pool.query(
+                    'SELECT id, name, code, schema_name FROM public.schools WHERE id = $1 AND status = $2',
+                    [user.primary_school_id, 'active']
+                );
+                if (primarySchoolResult.rows.length > 0) {
+                    schoolInfo = primarySchoolResult.rows[0];
+                    schemaName = schoolInfo.schema_name;
+                }
+            }
 
-        if (!user) {
-            console.error('Failed to create or find user');
-            return res.status(500).json({ error: 'Failed to create user account' });
-        }
-
-        // Generate JWT token for the user
-        const token = jwt.sign(
-            { userId: user.id, role: user.role },
-            JWT_SECRET,
-            { expiresIn: '24h' }
-        );
-
-        // Get additional user info based on role
-        let userInfo = { ...user };
-        delete userInfo.password;
-
-        if (user.role === 'teacher') {
-            const teacher = await dbGet('SELECT * FROM teachers WHERE user_id = ?', [user.id]);
-            userInfo.teacher = teacher;
-        }
-
-        if (user.role === 'parent') {
-            const children = await dbAll(
-                `SELECT s.*, c.class_name 
-                 FROM students s 
-                 LEFT JOIN classes c ON s.class_id = c.id 
-                 WHERE s.parent_id = ?`,
-                [user.id]
+            // Generate JWT token for the user with school context
+            const token = jwt.sign(
+                { 
+                    userId: user.id, 
+                    role: user.role,
+                    schoolId: schoolInfo?.id,
+                    schemaName: schemaName
+                },
+                JWT_SECRET,
+                { expiresIn: '24h' }
             );
-            userInfo.children = children;
+
+            // Get additional user info based on role
+            let userInfo = { ...user };
+            delete userInfo.password;
+            delete userInfo.password_hash;
+            
+            // Add school info
+            if (schoolInfo) {
+                userInfo.schoolId = schoolInfo.id;
+                userInfo.schoolName = schoolInfo.name;
+                userInfo.schoolCode = schoolInfo.code;
+                userInfo.schemaName = schemaName;
+            }
+
+            if (user.role === 'teacher' && schemaName) {
+                const teacherResult = await pool.query(
+                    `SELECT * FROM ${schemaName}.teachers WHERE user_id = $1`,
+                    [user.id]
+                );
+                userInfo.teacher = teacherResult.rows[0];
+            }
+
+            if (user.role === 'parent' && schemaName) {
+                const childrenResult = await pool.query(
+                    `SELECT s.*, c.class_name 
+                     FROM ${schemaName}.students s 
+                     LEFT JOIN ${schemaName}.classes c ON s.class_id = c.id 
+                     WHERE s.parent_id = $1`,
+                    [user.id]
+                );
+                userInfo.children = childrenResult.rows;
+            }
+
+            console.log('Supabase sync successful, returning user:', userInfo.email, 'schema:', schemaName);
+
+            await pool.end();
+
+            res.json({
+                token,
+                user: userInfo
+            });
+        } catch (poolError) {
+            console.error('Supabase sync pool error:', poolError);
+            await pool.end();
+            throw poolError;
         }
-
-        console.log('Supabase sync successful, returning user:', userInfo.email);
-
-        res.json({
-            token,
-            user: userInfo
-        });
     } catch (error) {
         console.error('Supabase sync error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+/**
+ * POST /api/auth/refresh-token
+ * Refresh JWT token
+ */
+router.post('/refresh-token', async (req, res) => {
+    try {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!token) {
+            return res.status(401).json({ error: 'No token provided' });
+        }
+
+        // Verify token even if expired
+        let decoded;
+        try {
+            decoded = jwt.verify(token, JWT_SECRET, { ignoreExpiration: true });
+        } catch (error) {
+            return res.status(401).json({ error: 'Invalid token' });
+        }
+
+        // Check if token is too old (more than 7 days)
+        const tokenAge = Date.now() - (decoded.iat * 1000);
+        const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+        if (tokenAge > maxAge) {
+            return res.status(401).json({ error: 'Token too old, please login again' });
+        }
+
+        // Handle platform admin
+        if (decoded.isPlatformAdmin) {
+            const platformUser = await dbGet(
+                'SELECT * FROM public.platform_users WHERE id = $1 AND is_active = true',
+                [decoded.platformUserId]
+            );
+
+            if (!platformUser) {
+                return res.status(401).json({ error: 'User not found' });
+            }
+
+            const newToken = generatePlatformToken(platformUser);
+            return res.json({ token: newToken });
+        }
+
+        // Regular user
+        const user = await dbGet(
+            'SELECT * FROM public.users WHERE id = $1 AND is_active = true',
+            [decoded.userId]
+        );
+
+        if (!user) {
+            return res.status(401).json({ error: 'User not found' });
+        }
+
+        // Get school info
+        let school = null;
+        if (decoded.schoolId) {
+            school = await dbGet(
+                'SELECT id, name, code, subdomain, schema_name FROM public.schools WHERE id = $1 AND status = $2',
+                [decoded.schoolId, 'active']
+            );
+        }
+
+        // Generate new token
+        const newToken = generateToken(user, school);
+        res.json({ token: newToken });
+
+    } catch (error) {
+        console.error('Token refresh error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

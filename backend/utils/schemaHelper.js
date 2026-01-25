@@ -114,10 +114,24 @@ const getSchema = (req) => {
         schemaName = req.user.schemaName;
     }
     
+    // DEBUG: Log what we found
+    console.log(`📋 getSchema called:`, {
+        'req.schemaName': req.schemaName,
+        'req.user?.schemaName': req.user?.schemaName,
+        'extracted': schemaName,
+        'req.user exists': !!req.user,
+        'req.path': req.path,
+        'req.method': req.method
+    });
+    
     // Validate format before returning (SQL injection prevention)
     if (schemaName && !isValidSchemaFormat(schemaName)) {
         console.error(`SECURITY: Invalid schema format in request: ${schemaName}`);
         return null;
+    }
+    
+    if (!schemaName) {
+        console.error(`❌ getSchema returned NULL - no schema context found in request!`);
     }
     
     return schemaName;

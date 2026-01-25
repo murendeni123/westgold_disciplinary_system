@@ -14,16 +14,24 @@ router.get('/', authenticateToken, async (req, res) => {
             return res.status(403).json({ error: 'School context required' });
         }
 
-        const query = `
+        let query = `
             SELECT s.*, c.class_name, u.name as parent_name, u.email as parent_email
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             LEFT JOIN public.users u ON s.parent_id = u.id
-            WHERE s.is_active = true
-            ORDER BY s.last_name, s.first_name
         `;
 
-        const students = await schemaAll(req, query);
+        const params = [];
+        
+        // If user is a parent, only show their own children
+        if (req.user.role === 'parent') {
+            query += ` WHERE s.parent_id = $1`;
+            params.push(req.user.id);
+        }
+        
+        query += ` ORDER BY s.last_name, s.first_name`;
+
+        const students = await schemaAll(req, query, params);
         res.json(students);
     } catch (error) {
         console.error('Error fetching students:', error);
@@ -49,6 +57,13 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
         if (!student) {
             return res.status(404).json({ error: 'Student not found' });
+        }
+
+        // If user is a parent, verify they can only access their own children
+        if (req.user.role === 'parent') {
+            if (student.parent_id !== req.user.id) {
+                return res.status(403).json({ error: 'You can only access your own children' });
+            }
         }
 
         res.json(student);
@@ -77,8 +92,14 @@ router.post('/:id/photo', authenticateToken, upload.single('photo'), async (req,
 
         // Check if user is admin or teacher of student's class
         if (req.user.role !== 'admin') {
+            // Get teacher ID from teachers table using user_id
+            const teacherData = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
+            if (!teacherData) {
+                return res.status(403).json({ error: 'Teacher record not found' });
+            }
+            
             const classData = await schemaGet(req, 'SELECT teacher_id FROM classes WHERE id = $1', [studentRow.class_id]);
-            if (!classData || classData.teacher_id !== req.user.id) {
+            if (!classData || classData.teacher_id !== teacherData.id) {
                 return res.status(403).json({ error: 'You can only upload photos for students in your class' });
             }
         }

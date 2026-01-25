@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
+import { getSavedAccounts, removeAccount, formatLastLogin, SavedAccount } from '../utils/savedAccounts';
 import { 
   GraduationCap, 
   Mail, 
@@ -13,7 +14,9 @@ import {
   ArrowRight,
   Shield,
   Users,
-  Award
+  Award,
+  X,
+  UserCircle
 } from 'lucide-react';
 
 const Login: React.FC = () => {
@@ -23,16 +26,54 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
+  const [showAccountSelection, setShowAccountSelection] = useState(true);
+  const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
   const { login, loginWithGoogle, isSupabaseEnabled } = useAuth();
   const { customizations, getImageUrl } = useSchoolTheme();
   const navigate = useNavigate();
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
+    // Load saved accounts
+    const accounts = getSavedAccounts();
+    setSavedAccounts(accounts);
+    setShowAccountSelection(accounts.length > 0);
     return () => {
       document.body.style.overflow = '';
     };
   }, []);
+
+  const handleAccountSelect = (account: SavedAccount) => {
+    setEmail(account.email);
+    setSelectedAccount(account.email);
+    setShowAccountSelection(false);
+    // Focus password field
+    setTimeout(() => {
+      const passwordInput = document.getElementById('password-input');
+      if (passwordInput) passwordInput.focus();
+    }, 100);
+  };
+
+  const handleRemoveAccount = (accountEmail: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeAccount(accountEmail);
+    const accounts = getSavedAccounts();
+    setSavedAccounts(accounts);
+    if (accounts.length === 0) {
+      setShowAccountSelection(false);
+    }
+    if (selectedAccount === accountEmail) {
+      setEmail('');
+      setSelectedAccount(null);
+    }
+  };
+
+  const handleUseAnotherAccount = () => {
+    setShowAccountSelection(false);
+    setEmail('');
+    setSelectedAccount(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,8 +180,8 @@ const Login: React.FC = () => {
                 )}
               </motion.div>
               <div>
-                <h1 className="text-3xl font-bold text-white">PDS</h1>
-                <p className="text-white/70 text-sm">Positive Discipline System</p>
+                <h1 className="text-3xl font-bold text-white">DMS</h1>
+                <p className="text-white/70 text-sm">Discipline Management System</p>
               </div>
             </div>
           </motion.div>
@@ -226,7 +267,7 @@ const Login: React.FC = () => {
             >
               <GraduationCap className="text-white" size={32} />
             </motion.div>
-            <h1 className="text-2xl font-bold text-gray-900">PDS</h1>
+            <h1 className="text-2xl font-bold text-gray-900">DMS</h1>
           </div>
 
           {/* Login Card */}
@@ -264,6 +305,58 @@ const Login: React.FC = () => {
                   <span className="text-sm">{error}</span>
                 </motion.div>
               )}
+
+              {/* Saved Accounts Section */}
+              <AnimatePresence>
+                {showAccountSelection && savedAccounts.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-3"
+                  >
+                    <label className="text-sm font-medium text-gray-700">Select Account</label>
+                    <div className="space-y-2">
+                      {savedAccounts.map((account, index) => (
+                        <motion.button
+                          key={account.email}
+                          type="button"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          onClick={() => handleAccountSelect(account)}
+                          className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border border-blue-200 rounded-xl transition-all group"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">
+                              {account.displayName?.charAt(0).toUpperCase() || account.email.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="text-left">
+                              <p className="font-medium text-gray-900">{account.email}</p>
+                              <p className="text-xs text-gray-500">{formatLastLogin(account.lastLogin)}</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => handleRemoveAccount(account.email, e)}
+                            className="p-2 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                          >
+                            <X size={16} />
+                          </button>
+                        </motion.button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleUseAnotherAccount}
+                      className="w-full flex items-center justify-center space-x-2 p-3 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all border border-transparent hover:border-blue-200"
+                    >
+                      <UserCircle size={18} />
+                      <span>Use another account</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Email Field */}
               <div className="space-y-2">
@@ -305,6 +398,7 @@ const Login: React.FC = () => {
                     }`} />
                   </div>
                   <input
+                    id="password-input"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -415,7 +509,7 @@ const Login: React.FC = () => {
             transition={{ delay: 0.6 }}
             className="mt-8 text-center text-gray-400 text-sm"
           >
-            <p>© 2026 PDS. All rights reserved.</p>
+            <p>© 2026 DMS. All rights reserved.</p>
           </motion.div>
         </motion.div>
       </div>

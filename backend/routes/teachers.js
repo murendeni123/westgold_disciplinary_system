@@ -8,6 +8,7 @@ const upload = require('../middleware/upload');
 const router = express.Router();
 
 // Upload teacher photo (admin or teacher themselves)
+// Note: :id here is the teacher table id, not the user_id
 router.post('/:id/photo', authenticateToken, upload.single('photo'), async (req, res) => {
     try {
         if (!req.file) {
@@ -19,19 +20,25 @@ router.post('/:id/photo', authenticateToken, upload.single('photo'), async (req,
             return res.status(403).json({ error: 'School context required' });
         }
 
+        // First, get the teacher record to find the user_id
+        const teacherRecord = await schemaGet(req, 'SELECT id, user_id FROM teachers WHERE id = $1', [req.params.id]);
+        if (!teacherRecord) {
+            return res.status(404).json({ error: 'Teacher not found' });
+        }
+
         // Check if user is admin or uploading their own photo
-        if (req.user.role !== 'admin' && req.user.id !== Number(req.params.id)) {
+        if (req.user.role !== 'admin' && req.user.id !== teacherRecord.user_id) {
             return res.status(403).json({ error: 'You can only upload your own photo' });
         }
 
         const photoPath = `/uploads/teachers/${req.file.filename}`;
-        await schemaRun(req, 'UPDATE teachers SET photo_path = $1 WHERE user_id = $2', [photoPath, req.params.id]);
+        await schemaRun(req, 'UPDATE teachers SET photo_path = $1 WHERE id = $2', [photoPath, req.params.id]);
         
         const teacher = await schemaGet(req, `
             SELECT t.*, u.email, u.name, u.role
             FROM teachers t
             INNER JOIN public.users u ON t.user_id = u.id
-            WHERE t.user_id = $1
+            WHERE t.id = $1
         `, [req.params.id]);
         res.json({ message: 'Photo uploaded successfully', teacher });
     } catch (error) {
@@ -76,9 +83,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
         }
 
         const teacher = await schemaGet(req, `
-            SELECT t.*, u.id as user_id, u.email, u.name as user_name, u.role, u.created_at
+            SELECT t.*, u.id as user_id, u.email, u.name as user_name, u.role, u.created_at,
+                   s.name as school_name, s.id as school_id
             FROM teachers t
             INNER JOIN public.users u ON t.user_id = u.id
+            LEFT JOIN public.schools s ON u.primary_school_id = s.id
             WHERE t.id = $1
         `, [req.params.id]);
 

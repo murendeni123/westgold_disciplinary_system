@@ -30,7 +30,7 @@ router.post('/onboard', authenticateToken, platformAdminOnly, async (req, res) =
             phone,
             address,
             city,
-            state,
+            province,
             postalCode,
             country,
             subscriptionTier,
@@ -39,34 +39,66 @@ router.post('/onboard', authenticateToken, platformAdminOnly, async (req, res) =
             // Admin user details
             adminName,
             adminEmail,
-            adminPassword
+            adminPassword,
+            // Trial & Branding
+            trialDays,
+            planId,
+            primaryColor,
+            secondaryColor,
+            logoUrl
         } = req.body;
 
         // Validate required fields
-        if (!name || !code || !adminEmail || !adminName) {
+        if (!name || !adminEmail || !adminName) {
             return res.status(400).json({
                 error: 'Missing required fields',
-                required: ['name', 'code', 'adminEmail', 'adminName']
+                required: ['name', 'adminEmail', 'adminName']
             });
         }
 
+        // Auto-generate school code if not provided
+        let schoolShortCode = code;
+        if (!schoolShortCode) {
+            // Generate from school name (e.g., "Westgold Primary" -> "WEPR")
+            const words = name.trim().split(/\s+/);
+            if (words.length >= 2) {
+                schoolShortCode = words.slice(0, 2).map(w => w.substring(0, 2).toUpperCase()).join('');
+            } else {
+                schoolShortCode = name.substring(0, 4).toUpperCase().replace(/[^A-Z0-9]/g, 'X');
+            }
+            // Add random suffix to ensure uniqueness
+            schoolShortCode += Math.floor(10 + Math.random() * 90); // Add 2-digit number
+        }
+
         // Validate code format (alphanumeric, 2-10 chars)
-        if (!/^[A-Z0-9]{2,10}$/i.test(code)) {
+        if (!/^[A-Z0-9]{2,10}$/i.test(schoolShortCode)) {
             return res.status(400).json({
                 error: 'Invalid school code',
                 message: 'Code must be 2-10 alphanumeric characters'
             });
         }
 
-        // Check if code already exists
-        const existingCode = await dbGet(
+        // Check if code already exists, if so, regenerate
+        let codeAttempts = 0;
+        let existingCode = await dbGet(
             'SELECT id FROM public.schools WHERE code = $1',
-            [code.toUpperCase()]
+            [schoolShortCode.toUpperCase()]
         );
+        while (existingCode && codeAttempts < 10) {
+            // Regenerate with different random number
+            const baseCode = schoolShortCode.replace(/\d+$/, '');
+            schoolShortCode = baseCode + Math.floor(10 + Math.random() * 90);
+            existingCode = await dbGet(
+                'SELECT id FROM public.schools WHERE code = $1',
+                [schoolShortCode.toUpperCase()]
+            );
+            codeAttempts++;
+        }
+        
         if (existingCode) {
             return res.status(409).json({
-                error: 'School code already exists',
-                message: `A school with code ${code.toUpperCase()} already exists`
+                error: 'Could not generate unique school code',
+                message: 'Please try again or provide a custom code'
             });
         }
 
@@ -96,35 +128,44 @@ router.post('/onboard', authenticateToken, platformAdminOnly, async (req, res) =
             });
         }
 
-        // Generate schema name
-        const schemaName = generateSchemaName(code);
+        // Generate schema name and school code for parents/teachers registration
+        const schemaName = generateSchemaName(schoolShortCode);
+        const schoolCode = schoolShortCode.toUpperCase() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase();
+
+        // Calculate trial end date
+        const trialEndsAt = trialDays ? new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000) : null;
 
         // Start transaction for school creation
         const result = await dbTransaction(async (client) => {
             // 1. Create school record in public.schools
             const schoolResult = await client.query(`
                 INSERT INTO public.schools (
-                    name, code, subdomain, email, phone, address, city, state, 
+                    name, code, subdomain, email, phone, address, city, province, 
                     postal_code, country, status, schema_name, max_students, 
-                    max_teachers, subscription_tier
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                    max_teachers, school_code, trial_ends_at,
+                    primary_color, secondary_color, logo_path
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
                 RETURNING id
             `, [
                 name,
-                code.toUpperCase(),
+                schoolShortCode.toUpperCase(),
                 subdomain ? subdomain.toLowerCase() : null,
                 email,
                 phone,
                 address,
                 city,
-                state,
+                province,
                 postalCode,
                 country || 'South Africa',
                 'active',
                 schemaName,
                 maxStudents || 1000,
                 maxTeachers || 100,
-                subscriptionTier || 'trial'
+                schoolCode,
+                trialEndsAt,
+                primaryColor || '#3B82F6',
+                secondaryColor || '#8B5CF6',
+                logoUrl || null
             ]);
 
             const schoolId = schoolResult.rows[0].id;
@@ -134,8 +175,8 @@ router.post('/onboard', authenticateToken, platformAdminOnly, async (req, res) =
             
             const userResult = await client.query(`
                 INSERT INTO public.users (
-                    email, password_hash, name, role, primary_school_id, is_active, email_verified
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    email, password_hash, name, role, primary_school_id, is_active
+                ) VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING id
             `, [
                 adminEmail.toLowerCase(),
@@ -143,8 +184,7 @@ router.post('/onboard', authenticateToken, platformAdminOnly, async (req, res) =
                 adminName,
                 'admin',
                 schoolId,
-                true,
-                false
+                true
             ]);
 
             const adminUserId = userResult.rows[0].id;
@@ -169,16 +209,17 @@ router.post('/onboard', authenticateToken, platformAdminOnly, async (req, res) =
                 `School "${name}" (${code}) created with admin ${adminEmail}`
             ]);
 
-            return { schoolId, adminUserId, schemaName };
+            return { schoolId, adminUserId, schemaName, schoolCode };
         });
 
         // 5. Create the school schema (outside transaction for better error handling)
-        const schemaResult = await createSchoolSchema(code);
+        const schemaResult = await createSchoolSchema(schoolShortCode);
         
         if (!schemaResult.success) {
             // Rollback school creation if schema fails
-            await dbRun('DELETE FROM public.schools WHERE id = $1', [result.schoolId]);
+            await dbRun('DELETE FROM public.user_schools WHERE school_id = $1', [result.schoolId]);
             await dbRun('DELETE FROM public.users WHERE id = $1', [result.adminUserId]);
+            await dbRun('DELETE FROM public.schools WHERE id = $1', [result.schoolId]);
             
             return res.status(500).json({
                 error: 'Failed to create school schema',
@@ -186,11 +227,16 @@ router.post('/onboard', authenticateToken, platformAdminOnly, async (req, res) =
             });
         }
 
-        // 6. Create admin record in school schema
-        await dbRun(`
-            INSERT INTO teachers (user_id, is_active)
-            VALUES ($1, $2)
-        `, [result.adminUserId, true], schemaName);
+        // 6. Create admin record in school schema teachers table
+        try {
+            await dbRun(`
+                INSERT INTO teachers (user_id, is_active, department)
+                VALUES ($1, $2, $3)
+            `, [result.adminUserId, true, 'Administration'], result.schemaName);
+        } catch (teacherError) {
+            console.warn('Warning: Could not create teacher record:', teacherError.message);
+            // Non-fatal - admin can still log in
+        }
 
         res.status(201).json({
             success: true,
@@ -198,16 +244,24 @@ router.post('/onboard', authenticateToken, platformAdminOnly, async (req, res) =
             school: {
                 id: result.schoolId,
                 name,
-                code: code.toUpperCase(),
+                code: schoolShortCode.toUpperCase(),
+                school_code: result.schoolCode,
                 subdomain: subdomain ? subdomain.toLowerCase() : null,
-                schemaName: result.schemaName
+                schemaName: result.schemaName,
+                trialEndsAt: trialEndsAt
             },
             admin: {
                 id: result.adminUserId,
                 email: adminEmail.toLowerCase(),
                 name: adminName,
                 temporaryPassword: adminPassword ? undefined : 'ChangeMe123!'
-            }
+            },
+            next_steps: [
+                'Share the school code with teachers and parents for registration',
+                'Configure incident types and merit types in Discipline Rules',
+                'Add teachers and import students via Bulk Import',
+                'Set up class timetables and assign teachers'
+            ]
         });
 
     } catch (error) {

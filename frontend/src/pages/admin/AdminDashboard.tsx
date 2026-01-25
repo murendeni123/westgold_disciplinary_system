@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, AlertTriangle, Clock, Calendar, Award, Gavel, TrendingDown, Bell, 
   UserCheck, BookOpen, ArrowRight, AlertCircle, XCircle, MessageSquare, 
-  ClipboardList, ChevronRight, Zap, Shield, FileText, X, RefreshCw, Target
+  ClipboardList, ChevronRight, Zap, Shield, FileText, X, RefreshCw, Target,
+  Copy, Check, Key
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
@@ -36,6 +37,7 @@ interface AtRiskStudents {
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState<any>(null);
+  const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [criticalAlerts, setCriticalAlerts] = useState<CriticalAlerts | null>(null);
   const [atRiskStudents, setAtRiskStudents] = useState<AtRiskStudents | null>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -46,8 +48,45 @@ const AdminDashboard: React.FC = () => {
   const [showTeacherModal, setShowTeacherModal] = useState(false);
   const [showClassModal, setShowClassModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const copySchoolCode = () => {
+    if (schoolInfo?.school_code) {
+      navigator.clipboard.writeText(schoolInfo.school_code);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    }
+  };
 
   useEffect(() => {
+    // Verify token exists before making API calls
+    const token = localStorage.getItem('token');
+    const user = localStorage.getItem('user');
+    
+    console.log('=== Dashboard Initialization ===');
+    console.log('Token exists:', !!token);
+    console.log('User exists:', !!user);
+    
+    if (user) {
+      try {
+        const userData = JSON.parse(user);
+        console.log('User data:', {
+          id: userData.id,
+          email: userData.email,
+          role: userData.role,
+          schoolId: userData.schoolId,
+          schemaName: userData.schemaName
+        });
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+    
+    if (!token) {
+      console.error('❌ No token found in localStorage - user needs to log in');
+      return;
+    }
+    
     fetchAllData();
     const interval = setInterval(fetchAllData, 5 * 60 * 1000);
     return () => clearInterval(interval);
@@ -55,15 +94,42 @@ const AdminDashboard: React.FC = () => {
 
   const fetchAllData = async () => {
     try {
-      const [statsRes, alertsRes, riskRes, notifsRes, countRes] = await Promise.all([
-        api.getDashboardStats(),
-        api.getCriticalAlerts().catch(() => ({ data: null })),
-        api.getAtRiskStudents().catch(() => ({ data: null })),
-        api.getNotifications({ is_read: 'false' }).catch(() => ({ data: [] })),
-        api.getUnreadCount().catch(() => ({ data: { count: 0 } })),
+      console.log('Fetching dashboard data...');
+      
+      // Fetch school info and dashboard data in parallel
+      // The x-school-id header from token is sufficient for API calls
+      const [statsRes, schoolInfoRes, alertsRes, riskRes, notifsRes, countRes] = await Promise.all([
+        api.getDashboardStats().catch((err) => {
+          console.error('Error fetching dashboard stats:', err);
+          return { data: null };
+        }),
+        api.getCurrentSchoolInfo().catch((err) => {
+          console.error('Error fetching school info:', err);
+          return { data: null };
+        }),
+        api.getCriticalAlerts().catch((err) => {
+          console.error('Error fetching critical alerts:', err);
+          return { data: null };
+        }),
+        api.getAtRiskStudents().catch((err) => {
+          console.error('Error fetching at-risk students:', err);
+          return { data: null };
+        }),
+        api.getNotifications({ is_read: 'false' }).catch((err) => {
+          console.error('Error fetching notifications:', err);
+          return { data: [] };
+        }),
+        api.getUnreadCount().catch((err) => {
+          console.error('Error fetching unread count:', err);
+          return { data: { count: 0 } };
+        }),
       ]);
       
+      console.log('Dashboard stats response:', statsRes?.data);
+      console.log('School info response:', schoolInfoRes?.data);
+      
       setStats(statsRes.data);
+      setSchoolInfo(schoolInfoRes.data);
       setCriticalAlerts(alertsRes.data);
       setAtRiskStudents(riskRes.data);
       setNotifications(notifsRes.data?.slice(0, 5) || []);
@@ -163,6 +229,51 @@ const AdminDashboard: React.FC = () => {
           <span className="font-medium">Refresh</span>
         </motion.button>
       </motion.div>
+
+      {/* School Code Banner */}
+      {schoolInfo?.school_code && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl p-4 md:p-5 shadow-xl"
+        >
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                <Key size={24} className="text-white" />
+              </div>
+              <div>
+                <p className="text-white/80 text-sm font-medium">School Registration Code</p>
+                <p className="text-2xl md:text-3xl font-bold text-white tracking-wider font-mono">
+                  {schoolInfo.school_code}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <p className="text-white/70 text-sm hidden md:block">Share this code with parents to link their accounts</p>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={copySchoolCode}
+                className="flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl backdrop-blur-sm transition-all"
+              >
+                {copiedCode ? (
+                  <>
+                    <Check size={18} className="text-green-300" />
+                    <span className="text-white font-medium">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy size={18} className="text-white" />
+                    <span className="text-white font-medium">Copy Code</span>
+                  </>
+                )}
+              </motion.button>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Critical Alerts Banner */}
       {totalCriticalAlerts > 0 && (
