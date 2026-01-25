@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { api } from '../../services/api';
 import Table from '../../components/Table';
 import Select from '../../components/Select';
+import SearchableSelect from '../../components/SearchableSelect';
+import ModernFilter from '../../components/ModernFilter';
 import Input from '../../components/Input';
 import { motion } from 'framer-motion';
 import { Award, TrendingUp, Sparkles } from 'lucide-react';
@@ -193,47 +195,46 @@ const ViewMerits: React.FC = () => {
         </div>
       )}
 
-      {/* Filters Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
-      >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Filters</h2>
-          <Sparkles className="text-emerald-600" size={24} />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Select
-            label="Student"
-            value={selectedStudent}
-            onChange={(e) => setSelectedStudent(e.target.value)}
-            options={[
-              { value: '', label: 'All Students' },
-              ...students.map((s: any) => ({
-                value: s.id,
-                label: `${s.first_name} ${s.last_name} (${s.student_id})`,
-              })),
-            ]}
-            className="rounded-xl"
-          />
-          <Input
-            label="Start Date"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="rounded-xl"
-          />
-          <Input
-            label="End Date"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="rounded-xl"
-          />
-        </div>
-      </motion.div>
+      {/* Modern Filters */}
+      <ModernFilter
+        fields={[
+          {
+            type: 'searchable-select',
+            name: 'student',
+            label: 'Student',
+            placeholder: 'Search and select a student...',
+            options: students.map((s: any) => ({
+              value: s.id.toString(),
+              label: `${s.first_name} ${s.last_name} (${s.student_id})`,
+            })),
+          },
+          {
+            type: 'date',
+            name: 'start_date',
+            label: 'Start Date',
+          },
+          {
+            type: 'date',
+            name: 'end_date',
+            label: 'End Date',
+          },
+        ]}
+        values={{
+          student: selectedStudent,
+          start_date: startDate,
+          end_date: endDate,
+        }}
+        onChange={(name, value) => {
+          if (name === 'student') setSelectedStudent(value);
+          if (name === 'start_date') setStartDate(value);
+          if (name === 'end_date') setEndDate(value);
+        }}
+        onClear={() => {
+          setSelectedStudent('');
+          setStartDate(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+          setEndDate(new Date().toISOString().split('T')[0]);
+        }}
+      />
 
       {!selectedStudent ? (
         <motion.div

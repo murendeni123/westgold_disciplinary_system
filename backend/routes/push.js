@@ -30,14 +30,14 @@ router.post('/subscribe', authenticateToken, async (req, res) => {
 
         // Check if subscription already exists
         const existing = await dbGet(
-            'SELECT id FROM push_subscriptions WHERE user_id = ? AND endpoint = ?',
+            'SELECT id FROM public.push_subscriptions WHERE user_id = $1 AND endpoint = $2',
             [userId, subscription.endpoint]
         );
 
         if (existing) {
             // Update existing subscription
             await dbRun(
-                'UPDATE push_subscriptions SET p256dh = ?, auth = ? WHERE id = ?',
+                'UPDATE public.push_subscriptions SET p256dh = $1, auth = $2 WHERE id = $3',
                 [subscription.keys.p256dh, subscription.keys.auth, existing.id]
             );
             return res.json({ message: 'Subscription updated' });
@@ -45,8 +45,8 @@ router.post('/subscribe', authenticateToken, async (req, res) => {
 
         // Create new subscription
         await dbRun(
-            `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, device_type)
-             VALUES (?, ?, ?, ?, ?)`,
+            `INSERT INTO public.push_subscriptions (user_id, endpoint, p256dh, auth, device_type)
+             VALUES ($1, $2, $3, $4, $5)`,
             [userId, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth, 'web']
         );
 
@@ -68,7 +68,7 @@ router.post('/unsubscribe', authenticateToken, async (req, res) => {
         }
 
         await dbRun(
-            'DELETE FROM push_subscriptions WHERE user_id = ? AND endpoint = ?',
+            'DELETE FROM public.push_subscriptions WHERE user_id = $1 AND endpoint = $2',
             [userId, endpoint]
         );
 
@@ -83,7 +83,7 @@ router.post('/unsubscribe', authenticateToken, async (req, res) => {
 const sendPushNotification = async (userId, title, message, data = {}) => {
     try {
         const subscriptions = await dbAll(
-            'SELECT * FROM push_subscriptions WHERE user_id = ?',
+            'SELECT * FROM public.push_subscriptions WHERE user_id = $1',
             [userId]
         );
 
@@ -109,7 +109,7 @@ const sendPushNotification = async (userId, title, message, data = {}) => {
                 console.error('Error sending push notification:', error);
                 // If subscription is invalid, remove it
                 if (error.statusCode === 410 || error.statusCode === 404) {
-                    dbRun('DELETE FROM push_subscriptions WHERE id = ?', [sub.id]).catch(console.error);
+                    dbRun('DELETE FROM public.push_subscriptions WHERE id = $1', [sub.id]).catch(console.error);
                 }
             });
         });

@@ -122,7 +122,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
@@ -133,36 +133,38 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
           className={`
-            w-full px-4 py-2 text-left bg-white border border-gray-300 rounded-lg
-            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+            w-full px-4 py-3 text-left bg-gray-50 border-2 border-gray-200 rounded-xl
+            focus:outline-none focus:border-blue-500 focus:bg-white
             disabled:bg-gray-100 disabled:cursor-not-allowed
             flex items-center justify-between
-            ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : ''}
+            transition-all duration-200 font-medium
+            hover:border-blue-300 hover:shadow-md
+            ${isOpen ? 'border-blue-500 bg-white shadow-md' : ''}
           `}
         >
-          <span className={selectedOption ? 'text-gray-900' : 'text-gray-500'}>
+          <span className={selectedOption ? 'text-gray-700' : 'text-gray-500'}>
             {selectedOption ? selectedOption.label : placeholder}
           </span>
           <div className="flex items-center space-x-2">
             {showClear && value && (
               <X
                 size={16}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-red-500 transition-colors"
                 onClick={handleClear}
               />
             )}
             <ChevronDown
               size={20}
-              className={`text-gray-400 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
+              className={`text-gray-400 transition-transform duration-200 ${isOpen ? 'transform rotate-180' : ''}`}
             />
           </div>
         </button>
 
         {isOpen && (
-          <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden">
-            <div className="p-2 border-b border-gray-200">
+          <div className="absolute z-50 w-full mt-2 bg-white border-2 border-blue-500 rounded-xl shadow-2xl max-h-64 overflow-hidden">
+            <div className="p-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
               <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500" />
                 <input
                   ref={inputRef}
                   type="text"
@@ -172,19 +174,22 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                     setFocusedIndex(-1);
                   }}
                   onKeyDown={handleKeyDown}
-                  placeholder="Search..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Type to search..."
+                  className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-gray-700 transition-all duration-200"
                 />
               </div>
             </div>
             <ul
               ref={listRef}
-              className="max-h-48 overflow-y-auto"
+              className="max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-300 scrollbar-track-gray-100"
               onKeyDown={handleKeyDown}
             >
               {filteredOptions.length === 0 ? (
-                <li className="px-4 py-3 text-sm text-gray-500 text-center">
-                  No options found
+                <li className="px-4 py-4 text-sm text-gray-500 text-center">
+                  <div className="flex flex-col items-center">
+                    <Search size={32} className="text-gray-300 mb-2" />
+                    <span className="font-medium">No options found</span>
+                  </div>
                 </li>
               ) : (
                 filteredOptions.map((option, index) => (
@@ -192,9 +197,12 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
                     key={option.value}
                     onClick={() => handleSelect(option.value)}
                     className={`
-                      px-4 py-2 cursor-pointer hover:bg-blue-50 transition-colors
-                      ${value === option.value ? 'bg-blue-100 font-medium' : ''}
-                      ${focusedIndex === index ? 'bg-blue-50' : ''}
+                      px-4 py-2.5 cursor-pointer transition-all duration-150 font-medium
+                      ${value === option.value 
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
+                        : 'hover:bg-blue-50 text-gray-700'
+                      }
+                      ${focusedIndex === index && value !== option.value ? 'bg-blue-100' : ''}
                     `}
                   >
                     {option.label}

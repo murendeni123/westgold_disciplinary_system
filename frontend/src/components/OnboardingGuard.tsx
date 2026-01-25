@@ -12,28 +12,50 @@ const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) => {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+    
     if (!loading && user) {
-      // Check if onboarding is completed
-      const onboardingCompleted = localStorage.getItem('parent_onboarding_completed');
+      // Check if AuthCallback is handling the redirect
+      const authCallbackRedirect = sessionStorage.getItem('auth_callback_redirect');
       
-      // Only redirect to onboarding if:
-      // 1. User is a parent
-      // 2. Onboarding not completed
-      // 3. User has no school linked OR no children linked (first-time user)
+      // Check if onboarding was already completed
+      const onboardingCompleted = localStorage.getItem('parent_onboarding_completed') === 'true';
+      
+      // Check actual data - user needs school AND children to be considered complete
+      const needsSchool = !user.school_id;
+      const needsChildren = !user.children || user.children.length === 0;
+      
+      // If parent has both school and children, automatically mark onboarding as complete
+      if (user.role === 'parent' && !needsSchool && !needsChildren && !onboardingCompleted) {
+        localStorage.setItem('parent_onboarding_completed', 'true');
+      }
+      
       if (
-        user.role === 'parent' &&
+        isMounted &&
+        !authCallbackRedirect &&
         !onboardingCompleted &&
-        (!user.school_id || !user.children || user.children.length === 0) &&
+        user.role === 'parent' &&
+        (needsSchool || needsChildren) &&
         window.location.pathname !== '/parent/onboarding' &&
         window.location.pathname !== '/parent/link-school' &&
-        window.location.pathname !== '/parent/link-child'
+        window.location.pathname !== '/parent/link-child' &&
+        window.location.pathname !== '/auth/callback'
       ) {
-        navigate('/parent/onboarding');
+        // Small delay to avoid race conditions with other navigation
+        setTimeout(() => {
+          if (isMounted) {
+            navigate('/parent/onboarding', { replace: true });
+          }
+        }, 100);
       }
       setChecking(false);
     } else if (!loading && !user) {
       setChecking(false);
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [user, loading, navigate]);
 
   if (loading || checking) {

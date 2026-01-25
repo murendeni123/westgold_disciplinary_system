@@ -13,7 +13,11 @@ import {
   Award,
   TrendingUp,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Activity,
+  Target,
+  Shield,
+  Clock
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
@@ -26,6 +30,9 @@ const ModernParentDashboard: React.FC = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [behaviorData, setBehaviorData] = useState<any[]>([]);
   const [attendanceData, setAttendanceData] = useState<any[]>([]);
+  const [consequences, setConsequences] = useState<any[]>([]);
+  const [interventions, setInterventions] = useState<any[]>([]);
+  const [detentions, setDetentions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasLinkedSchool, setHasLinkedSchool] = useState(false);
   const [hasLinkedChild, setHasLinkedChild] = useState(false);
@@ -37,6 +44,7 @@ const ModernParentDashboard: React.FC = () => {
     fetchNotifications();
     fetchBehaviorData();
     fetchAttendanceData();
+    fetchConsequencesAndInterventions();
   }, [user]);
 
   const checkSetupStatus = async () => {
@@ -168,6 +176,37 @@ const ModernParentDashboard: React.FC = () => {
     }
   };
 
+  const fetchConsequencesAndInterventions = async () => {
+    try {
+      if (!user?.children || user.children.length === 0) return;
+
+      const allConsequences: any[] = [];
+      const allInterventions: any[] = [];
+      const allDetentions: any[] = [];
+
+      for (const child of user.children) {
+        try {
+          const [consequencesRes, interventionsRes, detentionsRes] = await Promise.all([
+            api.getConsequenceAssignments({ student_id: child.id }),
+            api.getInterventions({ student_id: child.id }),
+            api.getDetentions({ student_id: child.id }),
+          ]);
+          allConsequences.push(...(consequencesRes.data || []));
+          allInterventions.push(...(interventionsRes.data || []));
+          allDetentions.push(...(detentionsRes.data || []));
+        } catch (error) {
+          console.error(`Error fetching consequences/interventions for child ${child.id}:`, error);
+        }
+      }
+
+      setConsequences(allConsequences);
+      setInterventions(allInterventions);
+      setDetentions(allDetentions);
+    } catch (error) {
+      console.error('Error fetching consequences and interventions:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -296,15 +335,52 @@ const ModernParentDashboard: React.FC = () => {
         />
       </motion.div>
 
+      {/* Additional Stats Row */}
+      {user?.children && user.children.length > 0 && (
+        <motion.div
+          variants={itemVariants}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+        >
+          <AnimatedStatCard
+            title="Active Consequences"
+            value={consequences.filter((c: any) => c.status === 'active' || c.status === 'pending').length}
+            icon={Shield}
+            iconColor="text-orange-600"
+            bgGradient="from-orange-500/10 to-red-500/10"
+            subtitle={`${consequences.length} total`}
+            delay={0.5}
+          />
+          <AnimatedStatCard
+            title="Active Interventions"
+            value={interventions.filter((i: any) => i.status === 'active' || i.status === 'in_progress').length}
+            icon={Target}
+            iconColor="text-purple-600"
+            bgGradient="from-purple-500/10 to-pink-500/10"
+            subtitle={`${interventions.length} total`}
+            delay={0.6}
+          />
+          <AnimatedStatCard
+            title="Pending Detentions"
+            value={detentions.filter((d: any) => d.status === 'assigned' || d.status === 'scheduled').length}
+            icon={Clock}
+            iconColor="text-indigo-600"
+            bgGradient="from-indigo-500/10 to-blue-500/10"
+            subtitle={`${detentions.length} total`}
+            delay={0.7}
+          />
+        </motion.div>
+      )}
+
       {/* Quick Actions */}
       {user?.children && user.children.length > 0 && (
         <motion.div variants={itemVariants}>
           <ModernCard title="Quick Actions" variant="glass">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { icon: Users, label: 'View Children', path: '/parent/children', color: 'blue' },
-                { icon: Calendar, label: 'View Attendance', path: '/parent/attendance', color: 'green' },
-                { icon: Award, label: 'View Merits', path: '/parent/merits', color: 'purple' },
+                { icon: Users, label: 'View Children', path: '/parent/children', color: 'blue', bgClass: 'bg-blue-50', borderClass: 'border-blue-200/50', hoverClass: 'hover:border-blue-300', iconBgClass: 'bg-blue-100', iconClass: 'text-blue-600', arrowClass: 'text-blue-400' },
+                { icon: AlertTriangle, label: 'View Incidents', path: '/parent/behaviour', color: 'red', bgClass: 'bg-red-50', borderClass: 'border-red-200/50', hoverClass: 'hover:border-red-300', iconBgClass: 'bg-red-100', iconClass: 'text-red-600', arrowClass: 'text-red-400' },
+                { icon: Award, label: 'View Merits', path: '/parent/merits', color: 'green', bgClass: 'bg-green-50', borderClass: 'border-green-200/50', hoverClass: 'hover:border-green-300', iconBgClass: 'bg-green-100', iconClass: 'text-green-600', arrowClass: 'text-green-400' },
+                { icon: Bell, label: 'Notifications', path: '/parent/notifications', color: 'yellow', bgClass: 'bg-yellow-50', borderClass: 'border-yellow-200/50', hoverClass: 'hover:border-yellow-300', iconBgClass: 'bg-yellow-100', iconClass: 'text-yellow-600', arrowClass: 'text-yellow-400' },
               ].map((action, index) => {
                 const Icon = action.icon;
                 return (
@@ -316,37 +392,19 @@ const ModernParentDashboard: React.FC = () => {
                     whileHover={{ scale: 1.05, x: 5 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => navigate(action.path)}
-                    className={`p-6 bg-gradient-to-br from-${action.color}-50 to-${action.color}-100/50 rounded-xl border border-${action.color}-200/50 hover:border-${action.color}-300 transition-all duration-300 text-left group`}
+                    className={`p-6 bg-gradient-to-br ${action.bgClass} to-${action.color}-100/50 rounded-xl border ${action.borderClass} ${action.hoverClass} transition-all duration-300 text-left group`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
-                        <div className={`p-3 rounded-xl group-hover:scale-110 transition-transform ${
-                          action.color === 'blue'
-                            ? 'bg-blue-100'
-                            : action.color === 'green'
-                            ? 'bg-green-100'
-                            : 'bg-purple-100'
-                        }`}>
-                          <Icon className={
-                            action.color === 'blue'
-                              ? 'text-blue-600'
-                              : action.color === 'green'
-                              ? 'text-green-600'
-                              : 'text-purple-600'
-                          } size={24} />
+                        <div className={`p-3 rounded-xl group-hover:scale-110 transition-transform ${action.iconBgClass}`}>
+                          <Icon className={action.iconClass} size={24} />
                         </div>
                         <div>
                           <p className="font-bold text-gray-900">{action.label}</p>
                           <p className="text-sm text-gray-600">Quick access</p>
                         </div>
                       </div>
-                      <ArrowRight className={`opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all ${
-                        action.color === 'blue'
-                          ? 'text-blue-400'
-                          : action.color === 'green'
-                          ? 'text-green-400'
-                          : 'text-purple-400'
-                      }`} size={20} />
+                      <ArrowRight className={`opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all ${action.arrowClass}`} size={20} />
                     </div>
                   </motion.button>
                 );

@@ -28,6 +28,7 @@ const Detentions: React.FC = () => {
     duration: '60',
     location: '',
     teacher_on_duty_id: '',
+    max_capacity: '30',
     notes: '',
   });
   const [ruleData, setRuleData] = useState({
@@ -134,6 +135,7 @@ const Detentions: React.FC = () => {
       duration: '60',
       location: '',
       teacher_on_duty_id: '',
+      max_capacity: '30',
       notes: '',
     });
     setIsModalOpen(true);
@@ -147,6 +149,7 @@ const Detentions: React.FC = () => {
       duration: String(detention.duration),
       location: detention.location || '',
       teacher_on_duty_id: detention.teacher_on_duty_id || '',
+      max_capacity: String(detention.max_capacity || 30),
       notes: detention.notes || '',
     });
     setIsModalOpen(true);

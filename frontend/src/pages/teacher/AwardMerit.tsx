@@ -9,6 +9,7 @@ import Textarea from '../../components/Textarea';
 import { motion } from 'framer-motion';
 import { Award } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import BadgeStatusModal from '../../components/BadgeStatusModal';
 
 const AwardMerit: React.FC = () => {
   const navigate = useNavigate();
@@ -21,12 +22,14 @@ const AwardMerit: React.FC = () => {
   const [formData, setFormData] = useState({
     student_id: '',
     merit_date: new Date().toISOString().split('T')[0],
-    merit_type: '',
+    merit_type_id: '',
     description: '',
     points: '1',
   });
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [showBadgeModal, setShowBadgeModal] = useState(false);
+  const [badgeModalData, setBadgeModalData] = useState<any>(null);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -59,13 +62,13 @@ const AwardMerit: React.FC = () => {
     if (selectedType) {
       setFormData({
         ...formData,
-        merit_type: selectedType.name,
-        points: String(selectedType.default_points),
+        merit_type_id: typeId,
+        points: String(selectedType.points),
       });
     } else {
       setFormData({
         ...formData,
-        merit_type: '',
+        merit_type_id: '',
         points: '1',
       });
     }
@@ -124,16 +127,33 @@ const AwardMerit: React.FC = () => {
         return;
       }
 
-      await api.createMerit({
+      const response = await api.createMerit({
         ...formData,
         points: Number(formData.points),
       });
+      
+      // Check if badge status changed
+      if (response.data.badgeStatusChange) {
+        const { badgeEarned, badgeLost, studentName, cleanPoints, totalMerits } = response.data.badgeStatusChange;
+        
+        if (badgeEarned || badgeLost) {
+          setBadgeModalData({
+            badgeEarned,
+            badgeLost,
+            studentName,
+            cleanPoints,
+            totalMerits
+          });
+          setShowBadgeModal(true);
+        }
+      }
+      
       success('Merit awarded successfully!');
       // Reset form
       setFormData({
         student_id: '',
         merit_date: new Date().toISOString().split('T')[0],
-        merit_type: '',
+        merit_type_id: '',
         description: '',
         points: '1',
       });
@@ -161,6 +181,21 @@ const AwardMerit: React.FC = () => {
   return (
     <div className="space-y-8">
       <ToastContainer />
+      
+      {/* Badge Status Modal */}
+      {badgeModalData && (
+        <BadgeStatusModal
+          isOpen={showBadgeModal}
+          onClose={() => {
+            setShowBadgeModal(false);
+            setBadgeModalData(null);
+          }}
+          badgeEarned={badgeModalData.badgeEarned}
+          studentName={badgeModalData.studentName}
+          cleanPoints={badgeModalData.cleanPoints}
+          totalMerits={badgeModalData.totalMerits}
+        />
+      )}
       
       {/* Header */}
       <motion.div
@@ -200,23 +235,29 @@ const AwardMerit: React.FC = () => {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <Select
+              <SearchableSelect
                 label="Class (Optional - filter students by class)"
                 value={selectedClassId}
-                onChange={(e) => {
-                  if (e.target.value === '') {
+                onChange={(value) => {
+                  if (value === '') {
                     setSelectedClassId('');
                     setClassStudents([]);
                     setFormData({ ...formData, student_id: '' });
                   } else {
-                    handleClassChange(e.target.value);
+                    handleClassChange(value.toString());
                   }
                 }}
                 options={[
                   { value: '', label: 'All Classes' },
-                  ...classes.map((c) => ({ value: c.id, label: c.class_name })),
+                  ...classes.map((c) => ({ value: c.id.toString(), label: c.class_name })),
                 ]}
-                className="rounded-xl"
+                placeholder="Search and select a class..."
+                showClear={!!selectedClassId}
+                onClear={() => {
+                  setSelectedClassId('');
+                  setClassStudents([]);
+                  setFormData({ ...formData, student_id: '' });
+                }}
               />
             </motion.div>
             <motion.div
@@ -275,30 +316,29 @@ const AwardMerit: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
           >
-            <Select
+            <SearchableSelect
               label="Merit Type"
-              value={meritTypes.find((t) => t.name === formData.merit_type)?.id || ''}
-              onChange={(e) => handleMeritTypeChange(e.target.value)}
-              options={[
-                { value: '', label: 'Select a merit type...' },
-                ...meritTypes.map((t) => ({
-                  value: t.id,
-                  label: `${t.name} (${t.default_points} pts)`,
-                })),
-              ]}
+              value={formData.merit_type_id}
+              onChange={(value) => handleMeritTypeChange(value.toString())}
+              options={meritTypes.map((t) => ({
+                value: t.id.toString(),
+                label: t.name,
+              }))}
+              placeholder="Search and select merit type..."
               required
-              className="rounded-xl"
+              showClear={!!formData.merit_type_id}
+              onClear={() => handleMeritTypeChange('')}
             />
           </motion.div>
 
-          {formData.merit_type && (
+          {formData.merit_type_id && (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               className="p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200"
             >
               <div className="text-sm text-gray-700">
-                Selected: <span className="font-bold text-green-600">{formData.merit_type}</span>
+                Selected: <span className="font-bold text-green-600">{meritTypes.find(t => t.id === Number(formData.merit_type_id))?.name}</span>
               </div>
             </motion.div>
           )}

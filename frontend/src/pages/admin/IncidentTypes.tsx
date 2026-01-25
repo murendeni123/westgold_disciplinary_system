@@ -157,7 +157,7 @@ const IncidentTypes: React.FC = () => {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-16 h-16 border-4 border-amber-200 border-t-amber-600 rounded-full"
+          className="w-16 h-16 border-4 border-red-200 border-t-red-600 rounded-full"
         />
       </div>
     );
@@ -172,13 +172,13 @@ const IncidentTypes: React.FC = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex justify-between items-center"
+        className="flex items-center justify-between"
       >
         <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent">
             Incident Types
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">Manage predefined incident types with default points and severity</p>
+          <p className="text-gray-600 mt-2 text-lg">Define and manage incident categories</p>
         </div>
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button
@@ -191,7 +191,47 @@ const IncidentTypes: React.FC = () => {
         </motion.div>
       </motion.div>
 
-      {/* Table Card */}
+      {/* Stats Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-1 md:grid-cols-3 gap-6"
+      >
+        <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-red-100 text-sm font-medium">Total Types</p>
+              <p className="text-4xl font-bold mt-2">{types.length}</p>
+            </div>
+            <AlertTriangle size={48} className="text-red-200 opacity-50" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-100 text-sm font-medium">Active</p>
+              <p className="text-4xl font-bold mt-2">{types.filter(t => t.is_active === 1).length}</p>
+            </div>
+            <AlertTriangle size={48} className="text-green-200 opacity-50" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-orange-100 text-sm font-medium">Avg Points</p>
+              <p className="text-4xl font-bold mt-2">
+                {types.length > 0 ? Math.round(types.reduce((sum, t) => sum + t.default_points, 0) / types.length) : 0}
+              </p>
+            </div>
+            <AlertTriangle size={48} className="text-orange-200 opacity-50" />
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Types Grid */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -200,16 +240,94 @@ const IncidentTypes: React.FC = () => {
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
-            <div className="p-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500">
+            <div className="p-3 rounded-xl bg-gradient-to-r from-red-500 to-orange-500">
               <AlertTriangle className="text-white" size={24} />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">All Incident Types ({types.length})</h2>
+            <h2 className="text-2xl font-bold text-gray-900">All Incident Types</h2>
           </div>
         </div>
-        <Table
-          columns={columns}
-          data={types}
-        />
+
+        {types.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <AlertTriangle size={48} className="mx-auto mb-4 text-gray-300" />
+            <p>No incident types found</p>
+            <Button onClick={handleCreate} className="mt-4">
+              Create Your First Incident Type
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {types.map((type, index) => (
+              <motion.div
+                key={type.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 * index }}
+                whileHover={{ scale: 1.02 }}
+                className="p-6 border-2 border-gray-200 rounded-xl hover:border-red-400 hover:shadow-lg transition-all bg-white"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-gray-900">{type.name}</h3>
+                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                      {type.description || 'No description'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                    <span className="text-sm text-gray-600">Points</span>
+                    <span className="text-lg font-bold text-red-600">
+                      {type.default_points}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                    <span className="text-sm text-gray-600">Severity</span>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        type.default_severity === 'high'
+                          ? 'bg-red-100 text-red-800'
+                          : type.default_severity === 'medium'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-green-100 text-green-800'
+                      }`}
+                    >
+                      {type.default_severity.toUpperCase()}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                    <span className="text-sm text-gray-600">Status</span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      type.is_active === 1 ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {type.is_active === 1 ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-100">
+                  <button
+                    onClick={() => handleEdit(type)}
+                    className="flex-1 px-3 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    <Edit size={16} className="inline mr-1" />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(type.id)}
+                    className="flex-1 px-3 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                  >
+                    <Trash2 size={16} className="inline mr-1" />
+                    Delete
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </motion.div>
 
       <Modal

@@ -1,4 +1,10 @@
 require('dotenv').config();
+
+// SECURITY: Validate JWT secret on startup
+const { validateAndEnforce } = require('./utils/jwtSecretValidator');
+const environment = process.env.NODE_ENV || 'development';
+validateAndEnforce(process.env.JWT_SECRET, environment);
+
 const express = require('express');
 const cors = require('cors');
 const http = require('http');
@@ -59,37 +65,69 @@ app.set('io', io);
 app.set('userSockets', userSockets);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3001', 'http://192.168.0.108:3001', 'http://192.168.18.160:3001'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-School-Id', 'X-Schema-Name']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// SECURITY: Input sanitization middleware
+const { sanitizeAll } = require('./middleware/inputSanitizer');
+app.use(sanitizeAll);
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
+// Schema context and security middleware
+const { setSchemaFromToken } = require('./middleware/schemaContext');
+const { enforceSchemaAccess } = require('./utils/schemaHelper');
+const { authenticateToken } = require('./middleware/auth');
+const { strictLimiter, uploadLimiter } = require('./middleware/rateLimiter');
+
+// Routes - Public (no schema context needed)
 app.use('/api/auth', require('./routes/auth'));
-app.use('/api/students', require('./routes/students'));
-app.use('/api/classes', require('./routes/classes'));
-app.use('/api/teachers', require('./routes/teachers'));
-app.use('/api/behaviour', require('./routes/behaviour'));
-app.use('/api/attendance', require('./routes/attendance'));
-app.use('/api/messages', require('./routes/messages'));
-app.use('/api/parents', require('./routes/parents'));
-app.use('/api/analytics', require('./routes/analytics'));
-app.use('/api/timetables', require('./routes/timetables'));
-app.use('/api/detentions', require('./routes/detentions'));
-app.use('/api/merits', require('./routes/merits'));
-app.use('/api/exports', require('./routes/exports'));
-app.use('/api/bulk-import', require('./routes/bulkImport'));
-app.use('/api/notifications', require('./routes/notifications').router);
-app.use('/api/incident-types', require('./routes/incidentTypes'));
-app.use('/api/merit-types', require('./routes/meritTypes'));
-app.use('/api/interventions', require('./routes/interventions'));
-app.use('/api/consequences', require('./routes/consequences'));
-app.use('/api/push', require('./routes/push').router);
+
+// Routes - Platform Admin (school onboarding)
+app.use('/api/schools', require('./routes/schoolOnboarding'));
+
+// Routes - School Information (requires auth but not schema context)
+app.use('/api/school-info', authenticateToken, require('./routes/schoolInfo'));
+
+// Routes - School-specific (schema context + security enforcement applied)
+// SECURITY: enforceSchemaAccess prevents cross-schema access attacks
+app.use('/api/students', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/students'));
+app.use('/api/classes', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/classes'));
+app.use('/api/teachers', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/teachers'));
+app.use('/api/behaviour', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/behaviour'));
+app.use('/api/attendance', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/attendance'));
+app.use('/api/messages', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/messages'));
+app.use('/api/parents', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/parents'));
+app.use('/api/analytics', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/analytics'));
+app.use('/api/timetables', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/timetables'));
+app.use('/api/period-timetables', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/periodTimetables'));
+app.use('/api/subjects', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/subjects'));
+app.use('/api/period-register', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/periodRegister'));
+app.use('/api/detentions', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/detentions'));
+app.use('/api/merits', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/merits'));
+app.use('/api/exports', authenticateToken, setSchemaFromToken, enforceSchemaAccess, strictLimiter, require('./routes/exports'));
+app.use('/api/bulk-import', authenticateToken, setSchemaFromToken, enforceSchemaAccess, strictLimiter, require('./routes/bulkImport'));
+app.use('/api/bulk-import-v2', authenticateToken, setSchemaFromToken, enforceSchemaAccess, strictLimiter, require('./routes/bulkImportV2'));
+app.use('/api/notifications', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/notifications').router);
+app.use('/api/incident-types', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/incidentTypes'));
+app.use('/api/merit-types', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/meritTypes'));
+app.use('/api/interventions', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/interventions'));
+app.use('/api/guided-interventions', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/guidedInterventions'));
+app.use('/api/consequences', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/consequences'));
+app.use('/api/consequence-assignments', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/consequence_assignments'));
+app.use('/api/push', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/push').router);
 app.use('/api/platform', require('./routes/platform'));
 app.use('/api/school-customizations', require('./routes/schoolCustomizations'));
-app.use('/api/users', require('./routes/users'));
+app.use('/api/users', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/users'));
+app.use('/api/feature-flags', require('./routes/featureFlags'));
+app.use('/api/goldie-badge', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/goldieBadge'));
 
 // Health check
 app.get('/api/health', (req, res) => {

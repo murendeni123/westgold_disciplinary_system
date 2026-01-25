@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { api } from '../../services/api';
+import { useToast } from '../../contexts/ToastContext';
 import {
   BarChart3,
   TrendingUp,
@@ -19,33 +20,34 @@ import {
   FileText,
 } from 'lucide-react';
 
-interface DashboardStats {
+interface Stats {
   totalStudents: number;
   totalTeachers: number;
   totalParents: number;
   totalClasses: number;
-  attendanceRate: number;
   incidentCount: number;
   meritCount: number;
   detentionCount: number;
 }
 
 const ReportsAnalytics: React.FC = () => {
+  const { showSuccess, showError, showWarning } = useToast();
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState('month');
-  const [stats, setStats] = useState<DashboardStats>({
+  const [stats, setStats] = useState<Stats>({
     totalStudents: 0,
     totalTeachers: 0,
     totalParents: 0,
     totalClasses: 0,
-    attendanceRate: 0,
     incidentCount: 0,
     meritCount: 0,
     detentionCount: 0,
   });
-
-  const [attendanceData, setAttendanceData] = useState<any[]>([]);
   const [behaviourData, setBehaviourData] = useState<any[]>([]);
+  const [allIncidents, setAllIncidents] = useState<any[]>([]);
+  const [allMerits, setAllMerits] = useState<any[]>([]);
+  const [allDetentions, setAllDetentions] = useState<any[]>([]);
+  const [allStudents, setAllStudents] = useState<any[]>([]);
 
   useEffect(() => {
     fetchAnalytics();
@@ -54,7 +56,7 @@ const ReportsAnalytics: React.FC = () => {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const [studentsRes, teachersRes, parentsRes, classesRes, incidentsRes, meritsRes, detentionsRes, attendanceRes] = await Promise.all([
+      const [studentsRes, teachersRes, parentsRes, classesRes, incidentsRes, meritsRes, detentionsRes] = await Promise.all([
         api.getStudents(),
         api.getTeachers(),
         api.getParents(),
@@ -62,42 +64,29 @@ const ReportsAnalytics: React.FC = () => {
         api.getIncidents(),
         api.getMerits(),
         api.getDetentions(),
-        api.getAttendance(),
       ]);
 
       const students = studentsRes.data || [];
-      const attendance = attendanceRes.data || [];
-      
-      // Calculate attendance rate
-      const presentCount = attendance.filter((a: any) => a.status === 'present').length;
-      const attendanceRate = attendance.length > 0 ? Math.round((presentCount / attendance.length) * 100) : 0;
+      const incidents = incidentsRes.data || [];
+      const merits = meritsRes.data || [];
+      const detentions = detentionsRes.data || [];
+
+      setAllStudents(students);
+      setAllIncidents(incidents);
+      setAllMerits(merits);
+      setAllDetentions(detentions);
 
       setStats({
         totalStudents: students.length,
         totalTeachers: teachersRes.data?.length || 0,
         totalParents: parentsRes.data?.length || 0,
         totalClasses: classesRes.data?.length || 0,
-        attendanceRate,
-        incidentCount: incidentsRes.data?.length || 0,
-        meritCount: meritsRes.data?.length || 0,
-        detentionCount: detentionsRes.data?.length || 0,
+        incidentCount: incidents.length,
+        meritCount: merits.length,
+        detentionCount: detentions.length,
       });
-
-      // Process attendance by day for chart
-      const attendanceByDay: { [key: string]: { present: number; absent: number; late: number } } = {};
-      attendance.forEach((record: any) => {
-        const date = new Date(record.date).toLocaleDateString('en-US', { weekday: 'short' });
-        if (!attendanceByDay[date]) {
-          attendanceByDay[date] = { present: 0, absent: 0, late: 0 };
-        }
-        if (record.status === 'present') attendanceByDay[date].present++;
-        else if (record.status === 'absent') attendanceByDay[date].absent++;
-        else if (record.status === 'late') attendanceByDay[date].late++;
-      });
-      setAttendanceData(Object.entries(attendanceByDay).map(([day, data]) => ({ day, ...data })));
 
       // Process behaviour data
-      const incidents = incidentsRes.data || [];
       const behaviourByType: { [key: string]: number } = {};
       incidents.forEach((incident: any) => {
         const type = incident.incident_type || 'Other';
@@ -112,22 +101,208 @@ const ReportsAnalytics: React.FC = () => {
     }
   };
 
+  const exportToCSV = () => {
+    const timestamp = new Date().toISOString().split('T')[0];
+    
+    // Export Incidents
+    if (allIncidents.length > 0) {
+      const incidentHeaders = ['Date', 'Student', 'Type', 'Severity', 'Points', 'Status', 'Description'];
+      const incidentData = allIncidents.map(inc => [
+        inc.date || inc.incident_date,
+        inc.student_name,
+        inc.incident_type,
+        inc.severity,
+        inc.points || 0,
+        inc.status,
+        inc.description || ''
+      ]);
+      downloadCSV('incidents', incidentHeaders, incidentData, timestamp);
+    }
+
+    // Export Merits
+    if (allMerits.length > 0) {
+      const meritHeaders = ['Date', 'Student', 'Type', 'Points', 'Description'];
+      const meritData = allMerits.map(merit => [
+        merit.date || merit.merit_date,
+        merit.student_name,
+        merit.merit_type,
+        merit.points || 0,
+        merit.description || ''
+      ]);
+      downloadCSV('merits', meritHeaders, meritData, timestamp);
+    }
+
+    // Export Detentions
+    if (allDetentions.length > 0) {
+      const detentionHeaders = ['Date', 'Time', 'Duration', 'Status', 'Students', 'Location'];
+      const detentionData = allDetentions.map(det => [
+        det.detention_date,
+        det.detention_time || 'N/A',
+        `${det.duration || 60} min`,
+        det.status,
+        det.student_count || 0,
+        det.location || 'N/A'
+      ]);
+      downloadCSV('detentions', detentionHeaders, detentionData, timestamp);
+    }
+
+    // Export Student Summary
+    if (allStudents.length > 0) {
+      const studentHeaders = ['Student ID', 'Name', 'Class', 'Incidents', 'Merits', 'Net Points'];
+      const studentData = allStudents.map(student => {
+        const studentIncidents = allIncidents.filter(i => i.student_id === student.id);
+        const studentMerits = allMerits.filter(m => m.student_id === student.id);
+        const incidentPoints = studentIncidents.reduce((sum, i) => sum + (i.points || 0), 0);
+        const meritPoints = studentMerits.reduce((sum, m) => sum + (m.points || 0), 0);
+        return [
+          student.student_id,
+          `${student.first_name} ${student.last_name}`,
+          student.class_name || 'N/A',
+          studentIncidents.length,
+          studentMerits.length,
+          meritPoints - incidentPoints
+        ];
+      });
+      downloadCSV('student_summary', studentHeaders, studentData, timestamp);
+    }
+
+    showSuccess('Reports exported successfully! Check your downloads folder.');
+  };
+
+  const exportSingleReport = (reportType: string) => {
+    const timestamp = new Date().toISOString().split('T')[0];
+    
+    switch(reportType) {
+      case 'incidents':
+        if (allIncidents.length > 0) {
+          const headers = ['Date', 'Student', 'Type', 'Severity', 'Points', 'Status', 'Description'];
+          const data = allIncidents.map(inc => [
+            inc.date || inc.incident_date,
+            inc.student_name,
+            inc.incident_type,
+            inc.severity,
+            inc.points || 0,
+            inc.status,
+            inc.description || ''
+          ]);
+          downloadCSV('behaviour_report', headers, data, timestamp);
+        } else {
+          showWarning('No incident data available to export');
+        }
+        break;
+        
+      case 'merits':
+        if (allMerits.length > 0) {
+          const headers = ['Date', 'Student', 'Type', 'Points', 'Description'];
+          const data = allMerits.map(merit => [
+            merit.date || merit.merit_date,
+            merit.student_name,
+            merit.merit_type,
+            merit.points || 0,
+            merit.description || ''
+          ]);
+          downloadCSV('merit_report', headers, data, timestamp);
+        } else {
+          showWarning('No merit data available to export');
+        }
+        break;
+        
+      case 'student_summary':
+        if (allStudents.length > 0) {
+          const headers = ['Student ID', 'Name', 'Class', 'Incidents', 'Merits', 'Net Points'];
+          const data = allStudents.map(student => {
+            const studentIncidents = allIncidents.filter(i => i.student_id === student.id);
+            const studentMerits = allMerits.filter(m => m.student_id === student.id);
+            const incidentPoints = studentIncidents.reduce((sum, i) => sum + (i.points || 0), 0);
+            const meritPoints = studentMerits.reduce((sum, m) => sum + (m.points || 0), 0);
+            return [
+              student.student_id,
+              `${student.first_name} ${student.last_name}`,
+              student.class_name || 'N/A',
+              studentIncidents.length,
+              studentMerits.length,
+              meritPoints - incidentPoints
+            ];
+          });
+          downloadCSV('student_progress', headers, data, timestamp);
+        } else {
+          showWarning('No student data available to export');
+        }
+        break;
+        
+      case 'class_analytics':
+        if (allStudents.length > 0) {
+          const classSummary: { [key: string]: any } = {};
+          allStudents.forEach(student => {
+            const className = student.class_name || 'Unassigned';
+            if (!classSummary[className]) {
+              classSummary[className] = { students: 0, incidents: 0, merits: 0 };
+            }
+            classSummary[className].students++;
+            classSummary[className].incidents += allIncidents.filter(i => i.student_id === student.id).length;
+            classSummary[className].merits += allMerits.filter(m => m.student_id === student.id).length;
+          });
+          
+          const headers = ['Class', 'Students', 'Incidents', 'Merits', 'Incident Rate'];
+          const data = Object.entries(classSummary).map(([className, stats]: [string, any]) => [
+            className,
+            stats.students,
+            stats.incidents,
+            stats.merits,
+            stats.students > 0 ? (stats.incidents / stats.students).toFixed(2) : '0'
+          ]);
+          downloadCSV('class_analytics', headers, data, timestamp);
+        } else {
+          showWarning('No class data available to export');
+        }
+        break;
+        
+      case 'teacher_activity':
+        const headers = ['Report Type', 'Count'];
+        const data = [
+          ['Total Incidents Logged', allIncidents.length],
+          ['Total Merits Awarded', allMerits.length],
+          ['Total Detentions', allDetentions.length]
+        ];
+        downloadCSV('teacher_activity', headers, data, timestamp);
+        break;
+        
+      default:
+        showError('Report type not supported');
+    }
+  };
+
+  const downloadCSV = (reportName: string, headers: string[], data: any[][], timestamp: string) => {
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${reportName}_${timestamp}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const statCards = [
     { label: 'Total Students', value: stats.totalStudents, icon: Users, color: 'from-blue-500 to-cyan-500', change: '+12%', trend: 'up' },
-    { label: 'Attendance Rate', value: `${stats.attendanceRate}%`, icon: CheckCircle, color: 'from-green-500 to-emerald-500', change: '+3%', trend: 'up' },
     { label: 'Behaviour Incidents', value: stats.incidentCount, icon: AlertTriangle, color: 'from-red-500 to-orange-500', change: '-8%', trend: 'down' },
     { label: 'Merits Awarded', value: stats.meritCount, icon: Award, color: 'from-amber-500 to-yellow-500', change: '+15%', trend: 'up' },
     { label: 'Active Detentions', value: stats.detentionCount, icon: Clock, color: 'from-purple-500 to-pink-500', change: '-5%', trend: 'down' },
-    { label: 'Total Classes', value: stats.totalClasses, icon: Calendar, color: 'from-indigo-500 to-violet-500', change: '0%', trend: 'neutral' },
+    { label: 'Total Teachers', value: stats.totalTeachers, icon: Users, color: 'from-indigo-500 to-purple-500', change: '+2%', trend: 'up' },
   ];
 
   const reportTypes = [
-    { name: 'Attendance Report', description: 'Daily, weekly, and monthly attendance statistics', icon: Calendar, color: 'from-green-500 to-emerald-500' },
-    { name: 'Behaviour Report', description: 'Incident trends and severity analysis', icon: AlertTriangle, color: 'from-red-500 to-orange-500' },
-    { name: 'Merit Report', description: 'Recognition and achievement tracking', icon: Award, color: 'from-amber-500 to-yellow-500' },
-    { name: 'Student Progress', description: 'Individual student performance overview', icon: TrendingUp, color: 'from-blue-500 to-cyan-500' },
-    { name: 'Class Analytics', description: 'Class-wise performance comparison', icon: PieChart, color: 'from-purple-500 to-pink-500' },
-    { name: 'Teacher Activity', description: 'Teacher engagement and logging activity', icon: Activity, color: 'from-indigo-500 to-violet-500' },
+    { name: 'Behaviour Report', description: 'Incident trends and severity analysis', icon: AlertTriangle, color: 'from-red-500 to-orange-500', exportType: 'incidents' },
+    { name: 'Merit Report', description: 'Recognition and achievement tracking', icon: Award, color: 'from-amber-500 to-yellow-500', exportType: 'merits' },
+    { name: 'Student Progress', description: 'Individual student performance overview', icon: TrendingUp, color: 'from-blue-500 to-cyan-500', exportType: 'student_summary' },
+    { name: 'Class Analytics', description: 'Class-wise performance comparison', icon: PieChart, color: 'from-purple-500 to-pink-500', exportType: 'class_analytics' },
+    { name: 'Teacher Activity', description: 'Teacher engagement and logging activity', icon: Activity, color: 'from-indigo-500 to-violet-500', exportType: 'teacher_activity' },
   ];
 
   return (
@@ -169,10 +344,12 @@ const ReportsAnalytics: React.FC = () => {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all"
+            onClick={exportToCSV}
+            disabled={loading || (allIncidents.length === 0 && allMerits.length === 0 && allDetentions.length === 0)}
+            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download size={18} />
-            <span>Export</span>
+            <span>Export All Reports</span>
           </motion.button>
         </div>
       </motion.div>
@@ -212,74 +389,6 @@ const ReportsAnalytics: React.FC = () => {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Attendance Chart */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-gray-900">Attendance Overview</h3>
-            <div className="flex items-center space-x-4 text-xs">
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 bg-green-500 rounded-full" />
-                <span className="text-gray-600">Present</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 bg-red-500 rounded-full" />
-                <span className="text-gray-600">Absent</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 bg-amber-500 rounded-full" />
-                <span className="text-gray-600">Late</span>
-              </div>
-            </div>
-          </div>
-          
-          {loading ? (
-            <div className="h-48 flex items-center justify-center">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                className="w-8 h-8 border-2 border-blue-200 border-t-blue-600 rounded-full"
-              />
-            </div>
-          ) : (
-            <div className="h-48 flex items-end justify-between space-x-2">
-              {attendanceData.length > 0 ? attendanceData.slice(0, 7).map((day, index) => (
-                <div key={index} className="flex-1 flex flex-col items-center">
-                  <div className="w-full flex flex-col space-y-1">
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: `${Math.min(day.present * 5, 100)}px` }}
-                      transition={{ delay: index * 0.1 }}
-                      className="w-full bg-gradient-to-t from-green-500 to-green-400 rounded-t-lg"
-                    />
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: `${Math.min(day.late * 5, 40)}px` }}
-                      transition={{ delay: index * 0.1 + 0.05 }}
-                      className="w-full bg-gradient-to-t from-amber-500 to-amber-400"
-                    />
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: `${Math.min(day.absent * 5, 40)}px` }}
-                      transition={{ delay: index * 0.1 + 0.1 }}
-                      className="w-full bg-gradient-to-t from-red-500 to-red-400 rounded-b-lg"
-                    />
-                  </div>
-                  <span className="text-xs text-gray-500 mt-2">{day.day}</span>
-                </div>
-              )) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                  No attendance data available
-                </div>
-              )}
-            </div>
-          )}
-        </motion.div>
-
         {/* Behaviour Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -351,18 +460,25 @@ const ReportsAnalytics: React.FC = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.4 + index * 0.05 }}
-              whileHover={{ scale: 1.02, y: -2 }}
-              className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100 cursor-pointer group"
+              className="bg-white rounded-2xl p-5 shadow-lg border border-gray-100 group"
             >
               <div className="flex items-start space-x-4">
                 <div className={`w-12 h-12 bg-gradient-to-br ${report.color} rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
                   <report.icon className="text-white" size={22} />
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{report.name}</h4>
+                  <h4 className="font-semibold text-gray-900">{report.name}</h4>
                   <p className="text-sm text-gray-500 mt-1">{report.description}</p>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => exportSingleReport(report.exportType)}
+                    className="mt-3 flex items-center space-x-2 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all shadow-md"
+                  >
+                    <Download size={14} />
+                    <span>Export Excel</span>
+                  </motion.button>
                 </div>
-                <FileText size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
               </div>
             </motion.div>
           ))}
@@ -391,12 +507,12 @@ const ReportsAnalytics: React.FC = () => {
               <p className="text-white/70 text-sm">Teachers</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold">{stats.attendanceRate}%</p>
-              <p className="text-white/70 text-sm">Attendance</p>
-            </div>
-            <div className="text-center">
               <p className="text-3xl font-bold">{stats.meritCount}</p>
               <p className="text-white/70 text-sm">Merits</p>
+            </div>
+            <div className="text-center">
+              <p className="text-3xl font-bold">{stats.detentionCount}</p>
+              <p className="text-white/70 text-sm">Detentions</p>
             </div>
           </div>
         </div>

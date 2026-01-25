@@ -3,10 +3,11 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ModernSidebar from '../components/ModernSidebar';
 import QuickStudentSearch from '../components/QuickStudentSearch';
+import NotificationBell from '../components/NotificationBell';
 import SchoolSwitcher from '../components/SchoolSwitcher';
 import PageTransition from '../components/PageTransition';
 import AnimatedBackground from '../components/AnimatedBackground';
-import { Menu, Bell, Sparkles } from 'lucide-react';
+import { Menu, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
@@ -23,28 +24,29 @@ const ModernParentLayout: React.FC = () => {
   const [hasLinkedSchool, setHasLinkedSchool] = useState(false);
   const [hasLinkedChild, setHasLinkedChild] = useState(false);
 
-  // Check setup status on mount and when user changes
+  // Check setup status only on mount, not on every route change
   useEffect(() => {
-    checkSetupStatus();
-  }, [user, location.pathname]);
+    if (user && !setupChecked) {
+      checkSetupStatus();
+    }
+  }, [user]);
 
   const checkSetupStatus = async () => {
     if (!user) return;
 
     try {
-      // Check if parent has linked a school
-      const schoolsResponse = await api.getLinkedSchools();
-      const hasSchool = schoolsResponse.data && schoolsResponse.data.length > 0;
+      // Check if parent has linked a school from user data (no API call needed)
+      const hasSchool = !!user.school_id;
       setHasLinkedSchool(hasSchool);
 
-      // Check if parent has linked children
+      // Check if parent has linked children from user data (no API call needed)
       const hasChildren = !!(user?.children && user.children.length > 0);
       setHasLinkedChild(hasChildren);
 
       setSetupChecked(true);
 
       // Define allowed paths during setup
-      const setupPaths = ['/parent/link-school', '/parent/link-child', '/parent/settings'];
+      const setupPaths = ['/parent/link-school', '/parent/link-child', '/parent/settings', '/parent/onboarding'];
       const currentPath = location.pathname;
 
       // If not on a setup path, enforce setup completion
@@ -97,7 +99,7 @@ const ModernParentLayout: React.FC = () => {
       
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-80">
         {/* Premium Header - Aligned with Sidebar */}
-        <header className="relative overflow-hidden">
+        <header className="relative overflow-hidden z-50">
           {/* Gradient Background matching sidebar */}
           <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700" />
           
@@ -124,7 +126,7 @@ const ModernParentLayout: React.FC = () => {
           />
 
           {/* Header Content */}
-          <div className="relative z-10 flex items-center justify-between px-6 py-4 gap-4">
+          <div className="relative z-50 flex items-center justify-between px-6 py-4 gap-4">
             {/* Left Section - Menu & Title */}
             <div className="flex items-center space-x-4">
               <motion.button
@@ -160,23 +162,7 @@ const ModernParentLayout: React.FC = () => {
             <div className="flex items-center space-x-3">
               <SchoolSwitcher />
               
-              <motion.button 
-                className="relative w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-white hover:bg-white/30 transition-colors"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Bell size={20} />
-                {unreadCount > 0 && (
-                  <motion.span 
-                    className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 500 }}
-                  >
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </motion.span>
-                )}
-              </motion.button>
+              <NotificationBell />
 
               <motion.div 
                 className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-white font-bold cursor-pointer border-2 border-white/30"

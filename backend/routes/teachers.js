@@ -1,31 +1,44 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { dbAll, dbGet, dbRun } = require('../database/db');
+const { dbRun, dbGet } = require('../database/db');
+const { schemaAll, schemaGet, schemaRun, getSchema } = require('../utils/schemaHelper');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
 const router = express.Router();
 
 // Upload teacher photo (admin or teacher themselves)
+// Note: :id here is the teacher table id, not the user_id
 router.post('/:id/photo', authenticateToken, upload.single('photo'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
+        const schema = getSchema(req);
+        if (!schema) {
+            return res.status(403).json({ error: 'School context required' });
+        }
+
+        // First, get the teacher record to find the user_id
+        const teacherRecord = await schemaGet(req, 'SELECT id, user_id FROM teachers WHERE id = $1', [req.params.id]);
+        if (!teacherRecord) {
+            return res.status(404).json({ error: 'Teacher not found' });
+        }
+
         // Check if user is admin or uploading their own photo
-        if (req.user.role !== 'admin' && req.user.id !== Number(req.params.id)) {
+        if (req.user.role !== 'admin' && req.user.id !== teacherRecord.user_id) {
             return res.status(403).json({ error: 'You can only upload your own photo' });
         }
 
         const photoPath = `/uploads/teachers/${req.file.filename}`;
-        await dbRun('UPDATE teachers SET photo_path = ? WHERE user_id = ?', [photoPath, req.params.id]);
+        await schemaRun(req, 'UPDATE teachers SET photo_path = $1 WHERE id = $2', [photoPath, req.params.id]);
         
-        const teacher = await dbGet(`
-            SELECT u.id, u.email, u.name, u.role, t.employee_id, t.phone, t.photo_path
-            FROM users u
-            INNER JOIN teachers t ON u.id = t.user_id
-            WHERE u.id = ?
+        const teacher = await schemaGet(req, `
+            SELECT t.*, u.email, u.name, u.role
+            FROM teachers t
+            INNER JOIN public.users u ON t.user_id = u.id
+            WHERE t.id = $1
         `, [req.params.id]);
         res.json({ message: 'Photo uploaded successfully', teacher });
     } catch (error) {
@@ -37,14 +50,23 @@ router.post('/:id/photo', authenticateToken, upload.single('photo'), async (req,
 // Get all teachers
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const teachers = await dbAll(`
-            SELECT u.id, u.email, u.name, u.role, u.created_at,
-                   t.employee_id, t.phone, t.photo_path,
-                   (SELECT COUNT(*) FROM classes WHERE teacher_id = u.id) as class_count
-            FROM users u
-            INNER JOIN teachers t ON u.id = t.user_id
+        const schema = getSchema(req);
+        if (!schema) {
+            return res.status(403).json({ error: 'School context required' });
+        }
+
+        const query = `
+            SELECT t.*, u.id as user_id, u.email, u.name, u.role, u.created_at,
+                   (SELECT COUNT(*) FROM classes WHERE teacher_id = t.id) as class_count,
+                   c.class_name as assigned_classroom_name
+            FROM teachers t
+            INNER JOIN public.users u ON t.user_id = u.id
+            LEFT JOIN classes c ON t.class_teacher_of = c.id
+            WHERE t.is_active = true
             ORDER BY u.name
-        `);
+        `;
+
+        const teachers = await schemaAll(req, query);
         res.json(teachers);
     } catch (error) {
         console.error('Error fetching teachers:', error);
@@ -55,14 +77,18 @@ router.get('/', authenticateToken, async (req, res) => {
 // Get teacher by ID
 router.get('/:id', authenticateToken, async (req, res) => {
     try {
-        const teacher = await dbGet(`
-            SELECT u.id, u.email, u.name, u.role, u.created_at, u.school_id,
-                   t.employee_id, t.phone, t.photo_path,
-                   s.name as school_name
-            FROM users u
-            INNER JOIN teachers t ON u.id = t.user_id
-            LEFT JOIN schools s ON u.school_id = s.id
-            WHERE u.id = ?
+        const schema = getSchema(req);
+        if (!schema) {
+            return res.status(403).json({ error: 'School context required' });
+        }
+
+        const teacher = await schemaGet(req, `
+            SELECT t.*, u.id as user_id, u.email, u.name as user_name, u.role, u.created_at,
+                   s.name as school_name, s.id as school_id
+            FROM teachers t
+            INNER JOIN public.users u ON t.user_id = u.id
+            LEFT JOIN public.schools s ON u.primary_school_id = s.id
+            WHERE t.id = $1
         `, [req.params.id]);
 
         if (!teacher) {
@@ -70,11 +96,9 @@ router.get('/:id', authenticateToken, async (req, res) => {
         }
 
         // Get classes assigned to this teacher
-        const classes = await dbAll(`
-            SELECT c.* FROM classes c WHERE c.teacher_id = ?
-        `, [req.params.id]);
-
+        const classes = await schemaAll(req, 'SELECT * FROM classes WHERE teacher_id = $1', [req.params.id]);
         teacher.classes = classes;
+
         res.json(teacher);
     } catch (error) {
         console.error('Error fetching teacher:', error);
@@ -85,156 +109,61 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create teacher
 router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
-        console.log('=== CREATE TEACHER REQUEST ===');
-        console.log('Request body:', req.body);
-        console.log('User:', req.user);
-        
-        const { email, password, name, employee_id, phone } = req.body;
-        const schoolId = req.user.school_id || null;
+        const { email, password, name, employee_id, phone, department } = req.body;
+        const schema = getSchema(req);
 
-        console.log('Extracted values:', { email, name, employee_id, phone, schoolId });
+        if (!schema) {
+            return res.status(403).json({ error: 'School context required' });
+        }
 
         if (!email || !password || !name) {
-            console.error('Missing required fields:', { email: !!email, password: !!password, name: !!name });
             return res.status(400).json({ error: 'Email, password, and name are required' });
         }
 
-        console.log('Hashing password...');
         const hashedPassword = await bcrypt.hash(password, 10);
-        console.log('Password hashed successfully');
 
-        // Create user (PostgreSQL uses RETURNING id)
-        console.log('Creating user record...');
+        // Create user in public.users
         const userResult = await dbRun(
-            `INSERT INTO users (email, password, role, name, school_id) VALUES (?, ?, ?, ?, ?) RETURNING id`,
-            [email, hashedPassword, 'teacher', name, schoolId]
+            `INSERT INTO public.users (email, password_hash, role, name, primary_school_id, is_active) 
+             VALUES ($1, $2, $3, $4, $5, true) RETURNING id`,
+            [email.toLowerCase(), hashedPassword, 'teacher', name, req.schoolId]
         );
 
-        console.log('User creation result:', userResult);
-
-        // Get the user ID from the result (PostgreSQL uses RETURNING clause)
         const userId = userResult.id;
-        console.log('Extracted user ID:', userId);
-        
         if (!userId) {
-            console.error('❌ No user ID returned from INSERT');
-            console.error('User result:', userResult);
-            return res.status(500).json({ error: 'Failed to create user record - no ID returned' });
+            return res.status(500).json({ error: 'Failed to create user record' });
         }
 
-        console.log('✅ User created successfully with ID:', userId);
+        // Link user to school
+        await dbRun(
+            `INSERT INTO public.user_schools (user_id, school_id, role_in_school, is_primary) 
+             VALUES ($1, $2, $3, true) ON CONFLICT DO NOTHING`,
+            [userId, req.schoolId, 'teacher']
+        );
 
-        // Create teacher record
-        // Auto-generate employee_id if not provided
-        const teacherEmployeeId = employee_id && employee_id.trim() !== '' 
-            ? employee_id.trim() 
-            : `EMP-${userId}-${Date.now()}`;
+        // Create teacher record in school schema
+        const teacherEmployeeId = employee_id?.trim() || `EMP-${userId}-${Date.now()}`;
         
-        console.log('Creating teacher record with:', {
-            userId,
-            employee_id: teacherEmployeeId,
-            phone: phone || null,
-            schoolId
-        });
-        
-        let teacherResult;
-        try {
-            const insertSql = `INSERT INTO teachers (user_id, employee_id, phone, school_id) VALUES (?, ?, ?, ?) RETURNING id`;
-            const insertParams = [userId, teacherEmployeeId, phone || null, schoolId];
-            
-            console.log('Executing INSERT:', insertSql);
-            console.log('With params:', insertParams);
-            
-            teacherResult = await dbRun(insertSql, insertParams);
-            
-            console.log('INSERT result:', teacherResult);
-        } catch (insertError) {
-            console.error('❌ ERROR inserting teacher record:', insertError);
-            console.error('Error name:', insertError.name);
-            console.error('Error message:', insertError.message);
-            
-            // Try to clean up the user record
-            try {
-                await dbRun('DELETE FROM users WHERE id = ?', [userId]);
-                console.log('Cleaned up user record due to teacher insert failure.');
-            } catch (deleteError) {
-                console.error('Error cleaning up user record:', deleteError);
-            }
-            
-            if (insertError.message && (insertError.message.includes('UNIQUE constraint') || insertError.message.includes('duplicate key'))) {
-                return res.status(400).json({ error: 'Employee ID already exists for this school' });
-            } else {
-                return res.status(500).json({ 
-                    error: 'Failed to create teacher record',
-                    details: process.env.NODE_ENV === 'development' ? insertError.message : undefined
-                });
-            }
-        }
+        const teacherResult = await schemaRun(req,
+            `INSERT INTO teachers (user_id, employee_id, name, email, phone, department, is_active) 
+             VALUES ($1, $2, $3, $4, $5, $6, true) RETURNING id`,
+            [userId, teacherEmployeeId, name, email.toLowerCase(), phone || null, department || null]
+        );
 
-        if (!teacherResult || !teacherResult.changes || teacherResult.changes === 0) {
-            console.error('Failed to create teacher record - no rows affected');
-            console.error('Teacher result:', teacherResult);
-            // Try to clean up the user record
-            try {
-                await dbRun('DELETE FROM users WHERE id = ?', [userId]);
-                console.log('Cleaned up user record due to no rows affected in teacher insert.');
-            } catch (deleteError) {
-                console.error('Error cleaning up user record:', deleteError);
-            }
-            return res.status(500).json({ error: 'Failed to create teacher record - no rows affected' });
-        }
+        const teacher = await schemaGet(req, `
+            SELECT t.*, u.email, u.name as user_name, u.role, u.created_at
+            FROM teachers t
+            INNER JOIN public.users u ON t.user_id = u.id
+            WHERE t.id = $1
+        `, [teacherResult.id]);
 
-        console.log(`Successfully created teacher record: user_id=${userId}, employee_id=${teacherEmployeeId}, school_id=${schoolId}`);
-
-        // Fetch the created teacher with all fields
-        const teacher = await dbGet(`
-            SELECT u.id, u.email, u.name, u.role, u.created_at, u.school_id,
-                   t.employee_id, t.phone, t.photo_path, t.school_id as teacher_school_id
-            FROM users u
-            INNER JOIN teachers t ON u.id = t.user_id
-            WHERE u.id = ?
-        `, [userId]);
-
-        if (!teacher) {
-            console.error('Created teacher not found after creation');
-            // Attempt to fetch directly from teachers table if JOIN failed
-            const teacherCheck = await dbGet('SELECT * FROM teachers WHERE user_id = ?', [userId]);
-            if (teacherCheck) {
-                console.log('Teacher record exists but JOIN failed:', teacherCheck);
-                // Return a basic teacher object
-                const userData = await dbGet('SELECT * FROM users WHERE id = ?', [userId]);
-                return res.status(201).json({
-                    id: userId,
-                    email: userData?.email || email,
-                    name: userData?.name || name,
-                    role: 'teacher',
-                    employee_id: teacherCheck.employee_id || teacherEmployeeId,
-                    phone: teacherCheck.phone || phone || null,
-                    created_at: userData?.created_at || new Date().toISOString(),
-                    school_id: schoolId
-                });
-            } else {
-                console.error('Teacher record does not exist in teachers table');
-                return res.status(500).json({ error: 'Teacher record was not created in teachers table' });
-            }
-        }
-
-        console.log('Teacher created and fetched successfully:', teacher);
         res.status(201).json(teacher);
     } catch (error) {
-        console.error('❌❌❌ TOP LEVEL ERROR creating teacher ❌❌❌');
-        console.error('Error name:', error.name);
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-        console.error('Request body:', req.body);
-        
-        if (error.message && (error.message.includes('UNIQUE constraint') || error.message.includes('duplicate key'))) {
+        console.error('Error creating teacher:', error);
+        if (error.message?.includes('unique') || error.message?.includes('duplicate')) {
             res.status(400).json({ error: 'Email or employee ID already exists' });
         } else {
-            res.status(500).json({ 
-                error: 'Internal server error',
-                details: process.env.NODE_ENV === 'development' ? error.message : undefined
-            });
+            res.status(500).json({ error: 'Internal server error' });
         }
     }
 });
@@ -242,30 +171,50 @@ router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
 // Update teacher
 router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
-        const { name, email, phone, password } = req.body;
+        const { name, email, phone, password, department } = req.body;
+        const schema = getSchema(req);
 
-        if (name) {
-            await dbRun('UPDATE users SET name = ? WHERE id = ?', [name, req.params.id]);
+        if (!schema) {
+            return res.status(403).json({ error: 'School context required' });
         }
 
-        if (email) {
-            await dbRun('UPDATE users SET email = ? WHERE id = ?', [email, req.params.id]);
+        const existing = await schemaGet(req, 'SELECT id, user_id FROM teachers WHERE id = $1', [req.params.id]);
+        if (!existing) {
+            return res.status(404).json({ error: 'Teacher not found' });
         }
 
-        if (phone !== undefined) {
-            await dbRun('UPDATE teachers SET phone = ? WHERE user_id = ?', [phone, req.params.id]);
+        // Update teacher record in school schema
+        if (name || phone !== undefined || department !== undefined) {
+            await schemaRun(req, `
+                UPDATE teachers 
+                SET name = COALESCE($1, name), 
+                    phone = COALESCE($2, phone),
+                    department = COALESCE($3, department)
+                WHERE id = $4
+            `, [name, phone, department, req.params.id]);
+        }
+
+        // Update user record in public schema
+        if (name || email) {
+            await dbRun(`
+                UPDATE public.users 
+                SET name = COALESCE($1, name), 
+                    email = COALESCE($2, email),
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = $3
+            `, [name, email?.toLowerCase(), existing.user_id]);
         }
 
         if (password) {
             const hashedPassword = await bcrypt.hash(password, 10);
-            await dbRun('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, req.params.id]);
+            await dbRun('UPDATE public.users SET password_hash = $1 WHERE id = $2', [hashedPassword, existing.user_id]);
         }
 
-        const teacher = await dbGet(`
-            SELECT u.id, u.email, u.name, u.role, t.employee_id, t.phone
-            FROM users u
-            INNER JOIN teachers t ON u.id = t.user_id
-            WHERE u.id = ?
+        const teacher = await schemaGet(req, `
+            SELECT t.*, u.email, u.name as user_name, u.role
+            FROM teachers t
+            INNER JOIN public.users u ON t.user_id = u.id
+            WHERE t.id = $1
         `, [req.params.id]);
 
         res.json(teacher);
@@ -275,11 +224,23 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
     }
 });
 
-// Delete teacher
+// Delete teacher (soft delete)
 router.delete('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
-        await dbRun('DELETE FROM teachers WHERE user_id = ?', [req.params.id]);
-        await dbRun('DELETE FROM users WHERE id = ?', [req.params.id]);
+        const schema = getSchema(req);
+
+        if (!schema) {
+            return res.status(403).json({ error: 'School context required' });
+        }
+
+        const existing = await schemaGet(req, 'SELECT id, user_id FROM teachers WHERE id = $1', [req.params.id]);
+        if (!existing) {
+            return res.status(404).json({ error: 'Teacher not found' });
+        }
+
+        // Soft delete - set is_active to false
+        await schemaRun(req, 'UPDATE teachers SET is_active = false WHERE id = $1', [req.params.id]);
+        
         res.json({ message: 'Teacher deleted successfully' });
     } catch (error) {
         console.error('Error deleting teacher:', error);
@@ -288,4 +249,3 @@ router.delete('/:id', authenticateToken, requireRole('admin'), async (req, res) 
 });
 
 module.exports = router;
-

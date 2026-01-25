@@ -18,18 +18,26 @@ import {
   UserX,
   CheckCircle,
   XCircle,
+  ThumbsUp,
+  ThumbsDown,
+  X,
 } from 'lucide-react';
 
 type TabType = 'behaviour' | 'detentions' | 'interventions' | 'consequences';
 
 interface Incident {
   id: number;
+  student_id: number;
   student_name: string;
   incident_type: string;
+  incident_type_id: number;
+  incident_type_name?: string;
   description: string;
   severity: string;
   date: string;
-  reported_by: string;
+  time: string;
+  points_deducted: number;
+  teacher_name: string;
   status: string;
 }
 
@@ -52,6 +60,7 @@ interface Intervention {
   end_date: string;
   status: string;
   assigned_to: string;
+  assigned_by_name: string;
   notes: string;
 }
 
@@ -86,6 +95,17 @@ const DisciplineCenter: React.FC = () => {
     pendingConsequences: 0,
   });
 
+  // Decline modal state
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [selectedIncidentId, setSelectedIncidentId] = useState<number | null>(null);
+  const [declineReason, setDeclineReason] = useState('');
+  const [processing, setProcessing] = useState(false);
+
+  // Detail modal states
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [detailType, setDetailType] = useState<TabType>('behaviour');
+
   useEffect(() => {
     fetchData();
   }, [activeTab]);
@@ -100,7 +120,30 @@ const DisciplineCenter: React.FC = () => {
           break;
         case 'detentions':
           const detentionsRes = await api.getDetentions();
-          setDetentions(detentionsRes.data || []);
+          // Transform detention sessions to include student assignments
+          const sessionsWithAssignments: Detention[] = [];
+          for (const session of (detentionsRes.data || [])) {
+            try {
+              const detailRes = await api.getDetention(session.id);
+              const assignments = detailRes.data?.assignments || [];
+              assignments.forEach((assignment: any) => {
+                sessionsWithAssignments.push({
+                  id: assignment.id,
+                  student_name: assignment.student_name || 'Unknown',
+                  reason: assignment.notes || assignment.reason || session.notes || 'Detention',
+                  date: session.detention_date,
+                  time: session.detention_time,
+                  duration: session.duration || 60,
+                  status: assignment.status || session.status,
+                  supervisor: session.teacher_name || 'Not assigned',
+                });
+              });
+            } catch (err) {
+              // If session has no assignments, show the session itself
+              if (session.student_count > 0) continue;
+            }
+          }
+          setDetentions(sessionsWithAssignments);
           break;
         case 'interventions':
           const interventionsRes = await api.getInterventions();
@@ -131,6 +174,53 @@ const DisciplineCenter: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleApproveIncident = async (incidentId: number) => {
+    if (!window.confirm('Are you sure you want to approve this incident?')) return;
+    
+    setProcessing(true);
+    try {
+      await api.approveIncident(incidentId);
+      alert('Incident approved successfully');
+      fetchData(); // Refresh data
+    } catch (error) {
+      console.error('Error approving incident:', error);
+      alert('Failed to approve incident');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleDeclineClick = (incidentId: number) => {
+    setSelectedIncidentId(incidentId);
+    setDeclineReason('');
+    setShowDeclineModal(true);
+  };
+
+  const handleDeclineSubmit = async () => {
+    if (!selectedIncidentId) return;
+    
+    setProcessing(true);
+    try {
+      await api.declineIncident(selectedIncidentId, declineReason);
+      alert('Incident declined successfully');
+      setShowDeclineModal(false);
+      setSelectedIncidentId(null);
+      setDeclineReason('');
+      fetchData(); // Refresh data
+    } catch (error) {
+      console.error('Error declining incident:', error);
+      alert('Failed to decline incident');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleRowClick = (item: any, type: TabType) => {
+    setSelectedItem(item);
+    setDetailType(type);
+    setShowDetailModal(true);
   };
 
   const tabs = [
@@ -189,8 +279,10 @@ const DisciplineCenter: React.FC = () => {
         <tr>
           <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
           <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Incident Type</th>
+          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Points</th>
           <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Severity</th>
-          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Date & Time</th>
+          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Logged By</th>
           <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
           <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
         </tr>
@@ -202,7 +294,8 @@ const DisciplineCenter: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.03 }}
-            className="hover:bg-gray-50 transition-colors"
+            className="hover:bg-gray-50 transition-colors cursor-pointer"
+            onClick={() => handleRowClick(incident, 'behaviour')}
           >
             <td className="px-6 py-4">
               <div className="flex items-center space-x-3">
@@ -212,22 +305,55 @@ const DisciplineCenter: React.FC = () => {
                 <span className="font-medium text-gray-900">{incident.student_name}</span>
               </div>
             </td>
-            <td className="px-6 py-4 text-gray-600">{incident.incident_type}</td>
+            <td className="px-6 py-4 text-gray-600">{incident.incident_type_name || incident.incident_type || 'N/A'}</td>
+            <td className="px-6 py-4">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                -{incident.points_deducted || 0}
+              </span>
+            </td>
             <td className="px-6 py-4">
               <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getSeverityBadge(incident.severity)}`}>
                 {incident.severity}
               </span>
             </td>
-            <td className="px-6 py-4 text-gray-500">{new Date(incident.date).toLocaleDateString()}</td>
+            <td className="px-6 py-4 text-gray-500">
+              <div className="flex flex-col">
+                <span className="font-medium">{new Date(incident.date).toLocaleDateString()}</span>
+                {incident.time && <span className="text-xs text-gray-400">{incident.time}</span>}
+              </div>
+            </td>
+            <td className="px-6 py-4 text-gray-600 text-sm">{incident.teacher_name || 'N/A'}</td>
             <td className="px-6 py-4">
               <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(incident.status)}`}>
-                {incident.status}
+                {incident.status || 'pending'}
               </span>
             </td>
             <td className="px-6 py-4 text-right">
-              <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                <Eye size={18} />
-              </button>
+              <div className="flex items-center justify-end space-x-2">
+                {incident.status === 'pending' && (incident.severity === 'high' || incident.severity === 'critical') && (
+                  <>
+                    <button
+                      onClick={() => handleApproveIncident(incident.id)}
+                      disabled={processing}
+                      className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50"
+                      title="Approve Incident"
+                    >
+                      <ThumbsUp size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleDeclineClick(incident.id)}
+                      disabled={processing}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
+                      title="Decline Incident"
+                    >
+                      <ThumbsDown size={18} />
+                    </button>
+                  </>
+                )}
+                <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                  <Eye size={18} />
+                </button>
+              </div>
             </td>
           </motion.tr>
         ))}
@@ -254,7 +380,8 @@ const DisciplineCenter: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.03 }}
-            className="hover:bg-gray-50 transition-colors"
+            className="hover:bg-gray-50 transition-colors cursor-pointer"
+            onClick={() => handleRowClick(detention, 'detentions')}
           >
             <td className="px-6 py-4">
               <div className="flex items-center space-x-3">
@@ -268,7 +395,11 @@ const DisciplineCenter: React.FC = () => {
             <td className="px-6 py-4 text-gray-500">
               <div className="flex items-center space-x-2">
                 <Calendar size={16} />
-                <span>{new Date(detention.date).toLocaleDateString()} {detention.time}</span>
+                <span>
+                  {detention.date && !isNaN(new Date(detention.date).getTime()) 
+                    ? new Date(detention.date).toLocaleDateString() 
+                    : 'Invalid Date'} {detention.time || ''}
+                </span>
               </div>
             </td>
             <td className="px-6 py-4 text-gray-500">{detention.duration} mins</td>
@@ -307,7 +438,8 @@ const DisciplineCenter: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.03 }}
-            className="hover:bg-gray-50 transition-colors"
+            className="hover:bg-gray-50 transition-colors cursor-pointer"
+            onClick={() => handleRowClick(intervention, 'interventions')}
           >
             <td className="px-6 py-4">
               <div className="flex items-center space-x-3">
@@ -321,7 +453,7 @@ const DisciplineCenter: React.FC = () => {
             <td className="px-6 py-4 text-gray-500">
               {new Date(intervention.start_date).toLocaleDateString()} - {intervention.end_date ? new Date(intervention.end_date).toLocaleDateString() : 'Ongoing'}
             </td>
-            <td className="px-6 py-4 text-gray-600">{intervention.assigned_to}</td>
+            <td className="px-6 py-4 text-gray-600">{intervention.assigned_by_name || intervention.assigned_to || 'N/A'}</td>
             <td className="px-6 py-4">
               <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(intervention.status)}`}>
                 {intervention.status}
@@ -357,7 +489,8 @@ const DisciplineCenter: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.03 }}
-            className="hover:bg-gray-50 transition-colors"
+            className="hover:bg-gray-50 transition-colors cursor-pointer"
+            onClick={() => handleRowClick(consequence, 'consequences')}
           >
             <td className="px-6 py-4">
               <div className="flex items-center space-x-3">
@@ -567,6 +700,295 @@ const DisciplineCenter: React.FC = () => {
           </div>
         )}
       </motion.div>
+
+      {/* Decline Modal */}
+      <AnimatePresence>
+        {showDeclineModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => !processing && setShowDeclineModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900">Decline Incident</h3>
+                <button
+                  onClick={() => !processing && setShowDeclineModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  disabled={processing}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <p className="text-gray-600 mb-4">
+                Please provide a reason for declining this incident. This will be sent to the teacher who logged it.
+              </p>
+
+              <textarea
+                value={declineReason}
+                onChange={(e) => setDeclineReason(e.target.value)}
+                placeholder="Enter reason for declining..."
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+                rows={4}
+                disabled={processing}
+              />
+
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={() => !processing && setShowDeclineModal(false)}
+                  disabled={processing}
+                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeclineSubmit}
+                  disabled={processing}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-colors disabled:opacity-50 font-medium"
+                >
+                  {processing ? 'Declining...' : 'Decline Incident'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {showDetailModal && selectedItem && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowDetailModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+            >
+              {/* Modal Header */}
+              <div className={`p-6 text-white bg-gradient-to-r ${
+                detailType === 'behaviour' ? 'from-red-500 to-orange-500' :
+                detailType === 'detentions' ? 'from-amber-500 to-yellow-500' :
+                detailType === 'interventions' ? 'from-blue-500 to-cyan-500' :
+                'from-purple-500 to-pink-500'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    {detailType === 'behaviour' && <AlertTriangle size={24} />}
+                    {detailType === 'detentions' && <Clock size={24} />}
+                    {detailType === 'interventions' && <Shield size={24} />}
+                    {detailType === 'consequences' && <FileText size={24} />}
+                    <div>
+                      <h2 className="text-xl font-bold">
+                        {detailType === 'behaviour' ? 'Behaviour Incident Details' :
+                         detailType === 'detentions' ? 'Detention Details' :
+                         detailType === 'interventions' ? 'Intervention Details' :
+                         'Consequence Details'}
+                      </h2>
+                      <p className="text-white/80 text-sm">{selectedItem.student_name}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowDetailModal(false)}
+                    className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                {detailType === 'behaviour' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Incident Type</p>
+                        <p className="font-semibold text-gray-900">{selectedItem.incident_type_name || selectedItem.incident_type || 'N/A'}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Severity</p>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getSeverityBadge(selectedItem.severity)}`}>
+                          {selectedItem.severity || 'N/A'}
+                        </span>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Points Deducted</p>
+                        <p className="font-semibold text-red-600">-{selectedItem.points_deducted || 0}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Status</p>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(selectedItem.status)}`}>
+                          {selectedItem.status || 'pending'}
+                        </span>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Date & Time</p>
+                        <p className="font-semibold text-gray-900">
+                          {selectedItem.date ? new Date(selectedItem.date).toLocaleDateString() : 'N/A'}
+                          {selectedItem.time && ` at ${selectedItem.time}`}
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Logged By</p>
+                        <p className="font-semibold text-gray-900">{selectedItem.teacher_name || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <p className="text-sm text-gray-500 mb-1">Description</p>
+                      <p className="text-gray-900">{selectedItem.description || 'No description provided'}</p>
+                    </div>
+                  </div>
+                )}
+
+                {detailType === 'detentions' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Date</p>
+                        <p className="font-semibold text-gray-900">
+                          {selectedItem.date ? new Date(selectedItem.date).toLocaleDateString() : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Time</p>
+                        <p className="font-semibold text-gray-900">{selectedItem.time || 'N/A'}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Duration</p>
+                        <p className="font-semibold text-gray-900">{selectedItem.duration || 60} minutes</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Status</p>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(selectedItem.status)}`}>
+                          {selectedItem.status || 'scheduled'}
+                        </span>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4 col-span-2">
+                        <p className="text-sm text-gray-500 mb-1">Supervisor</p>
+                        <p className="font-semibold text-gray-900">{selectedItem.supervisor || 'Not assigned'}</p>
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <p className="text-sm text-gray-500 mb-1">Reason</p>
+                      <p className="text-gray-900">{selectedItem.reason || 'No reason provided'}</p>
+                    </div>
+                  </div>
+                )}
+
+                {detailType === 'interventions' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Type</p>
+                        <p className="font-semibold text-gray-900">{selectedItem.type || 'N/A'}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Status</p>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(selectedItem.status)}`}>
+                          {selectedItem.status || 'active'}
+                        </span>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Start Date</p>
+                        <p className="font-semibold text-gray-900">
+                          {selectedItem.start_date ? new Date(selectedItem.start_date).toLocaleDateString() : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">End Date</p>
+                        <p className="font-semibold text-gray-900">
+                          {selectedItem.end_date ? new Date(selectedItem.end_date).toLocaleDateString() : 'Ongoing'}
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4 col-span-2">
+                        <p className="text-sm text-gray-500 mb-1">Assigned By</p>
+                        <p className="font-semibold text-gray-900">{selectedItem.assigned_by_name || selectedItem.assigned_to || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <p className="text-sm text-gray-500 mb-1">Notes</p>
+                      <p className="text-gray-900">{selectedItem.notes || selectedItem.description || 'No notes provided'}</p>
+                    </div>
+                  </div>
+                )}
+
+                {detailType === 'consequences' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Type</p>
+                        <p className="font-semibold text-gray-900">{selectedItem.type || selectedItem.consequence_name || 'N/A'}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Status</p>
+                        <div className="flex items-center space-x-2">
+                          {selectedItem.completed ? (
+                            <CheckCircle size={16} className="text-green-500" />
+                          ) : (
+                            <XCircle size={16} className="text-amber-500" />
+                          )}
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(selectedItem.status)}`}>
+                            {selectedItem.completed ? 'Completed' : selectedItem.status || 'pending'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Date Assigned</p>
+                        <p className="font-semibold text-gray-900">
+                          {selectedItem.date_assigned || selectedItem.assigned_date 
+                            ? new Date(selectedItem.date_assigned || selectedItem.assigned_date).toLocaleDateString() 
+                            : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Due Date</p>
+                        <p className="font-semibold text-gray-900">
+                          {selectedItem.due_date ? new Date(selectedItem.due_date).toLocaleDateString() : 'No due date'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <p className="text-sm text-gray-500 mb-1">Reason</p>
+                      <p className="text-gray-900">{selectedItem.reason || selectedItem.notes || 'No reason provided'}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Close Button */}
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setShowDetailModal(false)}
+                    className={`px-6 py-3 rounded-xl font-medium text-white bg-gradient-to-r ${
+                      detailType === 'behaviour' ? 'from-red-500 to-orange-500' :
+                      detailType === 'detentions' ? 'from-amber-500 to-yellow-500' :
+                      detailType === 'interventions' ? 'from-blue-500 to-cyan-500' :
+                      'from-purple-500 to-pink-500'
+                    } hover:shadow-lg transition-all`}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

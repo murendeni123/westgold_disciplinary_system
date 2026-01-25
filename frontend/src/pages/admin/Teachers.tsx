@@ -5,7 +5,7 @@ import Button from '../../components/Button';
 import Modal from '../../components/Modal';
 import Input from '../../components/Input';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, UserCheck, Sparkles } from 'lucide-react';
+import { Plus, Edit, Trash2, UserCheck, Sparkles, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
 
@@ -16,6 +16,7 @@ const Teachers: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -93,6 +94,16 @@ const Teachers: React.FC = () => {
     }
   };
 
+  // Filter teachers based on search query
+  const filteredTeachers = teachers.filter((teacher) => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      teacher.name?.toLowerCase().includes(searchLower) ||
+      teacher.email?.toLowerCase().includes(searchLower) ||
+      teacher.employee_id?.toLowerCase().includes(searchLower)
+    );
+  });
+
   const columns = [
     {
       key: 'photo_path',
@@ -113,7 +124,11 @@ const Teachers: React.FC = () => {
     { key: 'name', label: 'Name' },
     { key: 'email', label: 'Email' },
     { key: 'phone', label: 'Phone' },
-    { key: 'class_count', label: 'Classes' },
+    { 
+      key: 'class_count', 
+      label: 'Classes',
+      render: (value: any) => typeof value === 'number' ? value : Number(value) || 0
+    },
     {
       key: 'actions',
       label: 'Actions',
@@ -182,7 +197,70 @@ const Teachers: React.FC = () => {
         </motion.div>
       </motion.div>
 
-      {/* Table Card */}
+      {/* Search Bar */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="relative"
+      >
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          <input
+            type="text"
+            placeholder="Search teachers by name, email, or employee ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+          />
+        </div>
+      </motion.div>
+
+      {/* Stats Cards */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="grid grid-cols-1 md:grid-cols-3 gap-6"
+      >
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-100 text-sm font-medium">Total Teachers</p>
+              <p className="text-4xl font-bold mt-2">{teachers.length}</p>
+            </div>
+            <UserCheck size={48} className="text-blue-200 opacity-50" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-100 text-sm font-medium">Total Classes</p>
+              <p className="text-4xl font-bold mt-2">
+                {teachers.reduce((sum, t) => sum + (Number(t.class_count) || 0), 0)}
+              </p>
+            </div>
+            <UserCheck size={48} className="text-green-200 opacity-50" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-amber-100 text-sm font-medium">Avg Classes</p>
+              <p className="text-4xl font-bold mt-2">
+                {teachers.length > 0 
+                  ? (teachers.reduce((sum, t) => sum + (t.class_count || 0), 0) / teachers.length).toFixed(1)
+                  : 0}
+              </p>
+            </div>
+            <UserCheck size={48} className="text-amber-200 opacity-50" />
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Teachers Grid */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -191,17 +269,106 @@ const Teachers: React.FC = () => {
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
-            <div className="p-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500">
+            <div className="p-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500">
               <UserCheck className="text-white" size={24} />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">All Teachers ({teachers.length})</h2>
+            <h2 className="text-2xl font-bold text-gray-900">All Teachers</h2>
           </div>
         </div>
-        <Table
-          columns={columns}
-          data={teachers}
-          onRowClick={(row) => navigate(`/admin/teachers/${row.id}`)}
-        />
+
+        {filteredTeachers.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <UserCheck size={48} className="mx-auto mb-4 text-gray-300" />
+            <p>{searchQuery ? 'No teachers match your search' : 'No teachers found'}</p>
+            {!searchQuery && (
+              <Button onClick={handleCreate} className="mt-4">
+                Add Your First Teacher
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredTeachers.map((teacher, index) => (
+              <motion.div
+                key={teacher.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 * index }}
+                whileHover={{ scale: 1.02 }}
+                onClick={() => navigate(`/admin/teachers/${teacher.id}`)}
+                className="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:shadow-lg transition-all cursor-pointer bg-white"
+              >
+                <div className="flex items-start space-x-4 mb-4">
+                  {teacher.photo_path ? (
+                    <img
+                      src={teacher.photo_path.startsWith('http') ? teacher.photo_path : `http://localhost:5000${teacher.photo_path}`}
+                      alt={teacher.name}
+                      className="w-16 h-16 rounded-full object-cover border-2 border-blue-200"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xl font-bold">
+                      {teacher.name?.charAt(0) || 'T'}
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-gray-900">{teacher.name}</h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      ID: {teacher.employee_id}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                    <span className="text-sm text-gray-600">Email</span>
+                    <span className="text-sm font-semibold text-gray-900 truncate ml-2">
+                      {teacher.email}
+                    </span>
+                  </div>
+
+                  {teacher.phone && (
+                    <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                      <span className="text-sm text-gray-600">Phone</span>
+                      <span className="text-sm font-semibold text-gray-900">
+                        {teacher.phone}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between py-2 border-t border-gray-100">
+                    <span className="text-sm text-gray-600">Classes</span>
+                    <span className="text-lg font-bold text-blue-600">
+                      {teacher.class_count || 0}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex space-x-2 mt-4 pt-4 border-t border-gray-100">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEdit(teacher);
+                    }}
+                    className="flex-1 px-3 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                  >
+                    <Edit size={16} className="inline mr-1" />
+                    Edit
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(teacher.id);
+                    }}
+                    className="flex-1 px-3 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                  >
+                    <Trash2 size={16} className="inline mr-1" />
+                    Delete
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </motion.div>
 
       <Modal

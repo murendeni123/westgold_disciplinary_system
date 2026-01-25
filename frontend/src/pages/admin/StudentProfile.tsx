@@ -5,6 +5,8 @@ import Button from '../../components/Button';
 import Modal from '../../components/Modal';
 import Select from '../../components/Select';
 import ParentProfileModal from '../../components/ParentProfileModal';
+import GoldieBadge from '../../components/GoldieBadge';
+import GoldenDotIndicator from '../../components/GoldenDotIndicator';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Copy, Camera, Upload, User, Award, AlertTriangle, Calendar, TrendingUp } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -241,9 +243,14 @@ const StudentProfile: React.FC = () => {
           </Button>
         </motion.div>
         <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            {student.first_name} {student.last_name}
-          </h1>
+          <div className="flex items-center space-x-3">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+              {student.first_name} {student.last_name}
+            </h1>
+            {stats && stats.totalMerits >= 10 && (stats.totalMerits - stats.totalIncidents) >= 10 && (
+              <GoldenDotIndicator size="lg" showTooltip={true} animated={true} />
+            )}
+          </div>
           <p className="text-gray-600 mt-2 text-lg">Student Profile</p>
         </div>
       </motion.div>
@@ -508,6 +515,24 @@ const StudentProfile: React.FC = () => {
             </div>
           </motion.div>
         </div>
+      )}
+
+      {/* Goldie Badge */}
+      {stats && stats.totalMerits >= 10 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="mb-6"
+        >
+          <GoldieBadge
+            totalMerits={stats.totalMerits}
+            totalDemerits={stats.totalIncidents}
+            studentName={student ? `${student.first_name} ${student.last_name}` : undefined}
+            showDetails={true}
+            size="lg"
+          />
+        </motion.div>
       )}
 
       {/* Charts */}

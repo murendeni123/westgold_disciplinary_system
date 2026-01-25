@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
@@ -9,12 +10,14 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 const ChildProfile: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [child, setChild] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [attendanceTrend, setAttendanceTrend] = useState<any[]>([]);
   const [behaviorTrend, setBehaviorTrend] = useState<any[]>([]);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -25,10 +28,45 @@ const ChildProfile: React.FC = () => {
 
   const fetchChild = async () => {
     try {
-      const response = await api.getStudent(Number(id));
-      setChild(response.data);
+      console.log('ChildProfile - Route ID:', id);
+      console.log('ChildProfile - User children:', user?.children);
+      
+      // Verify this child belongs to the logged-in parent
+      const linkedChild = user?.children?.find((c: any) => c.id === Number(id));
+      
+      console.log('ChildProfile - Linked child found:', linkedChild);
+      
+      if (!linkedChild) {
+        setError('Child not found or not linked to your account');
+        setLoading(false);
+        return;
+      }
+
+      // Use the linked child data directly from user context to ensure consistency
+      // This prevents showing wrong student data if API returns incorrect information
+      setChild(linkedChild);
+      
+      // Optionally fetch additional details if needed, but use linkedChild as base
+      try {
+        const response = await api.getStudent(Number(id));
+        console.log('ChildProfile - Student data received:', response.data);
+        
+        // Only update if the fetched data matches the linked child
+        if (response.data.id === linkedChild.id) {
+          setChild({
+            ...linkedChild,
+            ...response.data
+          });
+        } else {
+          console.warn('API returned different student than expected. Using linked child data.');
+        }
+      } catch (apiError) {
+        console.warn('Could not fetch additional student details, using linked child data:', apiError);
+        // Continue with linkedChild data
+      }
     } catch (error) {
       console.error('Error fetching child:', error);
+      setError('Failed to load child profile');
     } finally {
       setLoading(false);
     }

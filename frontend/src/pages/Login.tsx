@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
+import { getSavedAccounts, removeAccount, formatLastLogin, SavedAccount } from '../utils/savedAccounts';
 import { 
   GraduationCap, 
   Mail, 
@@ -13,7 +14,9 @@ import {
   ArrowRight,
   Shield,
   Users,
-  Award
+  Award,
+  X,
+  UserCircle
 } from 'lucide-react';
 
 const Login: React.FC = () => {
@@ -23,16 +26,54 @@ const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const { login } = useAuth();
+  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
+  const [showAccountSelection, setShowAccountSelection] = useState(true);
+  const [selectedAccount, setSelectedAccount] = useState<string | null>(null);
+  const { login, loginWithGoogle, isSupabaseEnabled } = useAuth();
   const { customizations, getImageUrl } = useSchoolTheme();
   const navigate = useNavigate();
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
+    // Load saved accounts
+    const accounts = getSavedAccounts();
+    setSavedAccounts(accounts);
+    setShowAccountSelection(accounts.length > 0);
     return () => {
       document.body.style.overflow = '';
     };
   }, []);
+
+  const handleAccountSelect = (account: SavedAccount) => {
+    setEmail(account.email);
+    setSelectedAccount(account.email);
+    setShowAccountSelection(false);
+    // Focus password field
+    setTimeout(() => {
+      const passwordInput = document.getElementById('password-input');
+      if (passwordInput) passwordInput.focus();
+    }, 100);
+  };
+
+  const handleRemoveAccount = (accountEmail: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeAccount(accountEmail);
+    const accounts = getSavedAccounts();
+    setSavedAccounts(accounts);
+    if (accounts.length === 0) {
+      setShowAccountSelection(false);
+    }
+    if (selectedAccount === accountEmail) {
+      setEmail('');
+      setSelectedAccount(null);
+    }
+  };
+
+  const handleUseAnotherAccount = () => {
+    setShowAccountSelection(false);
+    setEmail('');
+    setSelectedAccount(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +84,20 @@ const Login: React.FC = () => {
       await login(email, password);
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       const role = user.role || 'admin';
+      
+      // Check if parent user needs onboarding
+      if (role === 'parent') {
+        const needsSchool = !user.school_id;
+        const needsChildren = !user.children || user.children.length === 0;
+        
+        // If user needs school or children, redirect to onboarding
+        // This ensures even if the flag is set, we check actual data
+        if (needsSchool || needsChildren) {
+          navigate('/parent/onboarding');
+          return;
+        }
+      }
+      
       navigate(`/${role}`);
     } catch (err: any) {
       setError(err.message || 'Login failed');
@@ -125,8 +180,8 @@ const Login: React.FC = () => {
                 )}
               </motion.div>
               <div>
-                <h1 className="text-3xl font-bold text-white">PDS</h1>
-                <p className="text-white/70 text-sm">Positive Discipline System</p>
+                <h1 className="text-3xl font-bold text-white">DMS</h1>
+                <p className="text-white/70 text-sm">Discipline Management System</p>
               </div>
             </div>
           </motion.div>
@@ -212,7 +267,7 @@ const Login: React.FC = () => {
             >
               <GraduationCap className="text-white" size={32} />
             </motion.div>
-            <h1 className="text-2xl font-bold text-gray-900">PDS</h1>
+            <h1 className="text-2xl font-bold text-gray-900">DMS</h1>
           </div>
 
           {/* Login Card */}
@@ -250,6 +305,58 @@ const Login: React.FC = () => {
                   <span className="text-sm">{error}</span>
                 </motion.div>
               )}
+
+              {/* Saved Accounts Section */}
+              <AnimatePresence>
+                {showAccountSelection && savedAccounts.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="space-y-3"
+                  >
+                    <label className="text-sm font-medium text-gray-700">Select Account</label>
+                    <div className="space-y-2">
+                      {savedAccounts.map((account, index) => (
+                        <motion.button
+                          key={account.email}
+                          type="button"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          onClick={() => handleAccountSelect(account)}
+                          className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border border-blue-200 rounded-xl transition-all group"
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">
+                              {account.displayName?.charAt(0).toUpperCase() || account.email.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="text-left">
+                              <p className="font-medium text-gray-900">{account.email}</p>
+                              <p className="text-xs text-gray-500">{formatLastLogin(account.lastLogin)}</p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => handleRemoveAccount(account.email, e)}
+                            className="p-2 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                          >
+                            <X size={16} />
+                          </button>
+                        </motion.button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleUseAnotherAccount}
+                      className="w-full flex items-center justify-center space-x-2 p-3 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all border border-transparent hover:border-blue-200"
+                    >
+                      <UserCircle size={18} />
+                      <span>Use another account</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Email Field */}
               <div className="space-y-2">
@@ -291,6 +398,7 @@ const Login: React.FC = () => {
                     }`} />
                   </div>
                   <input
+                    id="password-input"
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -332,13 +440,50 @@ const Login: React.FC = () => {
                 )}
               </motion.button>
 
-              {/* Sign Up Button - Right after Sign In */}
+              {/* Google Sign In Button */}
+              {isSupabaseEnabled && (
+                <>
+                  <div className="relative my-4">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-4 bg-white text-gray-500">or continue with</span>
+                    </div>
+                  </div>
+
+                  <motion.button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        setError('');
+                        await loginWithGoogle();
+                      } catch (err: any) {
+                        setError(err.message);
+                      }
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-white border-2 border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-md"
+                  >
+                    <svg className="w-6 h-6" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    <span>Sign in with Google</span>
+                  </motion.button>
+                </>
+              )}
+
+              {/* Sign Up Button */}
               <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-200"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-white text-gray-500">or</span>
+                  <span className="px-4 bg-white text-gray-500">new here?</span>
                 </div>
               </div>
 
@@ -355,32 +500,6 @@ const Login: React.FC = () => {
               </Link>
             </form>
 
-            {/* Demo Credentials */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100"
-            >
-              <div className="flex items-center space-x-2 mb-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                <p className="text-sm font-semibold text-gray-700">Demo Credentials</p>
-              </div>
-              <div className="grid grid-cols-1 gap-2 text-xs">
-                <div className="flex items-center justify-between p-2 bg-white rounded-lg">
-                  <span className="text-gray-500">Admin</span>
-                  <code className="text-blue-600 font-mono">admin@school.com / admin123</code>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-white rounded-lg">
-                  <span className="text-gray-500">Teacher</span>
-                  <code className="text-purple-600 font-mono">teacher1@school.com / teacher123</code>
-                </div>
-                <div className="flex items-center justify-between p-2 bg-white rounded-lg">
-                  <span className="text-gray-500">Parent</span>
-                  <code className="text-pink-600 font-mono">parent1@email.com / parent123</code>
-                </div>
-              </div>
-            </motion.div>
           </motion.div>
 
           {/* Footer */}
@@ -390,7 +509,7 @@ const Login: React.FC = () => {
             transition={{ delay: 0.6 }}
             className="mt-8 text-center text-gray-400 text-sm"
           >
-            <p>© 2026 PDS. All rights reserved.</p>
+            <p>© 2026 DMS. All rights reserved.</p>
           </motion.div>
         </motion.div>
       </div>

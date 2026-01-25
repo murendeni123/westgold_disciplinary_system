@@ -38,7 +38,7 @@ const Button: React.FC<ButtonProps> = ({ variant = 'primary', size = 'md', child
 
   return (
     <button
-      className={`${baseClasses} ${sizeClasses[size]} ${className}`}
+      className={`${baseClasses} ${sizeClasses[size]} ${className} ${props.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       style={{
         ...getVariantStyles(),
         borderRadius: 'var(--button-border-radius, 8px)',

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Authentication</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        button {
+            background: #ff4444;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover { background: #cc0000; }
+        .success { color: #00aa00; font-weight: bold; }
+        .info { background: #e3f2fd; padding: 15px; border-radius: 5px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Clear All Authentication</h1>
+        <div class="info">
+            <strong>Issue:</strong> You're logged in with a platform admin token instead of a school admin token.
+            <br><br>
+            Click the button below to clear all authentication data and force a fresh login.
+        </div>
+        
+        <button onclick="clearAuth()">Clear All Auth & Reload</button>
+        
+        <div id="result"></div>
+        
+        <div class="info" style="margin-top: 30px;">
+            <strong>After clearing:</strong>
+            <ol>
+                <li>You'll be redirected to login page</li>
+                <li>Log in with: <code>sports@westgoldprimary.co.za</code> / <code>admin123</code></li>
+                <li>You'll get a fresh school admin token with proper schema context</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script>
+        function clearAuth() {
+            // Clear all localStorage
+            localStorage.clear();
+            
+            // Clear all sessionStorage
+            sessionStorage.clear();
+            
+            // Clear all cookies
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            document.getElementById('result').innerHTML = '<p class="success">✅ All authentication cleared!</p><p>Redirecting to login...</p>';
+            
+            // Redirect to login after 2 seconds
+            setTimeout(() => {
+                window.location.href = 'http://localhost:3001/login';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

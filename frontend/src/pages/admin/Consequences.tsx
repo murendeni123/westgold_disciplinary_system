@@ -33,7 +33,6 @@ const Consequences: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    severity: 'low',
     default_duration: '',
     is_active: true,
   });
@@ -133,7 +132,6 @@ const Consequences: React.FC = () => {
     setFormData({
       name: '',
       description: '',
-      severity: 'low',
       default_duration: '',
       is_active: true,
     });
@@ -145,7 +143,6 @@ const Consequences: React.FC = () => {
     setFormData({
       name: definition.name || '',
       description: definition.description || '',
-      severity: definition.severity || 'low',
       default_duration: definition.default_duration || '',
       is_active: definition.is_active !== undefined ? definition.is_active : true,
     });
@@ -154,16 +151,32 @@ const Consequences: React.FC = () => {
 
   const handleSubmitDefinition = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submitted with data:', formData);
+    
+    if (!formData.name || formData.name.trim() === '') {
+      error('Name is required');
+      return;
+    }
+    
     try {
       if (editingConsequence) {
         await api.updateConsequenceDefinition(editingConsequence.id, formData);
+        success('Consequence definition updated successfully');
       } else {
         await api.createConsequenceDefinition(formData);
+        success('Consequence definition created successfully');
       }
       fetchDefinitions();
       setIsDefinitionModalOpen(false);
+      setFormData({
+        name: '',
+        description: '',
+        default_duration: '',
+        is_active: true,
+      });
     } catch (err: any) {
       console.error('Error saving consequence definition:', err);
+      error(err.response?.data?.error || 'Failed to save consequence definition');
     }
   };
 
@@ -565,28 +578,21 @@ const Consequences: React.FC = () => {
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             required
+            placeholder="e.g., Verbal Warning, Written Warning, Detention"
           />
           <Textarea
             label="Description"
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             rows={3}
+            placeholder="Optional description of this consequence type"
           />
-          <Select
-            label="Severity"
-            value={formData.severity}
-            onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
-          >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </Select>
           <Input
             label="Default Duration"
             type="text"
             value={formData.default_duration}
             onChange={(e) => setFormData({ ...formData, default_duration: e.target.value })}
-            placeholder="e.g., 1 week, 3 days"
+            placeholder="e.g., 1 week, 3 days (optional)"
           />
           <div className="flex items-center">
             <input
@@ -608,7 +614,10 @@ const Consequences: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button type="submit">
+            <Button 
+              type="submit"
+              disabled={!formData.name || formData.name.trim() === ''}
+            >
               {editingConsequence ? 'Update' : 'Create'}
             </Button>
           </div>

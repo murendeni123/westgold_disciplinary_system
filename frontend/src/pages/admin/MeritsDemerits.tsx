@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import Table from '../../components/Table';
 import Button from '../../components/Button';
-import Select from '../../components/Select';
+import ModernFilter from '../../components/ModernFilter';
 import { motion } from 'framer-motion';
-import { Download, Award, AlertTriangle, TrendingUp, Sparkles } from 'lucide-react';
+import { Download, Award, AlertTriangle, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from '../../hooks/useToast';
 
@@ -38,17 +38,23 @@ const MeritsDemerits: React.FC = () => {
         if (filters.start_date) params.start_date = filters.start_date;
         if (filters.end_date) params.end_date = filters.end_date;
         const response = await api.getMerits(params);
-        setMerits(response.data);
+        setMerits(Array.isArray(response.data) ? response.data : []);
       } else {
         const params: any = {};
         if (filters.student_id) params.student_id = filters.student_id;
         if (filters.start_date) params.start_date = filters.start_date;
         if (filters.end_date) params.end_date = filters.end_date;
         const response = await api.getIncidents(params);
-        setDemerits(response.data);
+        setDemerits(Array.isArray(response.data) ? response.data : []);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
+      // Set empty arrays on error to prevent crashes
+      if (viewType === 'merits') {
+        setMerits([]);
+      } else {
+        setDemerits([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -57,18 +63,20 @@ const MeritsDemerits: React.FC = () => {
   const fetchStudents = async () => {
     try {
       const response = await api.getStudents();
-      setStudents(response.data);
+      setStudents(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching students:', error);
+      setStudents([]);
     }
   };
 
   const fetchClasses = async () => {
     try {
       const response = await api.getClasses();
-      setClasses(response.data);
+      setClasses(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching classes:', error);
+      setClasses([]);
     }
   };
 
@@ -127,7 +135,7 @@ const MeritsDemerits: React.FC = () => {
               : 'bg-green-100 text-green-800'
           }`}
         >
-          {value.toUpperCase()}
+          {value ? value.toUpperCase() : 'N/A'}
         </span>
       ),
     },
@@ -147,7 +155,7 @@ const MeritsDemerits: React.FC = () => {
               : 'bg-green-100 text-green-800'
           }`}
         >
-          {value.toUpperCase()}
+          {value ? value.toUpperCase() : 'N/A'}
         </span>
       ),
     },
@@ -206,58 +214,119 @@ const MeritsDemerits: React.FC = () => {
         </div>
       </motion.div>
 
-      {/* Filters Card */}
+      {/* Stats Cards */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-1 md:grid-cols-4 gap-6"
       >
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Filters</h2>
-          <Sparkles className="text-amber-600" size={24} />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Select
-            label="Student"
-            value={filters.student_id}
-            onChange={(e) => setFilters({ ...filters, student_id: e.target.value })}
-            options={[{ value: '', label: 'All Students' }, ...students.map((s) => ({ value: s.id, label: `${s.first_name} ${s.last_name}` }))]}
-            className="rounded-xl"
-          />
-          <Select
-            label="Class"
-            value={filters.class_id}
-            onChange={(e) => setFilters({ ...filters, class_id: e.target.value })}
-            options={[{ value: '', label: 'All Classes' }, ...classes.map((c) => ({ value: c.id, label: c.class_name }))]}
-            className="rounded-xl"
-          />
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-            <input
-              type="date"
-              className="w-full px-4 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-              value={filters.start_date}
-              onChange={(e) => setFilters({ ...filters, start_date: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
-            <input
-              type="date"
-              className="w-full px-4 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-              value={filters.end_date}
-              onChange={(e) => setFilters({ ...filters, end_date: e.target.value })}
-            />
+        <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-100 text-sm font-medium">Total Merits</p>
+              <p className="text-4xl font-bold mt-2">{merits.length}</p>
+            </div>
+            <Award size={48} className="text-green-200 opacity-50" />
           </div>
         </div>
-        <div className="mt-6 flex space-x-3">
+
+        <div className="bg-gradient-to-br from-red-500 to-pink-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-red-100 text-sm font-medium">Total Demerits</p>
+              <p className="text-4xl font-bold mt-2">{demerits.length}</p>
+            </div>
+            <AlertTriangle size={48} className="text-red-200 opacity-50" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-100 text-sm font-medium">High Severity</p>
+              <p className="text-4xl font-bold mt-2">
+                {demerits.filter((d: any) => d.severity === 'high').length}
+              </p>
+            </div>
+            <AlertTriangle size={48} className="text-blue-200 opacity-50" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-amber-100 text-sm font-medium">This Week</p>
+              <p className="text-4xl font-bold mt-2">
+                {viewType === 'merits' 
+                  ? merits.filter((m: any) => {
+                      const date = new Date(m.merit_date);
+                      const weekAgo = new Date();
+                      weekAgo.setDate(weekAgo.getDate() - 7);
+                      return date >= weekAgo;
+                    }).length
+                  : demerits.filter((d: any) => {
+                      const date = new Date(d.incident_date);
+                      const weekAgo = new Date();
+                      weekAgo.setDate(weekAgo.getDate() - 7);
+                      return date >= weekAgo;
+                    }).length
+                }
+              </p>
+            </div>
+            <TrendingUp size={48} className="text-amber-200 opacity-50" />
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Modern Filters */}
+      <ModernFilter
+        fields={[
+          {
+            type: 'select',
+            name: 'student_id',
+            label: 'Student',
+            placeholder: 'All Students',
+            options: students.map((s) => ({ value: s.id.toString(), label: `${s.first_name} ${s.last_name}` }))
+          },
+          {
+            type: 'select',
+            name: 'class_id',
+            label: 'Class',
+            placeholder: 'All Classes',
+            options: classes.map((c) => ({ value: c.id.toString(), label: `${c.grade_level} ${c.class_name}` }))
+          },
+          {
+            type: 'date',
+            name: 'start_date',
+            label: 'Start Date',
+            placeholder: 'Select start date'
+          },
+          {
+            type: 'date',
+            name: 'end_date',
+            label: 'End Date',
+            placeholder: 'Select end date'
+          }
+        ]}
+        values={filters}
+        onChange={(name, value) => setFilters({ ...filters, [name]: value })}
+        onClear={() => setFilters({ student_id: '', class_id: '', start_date: '', end_date: '' })}
+      />
+
+      {/* Export Buttons */}
+      {(filters.student_id || filters.class_id) && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-wrap gap-3"
+        >
           {filters.student_id && (
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 variant="secondary"
                 onClick={() => handleExport(Number(filters.student_id))}
-                className="rounded-xl"
+                className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-0 shadow-lg hover:shadow-xl"
               >
                 <Download size={20} className="mr-2" />
                 Export Student Record
@@ -269,15 +338,15 @@ const MeritsDemerits: React.FC = () => {
               <Button
                 variant="secondary"
                 onClick={() => handleExport(undefined, Number(filters.class_id))}
-                className="rounded-xl"
+                className="rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 shadow-lg hover:shadow-xl"
               >
                 <Download size={20} className="mr-2" />
                 Export Class Records
               </Button>
             </motion.div>
           )}
-        </div>
-      </motion.div>
+        </motion.div>
+      )}
 
       {/* Charts */}
       {viewType === 'demerits' && demerits.length > 0 && (
@@ -342,6 +411,12 @@ const MeritsDemerits: React.FC = () => {
                   return acc;
                 }, {})
               ).map(([date, count]) => ({ date, count })).slice(-7)}>
+                <defs>
+                  <linearGradient id="demeritGradient" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#EF4444" />
+                    <stop offset="100%" stopColor="#F87171" />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="date" stroke="#6b7280" />
                 <YAxis stroke="#6b7280" />
@@ -355,19 +430,13 @@ const MeritsDemerits: React.FC = () => {
                 />
                 <Legend />
                 <Line type="monotone" dataKey="count" stroke="url(#demeritGradient)" name="Demerits" strokeWidth={3} />
-                <defs>
-                  <linearGradient id="demeritGradient" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#EF4444" />
-                    <stop offset="100%" stopColor="#F87171" />
-                  </linearGradient>
-                </defs>
               </LineChart>
             </ResponsiveContainer>
           </motion.div>
         </div>
       )}
 
-      {viewType === 'merits' && merits.length > 0 && (
+      {viewType === 'merits' && Array.isArray(merits) && merits.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -380,12 +449,20 @@ const MeritsDemerits: React.FC = () => {
           </div>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={Object.entries(
-              merits.reduce((acc: any, m: any) => {
-                const date = m.merit_date;
-                acc[date] = (acc[date] || 0) + 1;
+              (merits || []).reduce((acc: any, m: any) => {
+                const date = m?.merit_date;
+                if (date) {
+                  acc[date] = (acc[date] || 0) + 1;
+                }
                 return acc;
               }, {})
             ).map(([date, count]) => ({ date, count })).slice(-7)}>
+              <defs>
+                <linearGradient id="meritGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10B981" />
+                  <stop offset="100%" stopColor="#34D399" />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
               <XAxis dataKey="date" stroke="#6b7280" />
               <YAxis stroke="#6b7280" />
@@ -399,12 +476,6 @@ const MeritsDemerits: React.FC = () => {
               />
               <Legend />
               <Bar dataKey="count" fill="url(#meritGradient)" name="Merits" radius={[8, 8, 0, 0]} />
-              <defs>
-                <linearGradient id="meritGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10B981" />
-                  <stop offset="100%" stopColor="#34D399" />
-                </linearGradient>
-              </defs>
             </BarChart>
           </ResponsiveContainer>
         </motion.div>

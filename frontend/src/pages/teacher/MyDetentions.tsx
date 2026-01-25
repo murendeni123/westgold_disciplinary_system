@@ -31,9 +31,9 @@ const MyDetentions: React.FC = () => {
 
   const fetchDetentions = async () => {
     try {
-      // Get detentions where this teacher is on duty
+      // Get detentions - backend already filters for teachers to show only their assigned sessions
       const response = await api.getDetentions({});
-      const myDetentions = response.data.filter((d: any) => d.teacher_on_duty_id === user?.id);
+      const myDetentions = response.data;
       setDetentions(myDetentions);
 
       // Calculate summary
@@ -93,8 +93,18 @@ const MyDetentions: React.FC = () => {
       const response = await api.getDetention(detention.id);
       const assignments = response.data.assignments || [];
       const att: Record<number, string> = {};
+      // Map database status to frontend status
+      const statusMapping: Record<string, string> = {
+        'attended': 'present',
+        'assigned': 'pending',
+        'absent': 'absent',
+        'late': 'late',
+        'excused': 'excused',
+        'rescheduled': 'pending'
+      };
       assignments.forEach((a: any) => {
-        att[a.student_id] = a.status || 'pending';
+        const dbStatus = a.attendance_status || a.status || 'assigned';
+        att[a.student_id] = statusMapping[dbStatus] || dbStatus;
       });
       setAttendance(att);
       // Store assignments in selectedDetention for later use
@@ -105,18 +115,28 @@ const MyDetentions: React.FC = () => {
     }
   };
 
+  const handleUpdateSessionStatus = async (sessionId: number, newStatus: string) => {
+    try {
+      await api.updateDetentionSessionStatus(sessionId, newStatus);
+      success(`Session status updated to ${newStatus}`);
+      fetchDetentions();
+    } catch (err: any) {
+      error(err.response?.data?.error || 'Error updating session status');
+    }
+  };
+
   const handleMarkAttendance = async () => {
     if (!selectedDetention) return;
     
     setSaving(true);
     try {
-      // Update attendance for each student
+      // Update attendance for each student using the new attendance endpoint
       for (const [studentId, status] of Object.entries(attendance)) {
         try {
           // Find the assignment ID first
           const assignment = selectedDetention.assignments.find((a: any) => a.student_id === Number(studentId));
           if (assignment) {
-            await api.updateDetentionAttendance(assignment.id, { status: status as string });
+            await api.markDetentionAttendance(assignment.id, status as string);
           }
         } catch (error) {
           console.error(`Error updating attendance for student ${studentId}:`, error);
@@ -176,6 +196,39 @@ const MyDetentions: React.FC = () => {
       key: 'duration',
       label: 'Duration',
       render: (value: number) => `${value || 60} minutes`,
+    },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (value: any, row: any) => (
+        <div className="flex items-center space-x-2">
+          {row.status === 'scheduled' && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => handleUpdateSessionStatus(row.id, 'in_progress')}
+            >
+              Start
+            </Button>
+          )}
+          {row.status === 'in_progress' && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => handleUpdateSessionStatus(row.id, 'completed')}
+            >
+              Complete
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => handleViewDetention(row)}
+          >
+            View
+          </Button>
+        </div>
+      ),
     },
   ];
 
@@ -333,7 +386,7 @@ const MyDetentions: React.FC = () => {
         </motion.div>
       )}
 
-      {/* Detention Details Modal */}
+      {/* Detention Details Modal - Modernized */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => {
@@ -341,71 +394,133 @@ const MyDetentions: React.FC = () => {
           setSelectedDetention(null);
           setAttendance({});
         }}
-        title={`Detention - ${selectedDetention ? new Date(selectedDetention.detention_date).toLocaleDateString() : ''}`}
+        title="Detention Session Details"
       >
         {selectedDetention && (
           <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Date</p>
-                <p className="font-semibold">
-                  {new Date(selectedDetention.detention_date).toLocaleDateString()}
-                </p>
+            {/* Header Card with Gradient */}
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl p-6 text-white">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-2xl font-bold">
+                  {new Date(selectedDetention.detention_date).toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </h3>
+                <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                  selectedDetention.status === 'completed' 
+                    ? 'bg-green-400 text-green-900' 
+                    : 'bg-yellow-400 text-yellow-900'
+                }`}>
+                  {selectedDetention.status.toUpperCase()}
+                </span>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Time</p>
-                <p className="font-semibold">{selectedDetention.detention_time || 'N/A'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Duration</p>
-                <p className="font-semibold">{selectedDetention.duration || 60} minutes</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Status</p>
-                <p className="font-semibold capitalize">{selectedDetention.status}</p>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
+                  <p className="text-emerald-100 text-xs mb-1">Time</p>
+                  <p className="font-bold text-lg">{selectedDetention.detention_time || 'N/A'}</p>
+                </div>
+                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
+                  <p className="text-emerald-100 text-xs mb-1">Duration</p>
+                  <p className="font-bold text-lg">{selectedDetention.duration || 60} min</p>
+                </div>
+                <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
+                  <p className="text-emerald-100 text-xs mb-1">Students</p>
+                  <p className="font-bold text-lg">{selectedDetention.assignments?.length || 0}</p>
+                </div>
               </div>
             </div>
 
-            {selectedDetention.assignments && selectedDetention.assignments.length > 0 && (
+            {/* Student Attendance Section */}
+            {selectedDetention.assignments && selectedDetention.assignments.length > 0 ? (
               <div>
-                <h3 className="font-semibold text-gray-900 mb-4">Student Attendance</h3>
-                <div className="space-y-3">
-                  {selectedDetention.assignments.map((assignment: any) => (
-                    <div
-                      key={assignment.student_id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                    >
-                      <div>
-                        <p className="font-medium">{assignment.student_name}</p>
-                        <p className="text-sm text-gray-600">{assignment.student_id}</p>
-                      </div>
-                      <select
-                        value={attendance[assignment.student_id] || assignment.attendance_status || 'pending'}
-                        onChange={(e) =>
-                          setAttendance({
-                            ...attendance,
-                            [assignment.student_id]: e.target.value,
-                          })
-                        }
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="present">Present</option>
-                        <option value="absent">Absent</option>
-                        <option value="late">Late</option>
-                      </select>
-                    </div>
-                  ))}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-900 flex items-center">
+                    <Users size={20} className="mr-2 text-emerald-600" />
+                    Student Attendance
+                  </h3>
+                  <span className="text-sm text-gray-500">
+                    {Object.values(attendance).filter(s => s === 'present').length} / {selectedDetention.assignments.length} Present
+                  </span>
                 </div>
+                <div className="border border-gray-200 rounded-xl overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Student</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">ID</th>
+                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {selectedDetention.assignments.map((assignment: any, index: number) => (
+                        <tr key={assignment.student_id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          <td className="px-4 py-3">
+                            <p className="font-medium text-gray-900">{assignment.student_name}</p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="text-sm text-gray-600">{assignment.student_id}</p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex justify-center">
+                              <select
+                                value={attendance[assignment.student_id] || assignment.attendance_status || 'pending'}
+                                onChange={(e) =>
+                                  setAttendance({
+                                    ...attendance,
+                                    [assignment.student_id]: e.target.value,
+                                  })
+                                }
+                                className={`px-3 py-2 border-2 rounded-lg font-medium text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                                  (attendance[assignment.student_id] || assignment.attendance_status) === 'present'
+                                    ? 'border-green-300 bg-green-50 text-green-700'
+                                    : (attendance[assignment.student_id] || assignment.attendance_status) === 'absent'
+                                    ? 'border-red-300 bg-red-50 text-red-700'
+                                    : (attendance[assignment.student_id] || assignment.attendance_status) === 'late'
+                                    ? 'border-yellow-300 bg-yellow-50 text-yellow-700'
+                                    : (attendance[assignment.student_id] || assignment.attendance_status) === 'excused'
+                                    ? 'border-blue-300 bg-blue-50 text-blue-700'
+                                    : 'border-gray-300 bg-white text-gray-700'
+                                }`}
+                              >
+                                <option value="pending">⏳ Pending</option>
+                                <option value="present">✓ Present</option>
+                                <option value="absent">✗ Absent</option>
+                                <option value="late">⚠ Late</option>
+                                <option value="excused">ℹ Excused</option>
+                              </select>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 bg-gray-50 rounded-xl">
+                <Users size={48} className="mx-auto mb-3 text-gray-300" />
+                <p className="text-gray-500">No students assigned to this detention</p>
               </div>
             )}
 
-            <div className="flex justify-end space-x-3 pt-4 border-t">
-              <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+              <Button 
+                variant="secondary" 
+                onClick={() => setIsModalOpen(false)}
+                className="px-6"
+              >
                 Close
               </Button>
-              {selectedDetention.status === 'scheduled' && (
-                <Button onClick={handleMarkAttendance} disabled={saving}>
+              {selectedDetention.status === 'scheduled' && selectedDetention.assignments?.length > 0 && (
+                <Button 
+                  onClick={handleMarkAttendance} 
+                  disabled={saving}
+                  className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-6"
+                >
                   <CheckCircle size={20} className="mr-2" />
                   {saving ? 'Saving...' : 'Save Attendance'}
                 </Button>

@@ -48,28 +48,48 @@ const ParentProfileModal: React.FC<ParentProfileModalProps> = ({ isOpen, onClose
               <p className="text-xs text-gray-500">Work Phone</p>
               <p className="text-sm text-gray-900">{parent.work_phone || <span className="text-gray-400 italic">Not provided</span>}</p>
             </div>
+            <div>
+              <p className="text-xs text-gray-500">Relationship to Child</p>
+              <p className="text-sm text-gray-900">{parent.relationship_to_child || <span className="text-gray-400 italic">Not provided</span>}</p>
+            </div>
           </div>
         </div>
 
         {/* Emergency Contacts */}
-        {(parent.emergency_contact_name || parent.emergency_contact_phone) && (
-          <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
-              <User size={16} className="mr-2" />
-              Emergency Contact
-            </h4>
-            <div className="space-y-2 pl-6">
-              <div>
-                <p className="text-xs text-gray-500">Name</p>
-                <p className="text-sm text-gray-900">{parent.emergency_contact_name || <span className="text-gray-400 italic">Not provided</span>}</p>
+        <div>
+          <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+            <User size={16} className="mr-2" />
+            Emergency Contacts
+          </h4>
+          <div className="space-y-4 pl-6">
+            <div>
+              <p className="text-xs font-semibold text-gray-600 mb-2">Emergency Contact 1</p>
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs text-gray-500">Name</p>
+                  <p className="text-sm text-gray-900">{parent.emergency_contact_1_name || <span className="text-gray-400 italic">Not provided</span>}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Phone</p>
+                  <p className="text-sm text-gray-900">{parent.emergency_contact_1_phone || <span className="text-gray-400 italic">Not provided</span>}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-gray-500">Phone</p>
-                <p className="text-sm text-gray-900">{parent.emergency_contact_phone || <span className="text-gray-400 italic">Not provided</span>}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-600 mb-2">Emergency Contact 2</p>
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs text-gray-500">Name</p>
+                  <p className="text-sm text-gray-900">{parent.emergency_contact_2_name || <span className="text-gray-400 italic">Not provided</span>}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Phone</p>
+                  <p className="text-sm text-gray-900">{parent.emergency_contact_2_phone || <span className="text-gray-400 italic">Not provided</span>}</p>
+                </div>
               </div>
             </div>
           </div>
-        )}
+        </div>
 
         {/* Address */}
         {(parent.home_address || parent.city || parent.postal_code) && (

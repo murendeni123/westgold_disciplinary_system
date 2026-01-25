@@ -105,8 +105,8 @@ router.post('/students', authenticateToken, requireRole('admin'), upload.single(
           throw new Error('Last name is required');
         }
 
-        // Check if student ID already exists
-        const existing = await dbGet('SELECT id FROM students WHERE student_id = ? AND school_id = ?', [studentId, schoolId]);
+        // Check if student ID already exists (school-specific table, use schema context from req)
+        const existing = await dbGet('SELECT id FROM students WHERE student_id = $1', [studentId], req.schemaName);
         if (existing) {
           throw new Error(`Student ID ${studentId} already exists`);
         }
@@ -114,7 +114,7 @@ router.post('/students', authenticateToken, requireRole('admin'), upload.single(
         // Get class_id if class name provided
         let classId = null;
         if (className) {
-          const classData = await dbGet('SELECT id FROM classes WHERE class_name = ? AND school_id = ?', [className, schoolId]);
+          const classData = await dbGet('SELECT id FROM classes WHERE name = $1', [className], req.schemaName);
           if (classData) {
             classId = classData.id;
           } else {
@@ -127,9 +127,10 @@ router.post('/students', authenticateToken, requireRole('admin'), upload.single(
 
         // Insert student
         const result = await dbRun(
-          `INSERT INTO students (student_id, first_name, last_name, date_of_birth, class_id, grade_level, parent_link_code, school_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`,
-          [studentId, firstName, lastName, dateOfBirth, classId, gradeLevel, parentLinkCode, schoolId]
+          `INSERT INTO students (student_id, first_name, last_name, date_of_birth, class_id, grade_level, parent_link_code)
+           VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+          [studentId, firstName, lastName, dateOfBirth, classId, gradeLevel, parentLinkCode],
+          req.schemaName
         );
 
         results.successful++;
@@ -228,8 +229,8 @@ router.post('/teachers', authenticateToken, requireRole('admin'), upload.single(
           throw new Error('Password must be at least 6 characters');
         }
 
-        // Check if email already exists
-        const existingUser = await dbGet('SELECT id FROM users WHERE email = ?', [email]);
+        // Check if email already exists (public schema)
+        const existingUser = await dbGet('SELECT id FROM public.users WHERE email = $1', [email]);
         if (existingUser) {
           throw new Error(`Email ${email} already exists`);
         }
@@ -240,36 +241,44 @@ router.post('/teachers', authenticateToken, requireRole('admin'), upload.single(
         // Generate employee_id if not provided
         let finalEmployeeId = employeeId;
         if (!finalEmployeeId) {
-          // Get max employee ID (PostgreSQL)
-          // Uses SUBSTRING - db.js will convert from SUBSTR if needed
+          // Get max employee ID (school-specific)
           const maxEmpId = await dbGet(
-            `SELECT MAX(CAST(SUBSTR(employee_id, 4) AS INTEGER)) as max_id 
+            `SELECT MAX(CAST(SUBSTRING(employee_id FROM 4) AS INTEGER)) as max_id 
              FROM teachers 
-             WHERE employee_id LIKE ?`,
-            ['EMP%']
+             WHERE employee_id LIKE $1`,
+            ['EMP%'],
+            req.schemaName
           );
           const nextId = (maxEmpId?.max_id || 0) + 1;
           finalEmployeeId = `EMP${String(nextId).padStart(4, '0')}`;
         } else {
           // Check if employee_id already exists
-          const existingEmpId = await dbGet('SELECT id FROM teachers WHERE employee_id = ?', [finalEmployeeId]);
+          const existingEmpId = await dbGet('SELECT id FROM teachers WHERE employee_id = $1', [finalEmployeeId], req.schemaName);
           if (existingEmpId) {
             throw new Error(`Employee ID ${finalEmployeeId} already exists`);
           }
         }
 
-        // Create user
+        // Create user in public schema
         const userResult = await dbRun(
-          `INSERT INTO users (email, password, name, role, school_id)
-           VALUES (?, ?, ?, 'teacher', ?) RETURNING id`,
+          `INSERT INTO public.users (email, password_hash, name, role, primary_school_id)
+           VALUES ($1, $2, $3, 'teacher', $4) RETURNING id`,
           [email, hashedPassword, name, schoolId]
         );
 
-        // Create teacher record
+        // Link user to school in public schema
         await dbRun(
-          `INSERT INTO teachers (user_id, employee_id, phone, school_id)
-           VALUES (?, ?, ?, ?)`,
-          [userResult.id, finalEmployeeId, phone, schoolId]
+          `INSERT INTO public.user_schools (user_id, school_id, role_in_school, is_primary)
+           VALUES ($1, $2, 'teacher', true)`,
+          [userResult.id, schoolId]
+        );
+
+        // Create teacher record in school schema
+        await dbRun(
+          `INSERT INTO teachers (user_id, employee_id, phone)
+           VALUES ($1, $2, $3)`,
+          [userResult.id, finalEmployeeId, phone],
+          req.schemaName
         );
 
         results.successful++;
@@ -356,8 +365,8 @@ router.post('/classes', authenticateToken, requireRole('admin'), upload.single('
           throw new Error('Class name is required');
         }
 
-        // Check if class already exists
-        const existing = await dbGet('SELECT id FROM classes WHERE class_name = ? AND school_id = ?', [className, schoolId]);
+        // Check if class already exists (school schema)
+        const existing = await dbGet('SELECT id FROM classes WHERE name = $1', [className], req.schemaName);
         if (existing) {
           throw new Error(`Class "${className}" already exists`);
         }
@@ -366,9 +375,8 @@ router.post('/classes', authenticateToken, requireRole('admin'), upload.single('
         let teacherId = null;
         if (teacherEmail) {
           const teacher = await dbGet(
-            `SELECT u.id FROM users u 
-             INNER JOIN teachers t ON u.id = t.user_id 
-             WHERE u.email = ? AND u.school_id = ?`,
+            `SELECT u.id FROM public.users u 
+             WHERE u.email = $1 AND u.primary_school_id = $2 AND u.role = 'teacher'`,
             [teacherEmail, schoolId]
           );
           if (!teacher) {
@@ -377,11 +385,12 @@ router.post('/classes', authenticateToken, requireRole('admin'), upload.single('
           teacherId = teacher.id;
         }
 
-        // Insert class
+        // Insert class in school schema
         const result = await dbRun(
-          `INSERT INTO classes (class_name, grade_level, teacher_id, academic_year, school_id)
-           VALUES (?, ?, ?, ?, ?) RETURNING id`,
-          [className, gradeLevel, teacherId, academicYear, schoolId]
+          `INSERT INTO classes (name, grade_level, teacher_id, academic_year)
+           VALUES ($1, $2, $3, $4) RETURNING id`,
+          [className, gradeLevel, teacherId, academicYear],
+          req.schemaName
         );
 
         results.successful++;

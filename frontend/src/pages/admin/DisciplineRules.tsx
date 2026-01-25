@@ -113,39 +113,35 @@ const DisciplineRules: React.FC = () => {
   const fetchRules = async () => {
     setLoading(true);
     try {
-      // Fetch types from API
-      const [incidentTypesRes, meritTypesRes, interventionTypesRes] = await Promise.all([
+      // Fetch types and detention rules from API
+      const [incidentTypesRes, meritTypesRes, interventionTypesRes, detentionRulesRes] = await Promise.all([
         api.getIncidentTypes(),
         api.getMeritTypes(),
         api.getInterventionTypes(),
+        api.getDetentionRules().catch(() => ({ data: [] })),
       ]);
       
       setIncidentTypes(incidentTypesRes.data || []);
       setMeritTypes(meritTypesRes.data || []);
       setInterventionTypes(interventionTypesRes.data || []);
 
-      // Mock detention and consequence rules for now
-      setDetentionRules([
-        {
-          id: 1,
-          name: '3 Incidents Rule',
-          description: 'Student receives detention after 3 incidents in a week',
-          trigger_type: 'incident_count',
-          trigger_value: 3,
-          time_period_days: 7,
-          is_active: true,
-        },
-        {
-          id: 2,
-          name: 'Fighting Auto-Detention',
-          description: 'Automatic detention for any fighting incident',
-          trigger_type: 'incident_type',
-          trigger_value: 1,
-          trigger_incident_type: 'Fighting',
-          time_period_days: 1,
-          is_active: true,
-        },
-      ]);
+      // Map database rules to frontend format
+      const mappedRules = (detentionRulesRes.data || []).map((rule: any) => ({
+        id: rule.id,
+        name: rule.severity ? `${rule.severity.charAt(0).toUpperCase() + rule.severity.slice(1)} Severity Detention` : 
+              rule.min_points >= 10 ? `${rule.min_points}+ Points Detention` :
+              `${rule.min_points}+ Incidents Detention`,
+        description: rule.severity ? `Automatic detention for ${rule.severity} severity incidents` :
+                     rule.min_points >= 10 ? `Detention after accumulating ${rule.min_points}+ demerit points` :
+                     `Detention after ${rule.min_points}+ incidents`,
+        trigger_type: rule.severity ? 'incident_type' : rule.min_points >= 10 ? 'points_threshold' : 'incident_count',
+        trigger_value: rule.min_points,
+        trigger_incident_type: rule.severity,
+        time_period_days: 30,
+        is_active: rule.is_active === 1 || rule.is_active === true,
+      }));
+      
+      setDetentionRules(mappedRules);
 
       setConsequenceRules([
         {
@@ -289,30 +285,31 @@ const DisciplineRules: React.FC = () => {
   const handleSaveDetentionRule = async (rule: Partial<DetentionRule>) => {
     setSaving(true);
     try {
-      if (editingDetentionRule) {
-        // Update existing rule
-        setDetentionRules(detentionRules.map(r => 
-          r.id === editingDetentionRule.id ? { ...r, ...rule } : r
-        ));
-        setMessage({ type: 'success', text: 'Detention rule updated successfully' });
-      } else {
-        // Create new rule
-        const newRule: DetentionRule = {
-          id: Date.now(),
-          name: rule.name || '',
-          description: rule.description || '',
-          trigger_type: rule.trigger_type || 'incident_count',
-          trigger_value: rule.trigger_value || 3,
-          trigger_incident_type: rule.trigger_incident_type,
-          time_period_days: rule.time_period_days || 7,
-          is_active: true,
-        };
-        setDetentionRules([...detentionRules, newRule]);
-        setMessage({ type: 'success', text: 'Detention rule created successfully' });
-      }
+      // Map frontend rule format to backend format
+      const backendRule = {
+        id: editingDetentionRule?.id,
+        action_type: 'detention',
+        min_points: rule.trigger_value || 3,
+        max_points: null,
+        severity: rule.trigger_type === 'incident_type' ? rule.trigger_incident_type : null,
+        detention_duration: 60,
+        is_active: rule.is_active !== undefined ? rule.is_active : true,
+      };
+
+      // Call API to save rule
+      await api.saveDetentionRule(backendRule);
+      
+      // Refresh rules from database
+      await fetchRules();
+      
+      setMessage({ 
+        type: 'success', 
+        text: editingDetentionRule ? 'Detention rule updated successfully' : 'Detention rule created successfully' 
+      });
       setShowDetentionRuleModal(false);
       setEditingDetentionRule(null);
     } catch (error) {
+      console.error('Error saving detention rule:', error);
       setMessage({ type: 'error', text: 'Failed to save detention rule' });
     } finally {
       setSaving(false);
@@ -351,9 +348,20 @@ const DisciplineRules: React.FC = () => {
     }
   };
 
-  const handleDeleteDetentionRule = (id: number) => {
-    setDetentionRules(detentionRules.filter(r => r.id !== id));
-    setMessage({ type: 'success', text: 'Detention rule deleted' });
+  const handleDeleteDetentionRule = async (id: number) => {
+    try {
+      // Call API to delete rule (need to implement delete endpoint)
+      // For now, we'll disable the rule instead
+      await api.saveDetentionRule({ id, is_active: false });
+      
+      // Refresh rules from database
+      await fetchRules();
+      
+      setMessage({ type: 'success', text: 'Detention rule deleted' });
+    } catch (error) {
+      console.error('Error deleting detention rule:', error);
+      setMessage({ type: 'error', text: 'Failed to delete detention rule' });
+    }
   };
 
   const handleDeleteConsequenceRule = (id: number) => {
@@ -361,10 +369,23 @@ const DisciplineRules: React.FC = () => {
     setMessage({ type: 'success', text: 'Consequence rule deleted' });
   };
 
-  const handleToggleDetentionRule = (id: number) => {
-    setDetentionRules(detentionRules.map(r => 
-      r.id === id ? { ...r, is_active: !r.is_active } : r
-    ));
+  const handleToggleDetentionRule = async (id: number) => {
+    try {
+      const rule = detentionRules.find(r => r.id === id);
+      if (!rule) return;
+
+      // Call API to toggle rule active status
+      await api.saveDetentionRule({ 
+        id, 
+        is_active: !rule.is_active 
+      });
+      
+      // Refresh rules from database
+      await fetchRules();
+    } catch (error) {
+      console.error('Error toggling detention rule:', error);
+      setMessage({ type: 'error', text: 'Failed to toggle detention rule' });
+    }
   };
 
   const handleToggleConsequenceRule = (id: number) => {

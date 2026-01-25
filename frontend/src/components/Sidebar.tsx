@@ -22,6 +22,7 @@ import {
   MessageSquare,
   Building2,
   Clock,
+  Bell,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -36,18 +37,19 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
 
   const adminMenu = [
     { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/admin/users', label: 'User Management', icon: Shield },
     { path: '/admin/students', label: 'Students', icon: Users },
     { path: '/admin/classes', label: 'Classes', icon: BookOpen },
     { path: '/admin/teachers', label: 'Teachers', icon: UserCheck },
     { path: '/admin/parents', label: 'Parents', icon: Users },
-    { path: '/admin/attendance', label: 'Attendance', icon: Calendar },
+    { path: '/admin/behaviour-dashboard', label: 'Behaviour Dashboard', icon: AlertTriangle },
     { path: '/admin/discipline', label: 'Discipline Center', icon: Scale },
     { path: '/admin/discipline-rules', label: 'Discipline Rules', icon: Shield },
     { path: '/admin/detention-sessions', label: 'Detention Sessions', icon: Clock },
+    { path: '/admin/consequence-management', label: 'Assign Consequences', icon: Scale },
     { path: '/admin/merits', label: 'Merits & Recognition', icon: Award },
     { path: '/admin/reports', label: 'Reports & Analytics', icon: BarChart3 },
-    { path: '/admin/bulk-import', label: 'Bulk Import', icon: Upload },
+    { path: '/admin/smart-import', label: 'Smart Import', icon: Upload },
+    { path: '/admin/notifications', label: 'Notifications', icon: Bell },
     { path: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 
@@ -58,7 +60,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
     { path: '/teacher/merits', label: 'Merits', icon: Award },
     { path: '/teacher/detentions', label: 'Detentions', icon: Clock },
     { path: '/teacher/interventions', label: 'Interventions', icon: Shield },
-    { path: '/teacher/consequences', label: 'Consequences', icon: Scale },
+    { path: '/teacher/assign-consequence', label: 'Assign Consequences', icon: Scale },
+    { path: '/teacher/notifications', label: 'Notifications', icon: Bell },
     { path: '/teacher/settings', label: 'Settings', icon: Settings },
   ];
 
@@ -67,14 +70,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
     { path: '/parent/link-school', label: 'Link School', icon: Building2 },
     { path: '/parent/link-child', label: 'Link Child', icon: GraduationCap },
     { path: '/parent/children', label: 'My Children', icon: Users },
-    { path: '/parent/attendance', label: 'Attendance', icon: Calendar },
     { path: '/parent/behaviour', label: 'Behaviour', icon: AlertTriangle },
     { path: '/parent/merits', label: 'Merits', icon: Award },
     { path: '/parent/detentions', label: 'Detentions', icon: AlertTriangle },
     { path: '/parent/interventions', label: 'Interventions', icon: AlertTriangle },
     { path: '/parent/consequences', label: 'Consequences', icon: AlertTriangle },
     { path: '/parent/messages', label: 'Messages', icon: MessageSquare },
-    { path: '/parent/notifications', label: 'Notifications', icon: MessageSquare },
+    { path: '/parent/notifications', label: 'Notifications', icon: Bell },
     { path: '/parent/profile', label: 'Profile', icon: UserCheck },
     { path: '/parent/settings', label: 'Settings', icon: Settings },
   ];
@@ -156,7 +158,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
                   )}
                   <div>
                     <h1 className="font-bold text-2xl text-white drop-shadow-lg">
-                      PDS
+                      DMS
                     </h1>
                     <p className="text-xs text-white/80 capitalize font-medium">{user?.role} Portal</p>
                   </div>

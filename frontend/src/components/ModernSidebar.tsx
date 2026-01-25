@@ -93,7 +93,6 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
     // Always show these menu items (they were always visible before)
     baseMenu.push(
       { path: '/parent/children', label: 'My Children', icon: Users },
-      { path: '/parent/attendance', label: 'Attendance', icon: Calendar },
       { path: '/parent/behaviour', label: 'Behaviour', icon: AlertTriangle },
       { path: '/parent/merits', label: 'Merits', icon: Award },
       { path: '/parent/detentions', label: 'Detentions', icon: AlertTriangle },
@@ -198,7 +197,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
                   )}
                   <div>
                     <span className="font-bold text-xl text-white tracking-tight">
-                      PDS
+                      DMS
                     </span>
                     <div className="flex items-center space-x-1">
                       <Sparkles size={10} className="text-yellow-300" />

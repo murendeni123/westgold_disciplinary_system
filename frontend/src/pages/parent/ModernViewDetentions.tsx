@@ -34,28 +34,12 @@ const ModernViewDetentions: React.FC = () => {
       const studentId = selectedChild || user?.children?.[0]?.id;
       if (!studentId) return;
 
-      const response = await api.getDetentions({});
-      const allDetentions = response.data;
-
-      const studentDetentions: any[] = [];
-      for (const detention of allDetentions) {
-        try {
-          const detResponse = await api.getDetention(detention.id);
-          const assignments = detResponse.data.assignments || [];
-          const studentAssignment = assignments.find(
-            (a: any) => a.student_id === Number(studentId)
-          );
-          if (studentAssignment) {
-            studentDetentions.push({
-              ...detention,
-              assignment: studentAssignment,
-              attendance_status: studentAssignment.status || 'pending',
-            });
-          }
-        } catch (error) {
-          console.error(`Error fetching detention ${detention.id}:`, error);
-        }
-      }
+      // For parents, the API now returns detention assignments directly
+      const response = await api.getDetentions({ student_id: studentId });
+      const studentDetentions = response.data.map((d: any) => ({
+        ...d,
+        attendance_status: d.status || 'pending',
+      }));
 
       setDetentions(studentDetentions);
 
