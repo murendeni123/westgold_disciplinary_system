@@ -29,7 +29,9 @@ interface BehaviourCategory {
 
 interface Strategy {
   id: number;
+  strategy_id?: number;
   name: string;
+  strategy_name?: string;
   description: string;
   times_used?: number;
   was_effective?: boolean;
@@ -254,7 +256,7 @@ const GuidedIntervention: React.FC = () => {
           label="Student"
           value={formData.student_id}
           onChange={(value) => {
-            setFormData({ ...formData, student_id: value });
+            setFormData({ ...formData, student_id: String(value) });
             setCurrentStep(1);
           }}
           options={students.map(s => ({
@@ -561,7 +563,7 @@ const GuidedIntervention: React.FC = () => {
             {/* Action Buttons */}
             <div className="flex justify-between items-center">
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={() => setCurrentStep(1)}
                 className="flex items-center space-x-2"
               >
