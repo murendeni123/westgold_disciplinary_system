@@ -6,6 +6,7 @@ import ModernCard from '../../components/ModernCard';
 import { motion } from 'framer-motion';
 import { Save, Lock, User, Settings as SettingsIcon, CheckCircle, AlertCircle, Building2, Users, Plus } from 'lucide-react';
 import Input from '../../components/Input';
+import PasswordChangeForm from '../../components/PasswordChangeForm';
 
 const ModernSettings: React.FC = () => {
   const navigate = useNavigate();
@@ -35,14 +36,6 @@ const ModernSettings: React.FC = () => {
   const [profileSuccess, setProfileSuccess] = useState('');
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-  const [passwordError, setPasswordError] = useState('');
-  const [passwordSuccess, setPasswordSuccess] = useState('');
-  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -133,39 +126,6 @@ const ModernSettings: React.FC = () => {
     }
   };
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError('');
-    setPasswordSuccess('');
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setPasswordError('New passwords do not match');
-      return;
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      setPasswordError('New password must be at least 6 characters long');
-      return;
-    }
-
-    setChangingPassword(true);
-    try {
-      await api.changePassword({
-        currentPassword: passwordData.currentPassword,
-        newPassword: passwordData.newPassword,
-      });
-      setPasswordSuccess('Password changed successfully!');
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
-    } catch (error: any) {
-      setPasswordError(error.response?.data?.error || 'Error changing password');
-    } finally {
-      setChangingPassword(false);
-    }
-  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -421,64 +381,10 @@ const ModernSettings: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               className="space-y-6"
             >
-              <form onSubmit={handlePasswordChange} className="space-y-5">
-                <Input
-                  label="Current Password"
-                  type="password"
-                  value={passwordData.currentPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                  required
-                  placeholder="Enter current password"
-                />
-                <Input
-                  label="New Password"
-                  type="password"
-                  value={passwordData.newPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                  required
-                  minLength={6}
-                  placeholder="Enter new password (min 6 characters)"
-                />
-                <Input
-                  label="Confirm New Password"
-                  type="password"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                  required
-                  minLength={6}
-                  placeholder="Confirm new password"
-                />
-                {passwordError && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-4 bg-red-50 border-l-4 border-red-500 rounded-lg flex items-start space-x-3"
-                  >
-                    <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={20} />
-                    <p className="text-red-800 text-sm">{passwordError}</p>
-                  </motion.div>
-                )}
-                {passwordSuccess && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-4 bg-green-50 border-l-4 border-green-500 rounded-lg flex items-start space-x-3"
-                  >
-                    <CheckCircle className="text-green-600 flex-shrink-0 mt-0.5" size={20} />
-                    <p className="text-green-800 text-sm">{passwordSuccess}</p>
-                  </motion.div>
-                )}
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  type="submit"
-                  disabled={changingPassword}
-                  className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
-                >
-                  <Lock size={20} />
-                  <span>{changingPassword ? 'Changing Password...' : 'Change Password'}</span>
-                </motion.button>
-              </form>
+              <PasswordChangeForm
+                onSuccess={() => setProfileSuccess('Password changed successfully!')}
+                onError={(errorMsg) => setProfileError(errorMsg)}
+              />
             </motion.div>
           )}
 
