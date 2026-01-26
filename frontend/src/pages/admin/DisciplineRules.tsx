@@ -433,13 +433,13 @@ const DisciplineRules: React.FC = () => {
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Scale className="text-white" size={24} />
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center space-x-2 sm:space-x-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+              <Scale className="text-white" size={20} />
             </div>
             <span>Discipline Rules</span>
           </h1>
-          <p className="text-gray-500 mt-1">Configure automatic detention and consequence rules</p>
+          <p className="text-sm sm:text-base text-gray-500 mt-1">Configure automatic detention and consequence rules</p>
         </div>
       </motion.div>
 
@@ -450,7 +450,7 @@ const DisciplineRules: React.FC = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={`p-4 rounded-xl flex items-center justify-between ${
+            className={`p-3 sm:p-4 rounded-lg sm:rounded-xl flex items-center justify-between ${
               message.type === 'success' 
                 ? 'bg-green-50 text-green-700 border border-green-200' 
                 : 'bg-red-50 text-red-700 border border-red-200'
@@ -472,23 +472,23 @@ const DisciplineRules: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-white rounded-2xl p-2 shadow-lg border border-gray-100"
+        className="bg-white rounded-xl sm:rounded-2xl p-1.5 sm:p-2 shadow-lg border border-gray-100 overflow-x-auto"
       >
-        <div className="flex gap-2">
+        <div className="flex gap-1 sm:gap-2 min-w-max">
           {tabs.map((tab) => (
             <motion.button
               key={tab.id}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all ${
+              className={`flex items-center space-x-1.5 sm:space-x-2 px-3 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-medium transition-all text-sm sm:text-base min-h-[44px] ${
                 activeTab === tab.id
                   ? 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white shadow-lg'
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              <tab.icon size={18} />
-              <span>{tab.label}</span>
+              <tab.icon size={16} className="sm:w-[18px] sm:h-[18px]" />
+              <span className="whitespace-nowrap">{tab.label}</span>
             </motion.button>
           ))}
         </div>

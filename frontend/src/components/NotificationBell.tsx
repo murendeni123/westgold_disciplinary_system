@@ -4,6 +4,7 @@ import { Bell, X, Check, Trash2, CheckCheck } from 'lucide-react';
 import { api } from '../services/api';
 import { useSocket } from '../hooks/useSocket';
 import { useNavigate } from 'react-router-dom';
+import NotificationDetailModal from './NotificationDetailModal';
 
 interface Notification {
   id: number;
@@ -21,6 +22,8 @@ const NotificationBell: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const socket = useSocket();
   const navigate = useNavigate();
@@ -128,30 +131,15 @@ const NotificationBell: React.FC = () => {
       markAsRead(notification.id);
     }
 
-    // Navigate based on notification type
+    // Show detail modal if notification has related data
     if (notification.related_type && notification.related_id) {
-      switch (notification.related_type) {
-        case 'incident':
-          navigate(`/admin/discipline`);
-          break;
-        case 'merit':
-          navigate(`/admin/merits`);
-          break;
-        case 'detention':
-          navigate(`/admin/detention-sessions`);
-          break;
-        case 'intervention':
-          navigate(`/teacher/interventions`);
-          break;
-        case 'consequence':
-          navigate(`/teacher/consequences`);
-          break;
-        default:
-          break;
-      }
+      setSelectedNotification(notification);
+      setIsDetailModalOpen(true);
+      setIsOpen(false);
+    } else {
+      // For notifications without related data, just close dropdown
+      setIsOpen(false);
     }
-
-    setIsOpen(false);
   };
 
   const getNotificationIcon = (type: string) => {
@@ -349,6 +337,16 @@ const NotificationBell: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Notification Detail Modal */}
+      <NotificationDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedNotification(null);
+        }}
+        notification={selectedNotification}
+      />
     </div>
   );
 };
