@@ -14,12 +14,28 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: process.env.FRONTEND_URL || "http://localhost:5173",
-        methods: ["GET", "POST"]
-    }
-});
+
+// CORS configuration for Socket.io
+const allowedOriginPatterns = [
+  /^http:\/\/localhost:\d+$/,
+  /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
+  /^https:\/\/.*\.vercel\.app$/,
+  "https://greenstem-disciplinary-management-system.vercel.app",
+];
+
+const socketCors = {
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    const ok = allowedOriginPatterns.some((rule) =>
+      rule instanceof RegExp ? rule.test(origin) : rule === origin
+    );
+    return ok ? cb(null, true) : cb(new Error("Socket CORS blocked"));
+  },
+  methods: ["GET", "POST"],
+  credentials: true
+};
+
+const io = new Server(server, { cors: socketCors });
 
 const PORT = process.env.PORT || 5000;
 
@@ -66,11 +82,19 @@ app.set('userSockets', userSockets);
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3001', 'http://192.168.0.108:3001', 'http://192.168.18.160:3001'],
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    const ok = allowedOriginPatterns.some((rule) =>
+      rule instanceof RegExp ? rule.test(origin) : rule === origin
+    );
+    return ok ? cb(null, true) : cb(new Error(`CORS blocked for origin: ${origin}`));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-School-Id', 'X-Schema-Name']
 }));
+
+app.options("*", cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
