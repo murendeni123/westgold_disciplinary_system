@@ -222,7 +222,7 @@ const StudentProfile: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-6 md:space-y-8 px-2 sm:px-0">
       <ToastContainer />
       
       {/* Header */}
@@ -230,7 +230,7 @@ const StudentProfile: React.FC = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex items-center space-x-4"
+        className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4"
       >
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button
@@ -244,27 +244,27 @@ const StudentProfile: React.FC = () => {
         </motion.div>
         <div>
           <div className="flex items-center space-x-3">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
               {student.first_name} {student.last_name}
             </h1>
             {stats && stats.totalMerits >= 10 && (stats.totalMerits - stats.totalIncidents) >= 10 && (
               <GoldenDotIndicator size="lg" showTooltip={true} animated={true} />
             )}
           </div>
-          <p className="text-gray-600 mt-2 text-lg">Student Profile</p>
+          <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base md:text-lg">Student Profile</p>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Basic Information */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
-          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+          className="rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-4 sm:p-6"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Basic Information</h2>
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Basic Information</h2>
             <User className="text-amber-600" size={24} />
           </div>
           <div className="flex gap-6">
