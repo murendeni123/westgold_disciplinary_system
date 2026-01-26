@@ -14,6 +14,7 @@ const { dbRun, dbGet, dbAll, dbTransaction } = require('../database/db');
 const { createSchoolSchema, generateSchemaName, dropSchoolSchema, getSchemaStats } = require('../database/schemaManager');
 const { authenticateToken, generateToken, hashPassword } = require('../middleware/auth');
 const { platformAdminOnly } = require('../middleware/schemaContext');
+const { seedDefaultTypes } = require('../database/seedDefaultTypes');
 
 /**
  * POST /api/schools/onboard
@@ -238,6 +239,19 @@ router.post('/onboard', authenticateToken, platformAdminOnly, async (req, res) =
             // Non-fatal - admin can still log in
         }
 
+        // 7. Seed default incident types, merit types, and interventions
+        try {
+            const seedResult = await seedDefaultTypes(result.schoolId, result.schemaName);
+            if (!seedResult.success) {
+                console.warn('Warning: Could not seed default types:', seedResult.error);
+            } else {
+                console.log('✅ Seeded default types:', seedResult.counts);
+            }
+        } catch (seedError) {
+            console.warn('Warning: Error seeding default types:', seedError.message);
+            // Non-fatal - admin can add types manually
+        }
+
         res.status(201).json({
             success: true,
             message: 'School onboarded successfully',
@@ -258,7 +272,7 @@ router.post('/onboard', authenticateToken, platformAdminOnly, async (req, res) =
             },
             next_steps: [
                 'Share the school code with teachers and parents for registration',
-                'Configure incident types and merit types in Discipline Rules',
+                'Review and customize the predefined incident types, merit types, and interventions',
                 'Add teachers and import students via Bulk Import',
                 'Set up class timetables and assign teachers'
             ]
