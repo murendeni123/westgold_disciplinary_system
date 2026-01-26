@@ -122,7 +122,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
           opacity: isOpen ? 1 : 0 
         }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className={`fixed top-0 left-0 z-50 h-full w-80 bg-white shadow-2xl border-r border-gray-100 lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-50 h-full w-[280px] sm:w-80 bg-white shadow-2xl border-r border-gray-100 lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -132,42 +132,42 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.1 }}
-            className={`relative p-8 bg-gradient-to-br ${currentColor} overflow-hidden`}
+            className={`relative p-4 sm:p-6 md:p-8 bg-gradient-to-br ${currentColor} overflow-hidden`}
           >
             {/* Decorative circles */}
             <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
             <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
             
             <div className="relative z-10">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4 sm:mb-6">
                 <div className="flex items-center space-x-3">
                   {customizations?.logo_path ? (
                     <motion.img
                       whileHover={{ scale: 1.05 }}
                       src={getImageUrl(customizations.logo_path) || ''}
                       alt="Logo"
-                      className="h-12 w-auto object-contain rounded-xl bg-white/20 p-2 backdrop-blur-sm"
+                      className="h-10 sm:h-12 w-auto object-contain rounded-lg sm:rounded-xl bg-white/20 p-1.5 sm:p-2 backdrop-blur-sm"
                     />
                   ) : (
                     <motion.div
                       whileHover={{ scale: 1.05, rotate: 5 }}
                       className="p-3 rounded-2xl bg-white/20 backdrop-blur-sm shadow-lg border border-white/30"
                     >
-                      <GraduationCap className="text-white" size={28} />
+                      <GraduationCap className="text-white" size={24} />
                     </motion.div>
                   )}
                   <div>
-                    <h1 className="font-bold text-2xl text-white drop-shadow-lg">
+                    <h1 className="font-bold text-xl sm:text-2xl text-white drop-shadow-lg">
                       DMS
                     </h1>
-                    <p className="text-xs text-white/80 capitalize font-medium">{user?.role} Portal</p>
+                    <p className="text-xs text-white/80 capitalize font-medium hidden sm:block">{user?.role} Portal</p>
                   </div>
                 </div>
                 <motion.button
                   whileHover={{ scale: 1.1, rotate: 90 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={onToggle}
-                  className="lg:hidden p-2 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all duration-200"
+                  className="lg:hidden p-2.5 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-sm transition-all duration-200 min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
                   <X size={20} className="text-white" />
                 </motion.button>
@@ -176,22 +176,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
               {/* User Profile Card */}
               <motion.div
                 whileHover={{ scale: 1.02 }}
-                className="bg-white/20 backdrop-blur-md rounded-2xl p-4 border border-white/30 shadow-xl"
+                className="bg-white/20 backdrop-blur-md rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-white/30 shadow-xl"
               >
                 <div className="flex items-center space-x-3">
                   <div className="relative">
                     <motion.div
                       whileHover={{ scale: 1.1 }}
-                      className="w-14 h-14 rounded-xl bg-white shadow-lg flex items-center justify-center"
+                      className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg sm:rounded-xl bg-white shadow-lg flex items-center justify-center"
                     >
-                      <span className={`text-2xl font-bold bg-gradient-to-r ${currentColor} bg-clip-text text-transparent`}>
+                      <span className={`text-xl sm:text-2xl font-bold bg-gradient-to-r ${currentColor} bg-clip-text text-transparent`}>
                         {user?.name?.charAt(0).toUpperCase() || 'U'}
                       </span>
                     </motion.div>
                     <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white truncate">{user?.name}</p>
+                    <p className="text-xs sm:text-sm font-bold text-white truncate">{user?.name}</p>
                     <p className="text-xs text-white/70 capitalize font-medium">{user?.role}</p>
                   </div>
                 </div>
@@ -201,8 +201,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
 
 
           {/* Menu with animations */}
-          <nav className="flex-1 overflow-y-auto px-4 py-6">
-            <ul className="space-y-1">
+          <nav className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-6">
+            <ul className="space-y-0.5 sm:space-y-1">
               {menuItems.map((item, index) => {
                 const Icon = item.icon;
                 const active = isActive(item.path);
@@ -218,7 +218,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
                       onClick={() => {
                         if (window.innerWidth < 1024) onToggle();
                       }}
-                      className={`group relative flex items-center space-x-3 px-4 py-3.5 rounded-xl transition-all duration-300 overflow-hidden ${
+                      className={`group relative flex items-center space-x-2 sm:space-x-3 px-3 sm:px-4 py-3 sm:py-3.5 rounded-lg sm:rounded-xl transition-all duration-300 overflow-hidden min-h-[48px] ${
                         active
                           ? `bg-gradient-to-r ${currentColor} text-white shadow-lg`
                           : 'text-gray-700 hover:bg-gray-50'
@@ -232,14 +232,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
                           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                         />
                       )}
-                      <div className={`relative z-10 flex items-center justify-center w-10 h-10 rounded-lg transition-all ${
+                      <div className={`relative z-10 flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg transition-all flex-shrink-0 ${
                         active 
                           ? 'bg-white/20 text-white' 
                           : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
                       }`}>
-                        <Icon size={20} />
+                        <Icon size={18} className="sm:w-5 sm:h-5" />
                       </div>
-                      <span className={`relative z-10 font-semibold text-sm flex-1 ${
+                      <span className={`relative z-10 font-semibold text-xs sm:text-sm flex-1 truncate ${
                         active ? 'text-white' : 'text-gray-700 group-hover:text-gray-900'
                       }`}>
                         {item.label}
@@ -263,18 +263,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="p-4 border-t border-gray-100"
+            className="p-3 sm:p-4 border-t border-gray-100"
           >
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={logout}
-              className="flex items-center space-x-3 w-full px-4 py-3.5 rounded-xl text-gray-700 bg-gray-50 hover:bg-gradient-to-r hover:from-red-500 hover:to-pink-500 hover:text-white transition-all duration-300 border border-gray-200 hover:border-transparent shadow-sm hover:shadow-lg group"
+              className="flex items-center space-x-2 sm:space-x-3 w-full px-3 sm:px-4 py-3 sm:py-3.5 rounded-lg sm:rounded-xl text-gray-700 bg-gray-50 hover:bg-gradient-to-r hover:from-red-500 hover:to-pink-500 hover:text-white transition-all duration-300 border border-gray-200 hover:border-transparent shadow-sm hover:shadow-lg group min-h-[48px]"
             >
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white group-hover:bg-white/20 transition-all">
-                <LogOut size={20} className="group-hover:text-white" />
+              <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white group-hover:bg-white/20 transition-all flex-shrink-0">
+                <LogOut size={18} className="sm:w-5 sm:h-5 group-hover:text-white" />
               </div>
-              <span className="font-semibold text-sm flex-1 text-left">Logout</span>
+              <span className="font-semibold text-xs sm:text-sm flex-1 text-left">Logout</span>
             </motion.button>
           </motion.div>
         </div>

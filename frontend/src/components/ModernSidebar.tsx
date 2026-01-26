@@ -133,14 +133,14 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
       {/* Mobile overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
           onClick={onToggle}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-80 shadow-2xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+        className={`fixed top-0 left-0 z-50 h-full w-[280px] sm:w-80 shadow-2xl transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{
@@ -176,32 +176,32 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
             />
 
             {/* Header Content */}
-            <div className="relative z-10 p-5">
+            <div className="relative z-10 p-4 sm:p-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   {customizations?.logo_path ? (
-                    <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-lg sm:rounded-xl flex items-center justify-center">
                       <img 
                         src={getImageUrl(customizations.logo_path) || ''} 
                         alt="Logo" 
-                        className="h-6 w-auto object-contain"
+                        className="h-5 sm:h-6 w-auto object-contain"
                       />
                     </div>
                   ) : (
                     <motion.div 
-                      className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center"
+                      className="w-9 h-9 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-lg sm:rounded-xl flex items-center justify-center"
                       whileHover={{ scale: 1.05, rotate: 5 }}
                     >
-                      <GraduationCap className="text-white" size={22} />
+                      <GraduationCap className="text-white" size={20} />
                     </motion.div>
                   )}
                   <div>
-                    <span className="font-bold text-xl text-white tracking-tight">
+                    <span className="font-bold text-lg sm:text-xl text-white tracking-tight">
                       DMS
                     </span>
                     <div className="flex items-center space-x-1">
                       <Sparkles size={10} className="text-yellow-300" />
-                      <span className="text-[10px] text-white/70 uppercase tracking-wider">
+                      <span className="text-[10px] text-white/70 uppercase tracking-wider hidden sm:block">
                         Parent Portal
                       </span>
                     </div>
@@ -209,31 +209,31 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
                 </div>
                 <button
                   onClick={onToggle}
-                  className="lg:hidden w-8 h-8 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                  className="lg:hidden min-w-[44px] min-h-[44px] bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center text-white hover:bg-white/30 transition-colors"
                 >
-                  <X size={18} />
+                  <X size={20} />
                 </button>
               </div>
             </div>
           </div>
 
           {/* User Profile Card */}
-          <div className="px-4 -mt-3 relative z-20">
+          <div className="px-3 sm:px-4 -mt-3 relative z-20">
             <motion.div 
-              className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4"
+              className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100 p-3 sm:p-4"
               initial={{ y: 10, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.1 }}
             >
               <div className="flex items-center space-x-3">
                 <div className="relative">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg sm:rounded-xl flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-lg">
                     {user?.name?.charAt(0).toUpperCase() || 'P'}
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 truncate">
+                  <p className="font-semibold text-sm sm:text-base text-gray-900 truncate">
                     {user?.name}
                   </p>
                   <div className="flex items-center space-x-1">
@@ -249,8 +249,8 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
           <div className="h-4" />
 
           {/* Menu */}
-          <nav className="flex-1 overflow-y-auto p-4">
-            <ul className="space-y-2">
+          <nav className="flex-1 overflow-y-auto px-3 sm:px-4 py-4">
+            <ul className="space-y-1 sm:space-y-2">
               {parentMenu.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.path);
@@ -258,7 +258,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
                   <li key={item.path}>
                     <button
                       onClick={() => handleNavigation(item.path)}
-                            className={`flex items-center space-x-3 w-full px-4 py-3 rounded-lg transition-colors ${
+                            className={`flex items-center space-x-2 sm:space-x-3 w-full px-3 sm:px-4 py-3 rounded-lg transition-colors min-h-[48px] ${
                               active ? 'text-white' : 'hover:bg-gray-100'
                             }`}
                             style={{
@@ -271,8 +271,8 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
                               borderRadius: customizations?.button_border_radius || '0.5rem',
                             }}
                     >
-                      <Icon size={20} />
-                      <span className="font-medium">{item.label}</span>
+                      <Icon size={18} className="sm:w-5 sm:h-5 flex-shrink-0" />
+                      <span className="font-medium text-xs sm:text-sm truncate">{item.label}</span>
                     </button>
                   </li>
                 );
@@ -281,13 +281,13 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
           </nav>
 
           {/* Logout */}
-          <div className="p-4 border-t">
+          <div className="p-3 sm:p-4 border-t">
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-3 w-full px-4 py-3 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+              className="flex items-center space-x-2 sm:space-x-3 w-full px-3 sm:px-4 py-3 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors min-h-[48px]"
             >
-              <LogOut size={20} />
-              <span className="font-medium">Logout</span>
+              <LogOut size={18} className="sm:w-5 sm:h-5 flex-shrink-0" />
+              <span className="font-medium text-xs sm:text-sm">Logout</span>
             </button>
           </div>
         </div>
