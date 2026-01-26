@@ -597,25 +597,38 @@ router.put('/change-password', authenticateToken, async (req, res) => {
         
         console.log('✅ Found user:', { id: user.id, email: user.email, name: user.name });
 
+        console.log('🔐 Starting password verification...');
+        console.log('Current password length:', currentPassword.length);
+        
         // DUAL PASSWORD VERIFICATION: Check both normal and HTML-escaped versions
         // This handles passwords that were stored during the HTML escaping bug period
         // Once user changes password, new one will be stored correctly (no escaping)
+        console.log('Trying normal password verification...');
         const isValidPassword = await verifyPassword(currentPassword, user.password_hash);
+        console.log('Normal password verification result:', isValidPassword);
         
         // If normal verification fails, try escaped version (backward compatibility)
         let isValidEscaped = false;
         if (!isValidPassword) {
+            console.log('Normal verification failed, trying escaped version...');
             const validator = require('validator');
             const escapedPassword = validator.escape(currentPassword);
+            console.log('Escaped password:', escapedPassword);
+            console.log('Is different from original?', escapedPassword !== currentPassword);
+            
             // Only try escaped version if it's different from original
             if (escapedPassword !== currentPassword) {
                 isValidEscaped = await verifyPassword(escapedPassword, user.password_hash);
+                console.log('Escaped password verification result:', isValidEscaped);
             }
         }
 
         if (!isValidPassword && !isValidEscaped) {
+            console.log('❌ Both password verifications failed');
             return res.status(401).json({ error: 'Current password is incorrect' });
         }
+        
+        console.log('✅ Password verification successful!');
 
         const hashedPassword = await hashPassword(newPassword);
         
