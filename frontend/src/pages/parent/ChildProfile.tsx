@@ -168,26 +168,26 @@ const ChildProfile: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center space-x-4">
-        <Button variant="secondary" onClick={() => navigate('/parent/children')}>
-          <ArrowLeft size={20} className="mr-2" />
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+        <Button variant="secondary" onClick={() => navigate('/parent/children')} className="min-h-[44px]">
+          <ArrowLeft size={18} className="mr-2" />
           Back
         </Button>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
             {child.first_name} {child.last_name}
           </h1>
-          <p className="text-gray-600 mt-2">Child Profile</p>
+          <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">Child Profile</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <Card title="Basic Information">
-          <div className="flex gap-6">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
             {/* Photo in top left corner */}
             <div className="flex-shrink-0">
-              <div className="w-32 h-32 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center mx-auto sm:mx-0">
                 {child.photo_path ? (
                   <img
                     src={(() => {
@@ -215,28 +215,28 @@ const ChildProfile: React.FC = () => {
             </div>
 
             {/* Information on the right */}
-            <div className="flex-1 space-y-4">
+            <div className="flex-1 space-y-3 sm:space-y-4">
               <div>
-                <p className="text-sm text-gray-600">Student ID</p>
-                <p className="text-lg font-semibold">{child.student_id}</p>
+                <p className="text-xs sm:text-sm text-gray-600">Student ID</p>
+                <p className="text-base sm:text-lg font-semibold">{child.student_id}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Full Name</p>
-                <p className="text-lg font-semibold">
+                <p className="text-xs sm:text-sm text-gray-600">Full Name</p>
+                <p className="text-base sm:text-lg font-semibold break-words">
                   {child.first_name} {child.last_name}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Date of Birth</p>
-                <p className="text-lg font-semibold">{child.date_of_birth || 'N/A'}</p>
+                <p className="text-xs sm:text-sm text-gray-600">Date of Birth</p>
+                <p className="text-base sm:text-lg font-semibold">{child.date_of_birth || 'N/A'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Grade Level</p>
-                <p className="text-lg font-semibold">{child.grade_level || 'Not assigned'}</p>
+                <p className="text-xs sm:text-sm text-gray-600">Grade Level</p>
+                <p className="text-base sm:text-lg font-semibold">{child.grade_level || 'Not assigned'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Class</p>
-                <p className="text-lg font-semibold">{child.class_name || 'Not assigned'}</p>
+                <p className="text-xs sm:text-sm text-gray-600">Class</p>
+                <p className="text-base sm:text-lg font-semibold">{child.class_name || 'Not assigned'}</p>
               </div>
             </div>
           </div>
@@ -244,20 +244,20 @@ const ChildProfile: React.FC = () => {
 
         <Card title="Quick Stats">
           {stats ? (
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="p-3 bg-green-50 rounded-lg">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
+              <div className="p-3 sm:p-4 bg-green-50 rounded-lg">
                 <p className="text-xs text-gray-600">Total Merits</p>
-                <p className="text-2xl font-bold text-green-600">{stats.totalMerits}</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-600">{stats.totalMerits}</p>
                 <p className="text-xs text-gray-500">{stats.totalMeritPoints} points</p>
               </div>
-              <div className="p-3 bg-red-50 rounded-lg">
+              <div className="p-3 sm:p-4 bg-red-50 rounded-lg">
                 <p className="text-xs text-gray-600">Total Incidents</p>
-                <p className="text-2xl font-bold text-red-600">{stats.totalIncidents}</p>
+                <p className="text-xl sm:text-2xl font-bold text-red-600">{stats.totalIncidents}</p>
                 <p className="text-xs text-gray-500">{stats.totalDemeritPoints} points</p>
               </div>
-              <div className="p-3 bg-blue-50 rounded-lg col-span-2">
+              <div className="p-3 sm:p-4 bg-blue-50 rounded-lg sm:col-span-2">
                 <p className="text-xs text-gray-600">Attendance Rate (Last 30 days)</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.attendanceRate}%</p>
+                <p className="text-xl sm:text-2xl font-bold text-blue-600">{stats.attendanceRate}%</p>
               </div>
             </div>
           ) : (
@@ -266,29 +266,29 @@ const ChildProfile: React.FC = () => {
         </Card>
 
         <Card title="Quick Actions">
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <Button
-              className="w-full"
+              className="w-full min-h-[48px]"
               onClick={() => navigate(`/parent/attendance?student=${id}`)}
             >
               View Attendance
             </Button>
             <Button
-              className="w-full"
+              className="w-full min-h-[48px]"
               variant="secondary"
               onClick={() => navigate(`/parent/behaviour?student=${id}`)}
             >
               View Behaviour Reports
             </Button>
             <Button
-              className="w-full"
+              className="w-full min-h-[48px]"
               variant="secondary"
               onClick={() => navigate(`/parent/merits?student=${id}`)}
             >
               View Merits
             </Button>
             <Button
-              className="w-full"
+              className="w-full min-h-[48px]"
               variant="secondary"
               onClick={() => navigate(`/parent/detentions?student=${id}`)}
             >
@@ -338,7 +338,7 @@ const ChildProfile: React.FC = () => {
             {recentActivity.map((activity, index) => (
               <div
                 key={index}
-                className={`p-3 rounded-lg border-l-4 ${
+                className={`p-2.5 sm:p-3 rounded-lg border-l-4 ${
                   activity.type === 'merit'
                     ? 'bg-green-50 border-green-500'
                     : 'bg-red-50 border-red-500'
