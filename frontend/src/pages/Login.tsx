@@ -117,7 +117,7 @@ const Login: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen flex overflow-hidden">
+    <div className="min-h-screen flex flex-col lg:flex-row overflow-hidden">
       {/* Left Side - Branding & Features */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
         {/* Animated Gradient Background */}
@@ -244,7 +244,7 @@ const Login: React.FC = () => {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gradient-to-br from-gray-50 to-gray-100 relative">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-6 md:p-8 bg-gradient-to-br from-gray-50 to-gray-100 relative min-h-screen">
         {/* Subtle Background Pattern */}
         <div 
           className="absolute inset-0 opacity-[0.03]"
@@ -257,52 +257,52 @@ const Login: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md relative z-10"
+          className="w-full max-w-md relative z-10 px-2 sm:px-0"
         >
           {/* Mobile Logo */}
-          <div className="lg:hidden text-center mb-8">
+          <div className="lg:hidden text-center mb-6 sm:mb-8">
             <motion.div 
-              className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl mb-4 shadow-lg"
+              className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl mb-3 sm:mb-4 shadow-lg"
               whileHover={{ scale: 1.05 }}
             >
-              <GraduationCap className="text-white" size={32} />
+              <GraduationCap className="text-white" size={28} />
             </motion.div>
-            <h1 className="text-2xl font-bold text-gray-900">DMS</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">DMS</h1>
           </div>
 
           {/* Login Card */}
           <motion.div
-            className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-100"
+            className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-5 sm:p-6 md:p-8 border border-gray-100"
             initial={{ scale: 0.95 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.1 }}
           >
             {/* Header */}
-            <div className="text-center mb-8">
+            <div className="text-center mb-6 sm:mb-8">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
-                className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full mb-4"
+                className="inline-flex items-center space-x-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full mb-3 sm:mb-4"
               >
-                <Sparkles size={16} className="text-blue-600" />
-                <span className="text-sm font-medium text-blue-700">Secure Login</span>
+                <Sparkles size={14} className="text-blue-600" />
+                <span className="text-xs sm:text-sm font-medium text-blue-700">Secure Login</span>
               </motion.div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">{welcomeMessage}</h2>
-              <p className="text-gray-500">{tagline}</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{welcomeMessage}</h2>
+              <p className="text-sm sm:text-base text-gray-500">{tagline}</p>
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
               {/* Error Message */}
               {error && (
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center space-x-2"
+                  className="bg-red-50 border border-red-200 text-red-700 px-3 py-2.5 sm:px-4 sm:py-3 rounded-lg sm:rounded-xl flex items-center space-x-2"
                 >
                   <div className="w-2 h-2 bg-red-500 rounded-full" />
-                  <span className="text-sm">{error}</span>
+                  <span className="text-xs sm:text-sm">{error}</span>
                 </motion.div>
               )}
 
@@ -315,7 +315,7 @@ const Login: React.FC = () => {
                     exit={{ opacity: 0, height: 0 }}
                     className="space-y-3"
                   >
-                    <label className="text-sm font-medium text-gray-700">Select Account</label>
+                    <label className="text-xs sm:text-sm font-medium text-gray-700">Select Account</label>
                     <div className="space-y-2">
                       {savedAccounts.map((account, index) => (
                         <motion.button
@@ -325,21 +325,21 @@ const Login: React.FC = () => {
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: index * 0.1 }}
                           onClick={() => handleAccountSelect(account)}
-                          className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border border-blue-200 rounded-xl transition-all group"
+                          className="w-full flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border border-blue-200 rounded-lg sm:rounded-xl transition-all group min-h-[56px]"
                         >
                           <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-lg">
+                            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm sm:text-base font-bold shadow-lg flex-shrink-0">
                               {account.displayName?.charAt(0).toUpperCase() || account.email.charAt(0).toUpperCase()}
                             </div>
-                            <div className="text-left">
-                              <p className="font-medium text-gray-900">{account.email}</p>
-                              <p className="text-xs text-gray-500">{formatLastLogin(account.lastLogin)}</p>
+                            <div className="text-left min-w-0 flex-1">
+                              <p className="font-medium text-gray-900 text-sm sm:text-base truncate">{account.email}</p>
+                              <p className="text-xs text-gray-500 truncate">{formatLastLogin(account.lastLogin)}</p>
                             </div>
                           </div>
                           <button
                             type="button"
                             onClick={(e) => handleRemoveAccount(account.email, e)}
-                            className="p-2 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                            className="p-2 rounded-lg hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 flex-shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center"
                           >
                             <X size={16} />
                           </button>
@@ -349,7 +349,7 @@ const Login: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleUseAnotherAccount}
-                      className="w-full flex items-center justify-center space-x-2 p-3 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all border border-transparent hover:border-blue-200"
+                      className="w-full flex items-center justify-center space-x-2 p-3 text-xs sm:text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg sm:rounded-xl transition-all border border-transparent hover:border-blue-200 min-h-[48px]"
                     >
                       <UserCircle size={18} />
                       <span>Use another account</span>
@@ -360,7 +360,7 @@ const Login: React.FC = () => {
 
               {/* Email Field */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Email Address</label>
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Email Address</label>
                 <div className={`relative rounded-xl transition-all duration-300 ${
                   focusedField === 'email' 
                     ? 'ring-2 ring-blue-500 ring-offset-2' 
@@ -379,14 +379,14 @@ const Login: React.FC = () => {
                     onBlur={() => setFocusedField(null)}
                     required
                     placeholder="Enter your email"
-                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white transition-all"
+                    className="w-full pl-11 sm:pl-12 pr-4 py-3.5 sm:py-4 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:bg-white transition-all text-base"
                   />
                 </div>
               </div>
 
               {/* Password Field */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Password</label>
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Password</label>
                 <div className={`relative rounded-xl transition-all duration-300 ${
                   focusedField === 'password' 
                     ? 'ring-2 ring-blue-500 ring-offset-2' 
@@ -406,12 +406,12 @@ const Login: React.FC = () => {
                     onBlur={() => setFocusedField(null)}
                     required
                     placeholder="Enter your password"
-                    className="w-full pl-12 pr-12 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:bg-white transition-all"
+                    className="w-full pl-11 sm:pl-12 pr-11 sm:pr-12 py-3.5 sm:py-4 bg-gray-50 border border-gray-200 rounded-lg sm:rounded-xl focus:outline-none focus:bg-white transition-all text-base"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                    className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors min-w-[44px] min-h-[44px]"
                   >
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
@@ -424,7 +424,7 @@ const Login: React.FC = () => {
                 disabled={loading}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="w-full py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300 flex items-center justify-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                className="w-full py-3.5 sm:py-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-semibold rounded-lg sm:rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:shadow-blue-500/40 transition-all duration-300 flex items-center justify-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed min-h-[52px] text-base"
               >
                 {loading ? (
                   <motion.div
@@ -464,9 +464,9 @@ const Login: React.FC = () => {
                     }}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-white border-2 border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-md"
+                    className="w-full flex items-center justify-center space-x-3 px-4 sm:px-6 py-3.5 sm:py-4 bg-white border-2 border-gray-200 rounded-lg sm:rounded-xl font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-md min-h-[52px] text-sm sm:text-base"
                   >
-                    <svg className="w-6 h-6" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                       <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                       <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -492,7 +492,7 @@ const Login: React.FC = () => {
                   type="button"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 transition-all flex items-center justify-center space-x-2"
+                  className="w-full py-3.5 sm:py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-lg sm:rounded-xl shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 transition-all flex items-center justify-center space-x-2 min-h-[52px] text-base"
                 >
                   <span>Sign up as Parent</span>
                   <ArrowRight size={18} />
@@ -507,7 +507,7 @@ const Login: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.6 }}
-            className="mt-8 text-center text-gray-400 text-sm"
+            className="mt-6 sm:mt-8 text-center text-gray-400 text-xs sm:text-sm"
           >
             <p>© 2026 DMS. All rights reserved.</p>
           </motion.div>
