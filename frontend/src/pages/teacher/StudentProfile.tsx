@@ -5,7 +5,7 @@ import Button from '../../components/Button';
 import Card from '../../components/Card';
 import ParentProfileModal from '../../components/ParentProfileModal';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Camera, Upload, User, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Camera, Upload, User, TrendingUp, Copy, RefreshCw } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useToast } from '../../hooks/useToast';
 import { getPhotoUrl, handlePhotoError } from '../../utils/photoUrl';
@@ -156,6 +156,29 @@ const StudentProfile: React.FC = () => {
 
   const handleCameraCapture = () => {
     cameraInputRef.current?.click();
+  };
+
+  const handleCopyLinkCode = () => {
+    if (student.parent_link_code) {
+      navigator.clipboard.writeText(student.parent_link_code);
+      success('Link code copied to clipboard!');
+    }
+  };
+
+  const handleRegenerateLinkCode = async () => {
+    if (!id) return;
+    if (!window.confirm('Are you sure you want to regenerate the parent link code? The old code will no longer work.')) {
+      return;
+    }
+    
+    try {
+      const response = await api.generateLinkCode(Number(id));
+      setStudent({ ...student, parent_link_code: response.data.parent_link_code });
+      success('New link code generated successfully!');
+    } catch (err) {
+      console.error('Error regenerating link code:', err);
+      error('Error regenerating link code');
+    }
   };
 
   if (loading) {
@@ -326,6 +349,40 @@ const StudentProfile: React.FC = () => {
             <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
               <p className="text-xs sm:text-sm text-gray-600 mb-1">Parent Email</p>
               <p className="text-base sm:text-lg font-semibold text-emerald-700 break-words">{student.parent_email || 'N/A'}</p>
+            </div>
+            <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+              <p className="text-xs sm:text-sm text-gray-600 mb-2">Parent Link Code</p>
+              <div className="flex items-center gap-2 mb-2">
+                <p className="text-base sm:text-lg font-mono font-bold text-blue-700 break-all flex-1">
+                  {student.parent_link_code || 'Not generated'}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1">
+                  <Button
+                    variant="secondary"
+                    onClick={handleCopyLinkCode}
+                    disabled={!student.parent_link_code}
+                    className="text-xs py-2 px-3 rounded-lg sm:rounded-xl w-full min-h-[44px]"
+                  >
+                    <Copy size={14} className="mr-1" />
+                    Copy
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1">
+                  <Button
+                    variant="secondary"
+                    onClick={handleRegenerateLinkCode}
+                    className="text-xs py-2 px-3 rounded-lg sm:rounded-xl w-full min-h-[44px] bg-gradient-to-r from-orange-50 to-red-50 border-orange-200 text-orange-700 hover:from-orange-100 hover:to-red-100"
+                  >
+                    <RefreshCw size={14} className="mr-1" />
+                    Regenerate
+                  </Button>
+                </motion.div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Share this code with parents to link their account. Each code can only be used once.
+              </p>
             </div>
             {student.parent_id && parentData && (
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
