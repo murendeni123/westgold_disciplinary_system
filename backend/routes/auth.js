@@ -610,10 +610,27 @@ router.put('/change-password', authenticateToken, async (req, res) => {
         }
 
         const hashedPassword = await hashPassword(newPassword);
-        await dbRun(
+        
+        console.log('🔐 Updating password for user:', {
+            userId: req.user.id,
+            email: req.user.email,
+            hashedPasswordLength: hashedPassword.length
+        });
+        
+        const updateResult = await dbRun(
             'UPDATE public.users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
             [hashedPassword, req.user.id]
         );
+        
+        console.log('✅ Password update result:', {
+            rowsAffected: updateResult.changes,
+            userId: req.user.id
+        });
+        
+        if (updateResult.changes === 0) {
+            console.error('⚠️ WARNING: Password update affected 0 rows!');
+            return res.status(500).json({ error: 'Failed to update password - user not found' });
+        }
 
         res.json({ message: 'Password changed successfully' });
     } catch (error) {
