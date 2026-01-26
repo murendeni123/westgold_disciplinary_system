@@ -238,7 +238,7 @@ const StudentProfile: React.FC = () => {
                 )}
                 <span className="text-gray-400 text-sm photo-placeholder hidden">Photo not found</span>
               </div>
-              <div className="flex flex-col space-y-2 mt-3">
+              <div className="flex flex-row sm:flex-col gap-2 mt-3 justify-center sm:justify-start">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -254,23 +254,23 @@ const StudentProfile: React.FC = () => {
                   onChange={handleFileSelect}
                   className="hidden"
                 />
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1 sm:flex-none">
                   <Button
                     variant="secondary"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
-                    className="text-xs py-1 px-2 rounded-xl"
+                    className="text-xs py-2.5 px-3 rounded-lg sm:rounded-xl w-full min-h-[44px]"
                   >
                     <Upload size={14} className="mr-1" />
                     Upload
                   </Button>
                 </motion.div>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1 sm:flex-none">
                   <Button
                     variant="secondary"
                     onClick={handleCameraCapture}
                     disabled={uploading}
-                    className="text-xs py-1 px-2 rounded-xl"
+                    className="text-xs py-2.5 px-3 rounded-lg sm:rounded-xl w-full min-h-[44px]"
                   >
                     <Camera size={14} className="mr-1" />
                     Camera
@@ -280,28 +280,28 @@ const StudentProfile: React.FC = () => {
             </div>
 
             {/* Information on the right */}
-            <div className="flex-1 space-y-4">
-              <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-                <p className="text-sm text-gray-600 mb-1">Student ID</p>
-                <p className="text-lg font-semibold text-emerald-700">{student.student_id}</p>
+            <div className="flex-1 space-y-3 sm:space-y-4">
+              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Student ID</p>
+                <p className="text-base sm:text-lg font-semibold text-emerald-700">{student.student_id}</p>
               </div>
-              <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-                <p className="text-sm text-gray-600 mb-1">Full Name</p>
-                <p className="text-lg font-semibold text-emerald-700">
+              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Full Name</p>
+                <p className="text-base sm:text-lg font-semibold text-emerald-700 break-words">
                   {student.first_name} {student.last_name}
                 </p>
               </div>
-              <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-                <p className="text-sm text-gray-600 mb-1">Date of Birth</p>
-                <p className="text-lg font-semibold text-emerald-700">{student.date_of_birth || 'N/A'}</p>
+              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Date of Birth</p>
+                <p className="text-base sm:text-lg font-semibold text-emerald-700">{student.date_of_birth || 'N/A'}</p>
               </div>
-              <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-                <p className="text-sm text-gray-600 mb-1">Grade Level</p>
-                <p className="text-lg font-semibold text-emerald-700">{student.grade_level || 'Not assigned'}</p>
+              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Grade Level</p>
+                <p className="text-base sm:text-lg font-semibold text-emerald-700">{student.grade_level || 'Not assigned'}</p>
               </div>
-              <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-                <p className="text-sm text-gray-600 mb-1">Class</p>
-                <p className="text-lg font-semibold text-emerald-700">{student.class_name || 'Not assigned'}</p>
+              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Class</p>
+                <p className="text-base sm:text-lg font-semibold text-emerald-700">{student.class_name || 'Not assigned'}</p>
               </div>
             </div>
           </div>
@@ -312,27 +312,27 @@ const StudentProfile: React.FC = () => {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
-          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+          className="rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-4 sm:p-6"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Parent Information</h2>
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Parent Information</h2>
             <User className="text-emerald-600" size={24} />
           </div>
-          <div className="space-y-4">
-            <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-              <p className="text-sm text-gray-600 mb-1">Parent Name</p>
-              <p className="text-lg font-semibold text-emerald-700">{student.parent_name || 'Not linked'}</p>
+          <div className="space-y-3 sm:space-y-4">
+            <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+              <p className="text-xs sm:text-sm text-gray-600 mb-1">Parent Name</p>
+              <p className="text-base sm:text-lg font-semibold text-emerald-700 break-words">{student.parent_name || 'Not linked'}</p>
             </div>
-            <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-              <p className="text-sm text-gray-600 mb-1">Parent Email</p>
-              <p className="text-lg font-semibold text-emerald-700">{student.parent_email || 'N/A'}</p>
+            <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+              <p className="text-xs sm:text-sm text-gray-600 mb-1">Parent Email</p>
+              <p className="text-base sm:text-lg font-semibold text-emerald-700 break-words">{student.parent_email || 'N/A'}</p>
             </div>
             {student.parent_id && parentData && (
               <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                 <Button
                   variant="secondary"
                   onClick={() => setIsParentModalOpen(true)}
-                  className="mt-2 rounded-xl w-full"
+                  className="mt-2 rounded-lg sm:rounded-xl w-full min-h-[44px]"
                 >
                   <User size={16} className="mr-2" />
                   View Parent Profile
@@ -347,42 +347,42 @@ const StudentProfile: React.FC = () => {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4 }}
-          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+          className="rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-4 sm:p-6"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Quick Stats</h2>
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Quick Stats</h2>
             <TrendingUp className="text-emerald-600" size={24} />
           </div>
           {stats ? (
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.4 }}
-                className="p-4 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg"
+                className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg"
               >
                 <p className="text-xs opacity-90 mb-1">Total Merits</p>
-                <p className="text-2xl font-bold">{stats.totalMerits}</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.totalMerits}</p>
                 <p className="text-xs opacity-80">{stats.totalMeritPoints} points</p>
               </motion.div>
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.5 }}
-                className="p-4 rounded-xl bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg"
+                className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg"
               >
                 <p className="text-xs opacity-90 mb-1">Total Incidents</p>
-                <p className="text-2xl font-bold">{stats.totalIncidents}</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.totalIncidents}</p>
                 <p className="text-xs opacity-80">{stats.totalDemeritPoints} points</p>
               </motion.div>
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.6 }}
-                className="p-4 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg col-span-2"
+                className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg sm:col-span-2"
               >
                 <p className="text-xs opacity-90 mb-1">Attendance Rate (Last 30 days)</p>
-                <p className="text-2xl font-bold">{stats.attendanceRate}%</p>
+                <p className="text-xl sm:text-2xl font-bold">{stats.attendanceRate}%</p>
               </motion.div>
             </div>
           ) : (
@@ -396,16 +396,16 @@ const StudentProfile: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6 col-span-2"
+            className="rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-4 sm:p-6 col-span-1 lg:col-span-2"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Student Analytics</h2>
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Student Analytics</h2>
               <TrendingUp className="text-emerald-600" size={24} />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {stats.attendanceTrend && stats.attendanceTrend.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Attendance Trend</h4>
+                  <h4 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">Attendance Trend</h4>
                   <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={stats.attendanceTrend}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -432,7 +432,7 @@ const StudentProfile: React.FC = () => {
               )}
               {stats.behaviorTrend && stats.behaviorTrend.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Behavior Trend</h4>
+                  <h4 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">Behavior Trend</h4>
                   <ResponsiveContainer width="100%" height={200}>
                     <BarChart data={stats.behaviorTrend}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -457,36 +457,36 @@ const StudentProfile: React.FC = () => {
         )}
 
         <Card title="Quick Actions">
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <Button
-              className="w-full"
+              className="w-full min-h-[44px]"
               onClick={() => navigate(`/teacher/attendance/daily?student=${id}`)}
             >
               Take Attendance
             </Button>
             <Button
-              className="w-full"
+              className="w-full min-h-[44px]"
               variant="secondary"
               onClick={() => navigate(`/teacher/behaviour/log?student=${id}`)}
             >
               Log Incident
             </Button>
             <Button
-              className="w-full"
+              className="w-full min-h-[44px]"
               variant="secondary"
               onClick={() => navigate(`/teacher/merits/award?student=${id}`)}
             >
               Award Merit
             </Button>
             <Button
-              className="w-full"
+              className="w-full min-h-[44px]"
               variant="secondary"
               onClick={() => navigate(`/teacher/merits/view?student=${id}`)}
             >
               View Merits
             </Button>
             <Button
-              className="w-full"
+              className="w-full min-h-[44px]"
               variant="secondary"
               onClick={() => navigate(`/teacher/detentions/view?student=${id}`)}
             >
