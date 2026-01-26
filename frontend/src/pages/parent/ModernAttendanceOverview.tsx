@@ -5,7 +5,7 @@ import { api } from '../../services/api';
 import ModernCard from '../../components/ModernCard';
 import AnimatedStatCard from '../../components/AnimatedStatCard';
 import { motion } from 'framer-motion';
-import { Calendar, CheckCircle, XCircle, Clock, Download, TrendingUp } from 'lucide-react';
+import { Calendar, CheckCircle, XCircle, Clock, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import Table from '../../components/Table';
 import Select from '../../components/Select';
@@ -106,17 +106,6 @@ const ModernAttendanceOverview: React.FC = () => {
     }
   };
 
-  const handleExport = async () => {
-    try {
-      const studentId = selectedChild || user?.children?.[0]?.id;
-      if (!studentId) return;
-      await api.exportStudentRecord(Number(studentId), 'pdf');
-      alert('Export started! Check your downloads.');
-    } catch (error) {
-      console.error('Error exporting:', error);
-      alert('Error exporting attendance records');
-    }
-  };
 
   const columns = [
     { key: 'attendance_date', label: 'Date' },
@@ -277,15 +266,6 @@ const ModernAttendanceOverview: React.FC = () => {
               onChange={(e) => setEndDate(e.target.value)}
             />
             <div className="flex items-end">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleExport}
-                className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center space-x-2"
-              >
-                <Download size={18} />
-                <span>Export PDF</span>
-              </motion.button>
             </div>
           </div>
         </ModernCard>

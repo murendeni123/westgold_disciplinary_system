@@ -233,11 +233,15 @@ router.post('/link-school', authenticateToken, requireRole('parent'), async (req
 // Get all schools linked to parent
 router.get('/linked-schools', authenticateToken, requireRole('parent'), async (req, res) => {
     try {
+        // Get schools from user_schools table AND user's primary school_id
         const schools = await dbAll(
-            `SELECT s.id, s.name, s.subdomain, s.schema_name
+            `SELECT DISTINCT s.id, s.name, s.subdomain, s.schema_name, s.email,
+                    CASE WHEN s.id = u.school_id THEN 'active' ELSE 'linked' END as status
              FROM public.schools s 
-             INNER JOIN public.user_schools us ON s.id = us.school_id 
-             WHERE us.user_id = $1`,
+             LEFT JOIN public.user_schools us ON s.id = us.school_id AND us.user_id = $1
+             LEFT JOIN public.users u ON u.id = $1
+             WHERE us.user_id = $1 OR s.id = u.school_id
+             ORDER BY CASE WHEN s.id = u.school_id THEN 0 ELSE 1 END, s.name`,
             [req.user.id]
         );
 

@@ -5,7 +5,7 @@ import { api } from '../../services/api';
 import ModernCard from '../../components/ModernCard';
 import AnimatedStatCard from '../../components/AnimatedStatCard';
 import { motion } from 'framer-motion';
-import { AlertTriangle, TrendingDown, BarChart3, Download } from 'lucide-react';
+import { AlertTriangle, TrendingDown, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import Table from '../../components/Table';
 import Select from '../../components/Select';
@@ -86,34 +86,6 @@ const ModernBehaviourReport: React.FC = () => {
     }
   };
 
-  const exportToCSV = () => {
-    if (incidents.length === 0) return;
-
-    const headers = ['Date', 'Type', 'Severity', 'Demerit Points', 'Status', 'Description'];
-    const csvData = incidents.map(incident => [
-      incident.incident_date,
-      incident.incident_type,
-      incident.severity,
-      incident.points || 0,
-      incident.status,
-      incident.description || ''
-    ]);
-
-    const csvContent = [
-      headers.join(','),
-      ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `behaviour_report_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   const columns = [
     { key: 'incident_date', label: 'Date' },
@@ -220,14 +192,6 @@ const ModernBehaviourReport: React.FC = () => {
                 Monitor your child's behaviour incidents and patterns
               </p>
             </motion.div>
-            <Button
-              onClick={exportToCSV}
-              disabled={incidents.length === 0}
-              className="bg-white/20 hover:bg-white/30 text-white border-white/30"
-            >
-              <Download size={18} className="mr-2" />
-              Export CSV
-            </Button>
           </div>
         </div>
       </motion.div>
