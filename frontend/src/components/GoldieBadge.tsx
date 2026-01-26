@@ -20,8 +20,9 @@ const GoldieBadge: React.FC<GoldieBadgeProps> = ({
   // Calculate Clean Points: Total Merits - Total Demerits
   const cleanPoints = totalMerits - totalDemerits;
   
-  // Only show badge if student has 10 or more merits
-  const isEligible = totalMerits >= 10;
+  // Only show badge if student has 10 or more merits AND 10 or more clean points
+  // This matches the backend eligibility logic
+  const isEligible = totalMerits >= 10 && cleanPoints >= 10;
 
   if (!isEligible) {
     return null;
