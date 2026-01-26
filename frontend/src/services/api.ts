@@ -4,6 +4,13 @@ import axios from 'axios';
 // Falls back to /api for local development with proxy
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
+// Log the API base URL for debugging
+console.log('🔧 API Configuration:', {
+  VITE_API_URL: import.meta.env.VITE_API_URL,
+  API_BASE_URL: API_BASE_URL,
+  mode: import.meta.env.MODE
+});
+
 // Create axios instance
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
