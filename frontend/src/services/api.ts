@@ -453,8 +453,10 @@ export const api = {
   // Auth
   updateProfile: (data: { name: string; email: string }) =>
     axiosInstance.put('/api/auth/profile', data),
+  
+  // Password Management
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
-    axiosInstance.put('/api/auth/change-password', data),
+    axiosInstance.put('/api/password/change', data),
   emergencyPasswordReset: (newPassword: string) =>
     axiosInstance.post('/api/emergency-password-reset', { newPassword }),
 

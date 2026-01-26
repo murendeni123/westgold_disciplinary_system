@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import PasswordChangeForm from '../../components/PasswordChangeForm';
 import { motion } from 'framer-motion';
 import { Save, Lock, User, Settings, Sparkles, Building2, Copy, Check } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
@@ -21,13 +22,6 @@ const AdminSettings: React.FC = () => {
   });
   const [updatingProfile, setUpdatingProfile] = useState(false);
 
-  // Password state
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-  const [changingPassword, setChangingPassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -87,37 +81,6 @@ const AdminSettings: React.FC = () => {
     }
   };
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      error('New passwords do not match');
-      return;
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      error('New password must be at least 6 characters long');
-      return;
-    }
-
-    setChangingPassword(true);
-    try {
-      await api.changePassword({
-        currentPassword: passwordData.currentPassword,
-        newPassword: passwordData.newPassword,
-      });
-      success('Password changed successfully!');
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
-    } catch (err: any) {
-      error(err.response?.data?.error || 'Error changing password');
-    } finally {
-      setChangingPassword(false);
-    }
-  };
 
   return (
     <div className="space-y-8">
@@ -225,51 +188,10 @@ const AdminSettings: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Change Password</h2>
-              <Lock className="text-amber-600" size={24} />
-            </div>
-            <form onSubmit={handlePasswordChange} className="space-y-6">
-              <Input
-                label="Current Password"
-                type="password"
-                value={passwordData.currentPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-                required
-                placeholder="Enter current password"
-                className="rounded-xl"
-              />
-              <Input
-                label="New Password"
-                type="password"
-                value={passwordData.newPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                required
-                minLength={6}
-                placeholder="Enter new password (min 6 characters)"
-                className="rounded-xl"
-              />
-              <Input
-                label="Confirm New Password"
-                type="password"
-                value={passwordData.confirmPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                required
-                minLength={6}
-                placeholder="Confirm new password"
-                className="rounded-xl"
-              />
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  type="submit"
-                  disabled={changingPassword}
-                  className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 shadow-lg hover:shadow-xl"
-                >
-                  <Lock className="w-4 h-4 mr-2" />
-                  {changingPassword ? 'Changing Password...' : 'Change Password'}
-                </Button>
-              </motion.div>
-            </form>
+            <PasswordChangeForm
+              onSuccess={() => success('Password changed successfully!')}
+              onError={(errorMsg) => error(errorMsg)}
+            />
           </motion.div>
         )}
 

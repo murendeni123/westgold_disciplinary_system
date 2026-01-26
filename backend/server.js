@@ -114,6 +114,9 @@ const { strictLimiter, uploadLimiter } = require('./middleware/rateLimiter');
 // Routes - Public (no schema context needed)
 app.use('/api/auth', require('./routes/auth'));
 
+// Password Management (requires auth)
+app.use('/api/password', require('./routes/password'));
+
 // TEMPORARY: Emergency password reset (requires auth, no current password needed)
 app.use('/api/emergency-password-reset', require('./routes/emergency-password-reset'));
 
