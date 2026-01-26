@@ -27,7 +27,6 @@ const Students: React.FC = () => {
     last_name: '',
     date_of_birth: '',
     class_id: '',
-    grade_level: '',
   });
   const navigate = useNavigate();
 
@@ -87,7 +86,6 @@ const Students: React.FC = () => {
       last_name: '',
       date_of_birth: '',
       class_id: '',
-      grade_level: '',
     });
     setIsModalOpen(true);
   };
@@ -100,7 +98,6 @@ const Students: React.FC = () => {
       last_name: student.last_name,
       date_of_birth: student.date_of_birth || '',
       class_id: student.class_id || '',
-      grade_level: student.grade_level || '',
     });
     setIsModalOpen(true);
   };
@@ -459,13 +456,6 @@ const Students: React.FC = () => {
               </option>
             ))}
           </Select>
-          <Input
-            label="Grade Level"
-            value={formData.grade_level}
-            onChange={(e) => setFormData({ ...formData, grade_level: e.target.value })}
-            placeholder="e.g., Grade 1, Grade 2, etc."
-            className="rounded-xl"
-          />
           <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
             <Button
               type="button"

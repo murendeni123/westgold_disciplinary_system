@@ -131,7 +131,7 @@ router.post('/:id/photo', authenticateToken, upload.single('photo'), async (req,
 // Create student
 router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
-        const { student_id, first_name, last_name, date_of_birth, class_id, grade_level, parent_id } = req.body;
+        const { student_id, first_name, last_name, date_of_birth, class_id, parent_id } = req.body;
         const schema = getSchema(req);
 
         if (!student_id || !first_name || !last_name) {
@@ -146,9 +146,9 @@ router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
         const parent_link_code = `LINK${Date.now().toString().slice(-6)}`;
 
         const result = await schemaRun(req,
-            `INSERT INTO students (student_id, first_name, last_name, date_of_birth, class_id, grade_level, parent_id, parent_link_code, is_active)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true) RETURNING id`,
-            [student_id, first_name, last_name, date_of_birth || null, class_id || null, grade_level || null, parent_id || null, parent_link_code]
+            `INSERT INTO students (student_id, first_name, last_name, date_of_birth, class_id, parent_id, parent_link_code, is_active)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, true) RETURNING id`,
+            [student_id, first_name, last_name, date_of_birth || null, class_id || null, parent_id || null, parent_link_code]
         );
 
         const student = await schemaGet(req, 'SELECT * FROM students WHERE id = $1', [result.id]);
@@ -166,7 +166,7 @@ router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
 // Update student
 router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
     try {
-        const { first_name, last_name, date_of_birth, class_id, grade_level, parent_id } = req.body;
+        const { first_name, last_name, date_of_birth, class_id, parent_id } = req.body;
         const schema = getSchema(req);
 
         if (!schema) {
@@ -180,9 +180,9 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
 
         await schemaRun(req,
             `UPDATE students 
-             SET first_name = $1, last_name = $2, date_of_birth = $3, class_id = $4, grade_level = $5, parent_id = $6
-             WHERE id = $7`,
-            [first_name, last_name, date_of_birth || null, class_id || null, grade_level || null, parent_id || null, req.params.id]
+             SET first_name = $1, last_name = $2, date_of_birth = $3, class_id = $4, parent_id = $5
+             WHERE id = $6`,
+            [first_name, last_name, date_of_birth || null, class_id || null, parent_id || null, req.params.id]
         );
 
         const student = await schemaGet(req, 'SELECT * FROM students WHERE id = $1', [req.params.id]);
