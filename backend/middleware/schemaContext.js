@@ -160,6 +160,7 @@ const setSchemaFromToken = async (req, res, next) => {
             'req.user exists': !!req.user,
             'req.user.schemaName': req.user?.schemaName,
             'req.user.schoolId': req.user?.schoolId,
+            'x-school-id header': req.get('x-school-id'),
             'req.schemaName (before)': req.schemaName,
             'req.path': req.path
         });
@@ -179,7 +180,26 @@ const setSchemaFromToken = async (req, res, next) => {
                 req.school = await getCachedSchool(req.user.schoolId, 'id');
             }
         } else {
-            console.warn('⚠️ setSchemaFromToken: No schema found in req.user, keeping existing req.schemaName:', req.schemaName);
+            // Fallback: Check x-school-id header (for parents who just linked a school)
+            const schoolIdHeader = req.get('x-school-id');
+            if (schoolIdHeader && req.user) {
+                const schoolId = parseInt(schoolIdHeader, 10);
+                if (!isNaN(schoolId)) {
+                    const school = await getCachedSchool(schoolId, 'id');
+                    if (school) {
+                        req.schemaName = school.schema_name;
+                        req.schoolId = school.id;
+                        req.school = school;
+                        
+                        console.log('✅ Schema context set from x-school-id header:', {
+                            schemaName: req.schemaName,
+                            schoolId: req.schoolId
+                        });
+                    }
+                }
+            } else {
+                console.warn('⚠️ setSchemaFromToken: No schema found in req.user or headers, keeping existing req.schemaName:', req.schemaName);
+            }
         }
         
         next();

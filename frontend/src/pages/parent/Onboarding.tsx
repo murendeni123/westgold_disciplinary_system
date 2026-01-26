@@ -71,6 +71,15 @@ const Onboarding: React.FC = () => {
     
     try {
       const response = await api.linkSchoolByCode(schoolCode.trim().toUpperCase());
+      
+      // Store school context in localStorage for subsequent API requests
+      if (response.data?.school?.id) {
+        localStorage.setItem('schoolId', response.data.school.id.toString());
+      }
+      if (response.data?.school?.schema_name) {
+        localStorage.setItem('schemaName', response.data.school.schema_name);
+      }
+      
       await refreshUser();
       setHasSchool(true);
       setLinkedSchoolName(response.data?.school?.name || 'School');
