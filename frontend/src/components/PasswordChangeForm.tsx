@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, Eye, EyeOff } from 'lucide-react';
-import api from '../services/api';
+import { api } from '../services/api';
 
 interface PasswordChangeFormProps {
   onSuccess?: () => void;
