@@ -455,6 +455,8 @@ export const api = {
     axiosInstance.put('/api/auth/profile', data),
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
     axiosInstance.put('/api/auth/change-password', data),
+  emergencyPasswordReset: (newPassword: string) =>
+    axiosInstance.post('/api/emergency-password-reset', { newPassword }),
 
   // User Management (Admin)
   getUsers: () => axiosInstance.get('/api/users'),

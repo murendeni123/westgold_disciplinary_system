@@ -114,6 +114,9 @@ const { strictLimiter, uploadLimiter } = require('./middleware/rateLimiter');
 // Routes - Public (no schema context needed)
 app.use('/api/auth', require('./routes/auth'));
 
+// TEMPORARY: Emergency password reset (requires auth, no current password needed)
+app.use('/api/emergency-password-reset', require('./routes/emergency-password-reset'));
+
 // Routes - Platform Admin (school onboarding)
 app.use('/api/schools', require('./routes/schoolOnboarding'));
 
