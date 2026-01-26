@@ -22,11 +22,24 @@ router.get('/', authenticateToken, async (req, res) => {
         `;
 
         const params = [];
+        const conditions = [];
+        let paramIndex = 1;
         
         // If user is a parent, only show their own children
         if (req.user.role === 'parent') {
-            query += ` WHERE s.parent_id = $1`;
+            conditions.push(`s.parent_id = $${paramIndex++}`);
             params.push(req.user.id);
+        }
+        
+        // Filter by class_id if provided
+        if (req.query.class_id) {
+            conditions.push(`s.class_id = $${paramIndex++}`);
+            params.push(req.query.class_id);
+        }
+        
+        // Add WHERE clause if there are conditions
+        if (conditions.length > 0) {
+            query += ` WHERE ${conditions.join(' AND ')}`;
         }
         
         query += ` ORDER BY s.last_name, s.first_name`;
