@@ -341,7 +341,8 @@ const sanitizeBody = (req, res, next) => {
             sanitized[key] = sanitizeEmail(value);
         } else if (key.toLowerCase().includes('phone')) {
             sanitized[key] = sanitizePhone(value);
-        } else if (key.toLowerCase().includes('url') || key.toLowerCase().includes('link')) {
+        } else if (key.toLowerCase().includes('url') || key === 'website' || key === 'homepage') {
+            // Only sanitize as URL for actual URL fields, not link codes
             sanitized[key] = sanitizeUrl(value);
         } else if (typeof value === 'string') {
             // Default string sanitization
