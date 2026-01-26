@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useToast } from '../../hooks/useToast';
+import { getPhotoUrl, handlePhotoError } from '../../utils/photoUrl';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import Card from '../../components/Card';
@@ -190,21 +192,10 @@ const ChildProfile: React.FC = () => {
               <div className="w-24 h-24 sm:w-32 sm:h-32 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center mx-auto sm:mx-0">
                 {child.photo_path ? (
                   <img
-                    src={(() => {
-                      const baseUrl = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-                        ? 'http://192.168.18.160:5000'
-                        : 'http://localhost:5000';
-                      return child.photo_path.startsWith('http') ? child.photo_path : `${baseUrl}${child.photo_path}`;
-                    })()}
+                    src={getPhotoUrl(child.photo_path) || ''}
                     alt="Child"
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      console.error('Image load error:', child.photo_path);
-                      const target = e.currentTarget;
-                      target.style.display = 'none';
-                      const placeholder = target.parentElement?.querySelector('.photo-placeholder');
-                      if (placeholder) placeholder.classList.remove('hidden');
-                    }}
+                    onError={handlePhotoError}
                   />
                 ) : null}
                 {!child.photo_path && (

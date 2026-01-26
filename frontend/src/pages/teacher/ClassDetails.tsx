@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useToast } from '../../hooks/useToast';
+import { getPhotoUrl } from '../../utils/photoUrl';
 import { api } from '../../services/api';
 import Table from '../../components/Table';
 import Button from '../../components/Button';
@@ -36,12 +38,7 @@ const ClassDetails: React.FC = () => {
       render: (value: string) => (
         value ? (
           <img
-            src={(() => {
-              const baseUrl = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-                ? 'http://192.168.18.160:5000'
-                : 'http://localhost:5000';
-              return value.startsWith('http') ? value : `${baseUrl}${value}`;
-            })()}
+            src={getPhotoUrl(value) || ''}
             alt="Student"
             className="w-10 h-10 rounded-full object-cover"
           />

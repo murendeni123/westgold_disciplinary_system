@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Copy, Camera, Upload, User, Award, AlertTriangle, Calendar, TrendingUp } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useToast } from '../../hooks/useToast';
+import { getPhotoUrl, handlePhotoError } from '../../utils/photoUrl';
 
 const StudentProfile: React.FC = () => {
   const { id } = useParams();
@@ -273,21 +274,10 @@ const StudentProfile: React.FC = () => {
               <div className="w-24 h-24 sm:w-32 sm:h-32 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center mx-auto sm:mx-0">
                 {student.photo_path ? (
                   <img
-                    src={(() => {
-                      const baseUrl = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-                        ? 'http://192.168.18.160:5000'
-                        : 'http://localhost:5000';
-                      return student.photo_path.startsWith('http') ? student.photo_path : `${baseUrl}${student.photo_path}`;
-                    })()}
+                    src={getPhotoUrl(student.photo_path) || ''}
                     alt="Student"
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      console.error('Image load error:', student.photo_path);
-                      const target = e.currentTarget;
-                      target.style.display = 'none';
-                      const placeholder = target.parentElement?.querySelector('.photo-placeholder');
-                      if (placeholder) placeholder.classList.remove('hidden');
-                    }}
+                    onError={handlePhotoError}
                   />
                 ) : null}
                 {!student.photo_path && (

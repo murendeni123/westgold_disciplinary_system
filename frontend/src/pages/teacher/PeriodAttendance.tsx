@@ -6,6 +6,7 @@ import Input from '../../components/Input';
 import { motion } from 'framer-motion';
 import { Save, Calendar, Clock, Users } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { getPhotoUrl } from '../../utils/photoUrl';
 
 const PeriodAttendance: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
@@ -189,12 +190,7 @@ const PeriodAttendance: React.FC = () => {
                   <div className="flex items-center space-x-4">
                     {student.photo_path ? (
                       <img
-                        src={(() => {
-                          const baseUrl = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-                            ? 'http://192.168.18.160:5000'
-                            : 'http://localhost:5000';
-                          return student.photo_path.startsWith('http') ? student.photo_path : `${baseUrl}${student.photo_path}`;
-                        })()}
+                        src={getPhotoUrl(student.photo_path) || ''}
                         alt="Student"
                         className="w-12 h-12 rounded-full object-cover border-2 border-emerald-300 shadow-md"
                       />

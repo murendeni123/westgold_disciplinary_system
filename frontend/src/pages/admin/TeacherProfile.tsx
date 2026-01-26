@@ -5,6 +5,7 @@ import Button from '../../components/Button';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Camera, Upload, User, Mail, Phone, GraduationCap, Sparkles } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { getPhotoUrl, handlePhotoError } from '../../utils/photoUrl';
 
 const TeacherProfile: React.FC = () => {
   const { id } = useParams();
@@ -124,21 +125,10 @@ const TeacherProfile: React.FC = () => {
               <div className="w-32 h-32 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
                 {teacher.photo_path ? (
                   <img
-                    src={(() => {
-                      const baseUrl = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
-                        ? 'http://192.168.18.160:5000'
-                        : 'http://localhost:5000';
-                      return teacher.photo_path.startsWith('http') ? teacher.photo_path : `${baseUrl}${teacher.photo_path}`;
-                    })()}
+                    src={getPhotoUrl(teacher.photo_path) || ''}
                     alt="Teacher"
                     className="w-full h-full object-cover"
-                    onError={(e) => {
-                      console.error('Image load error:', teacher.photo_path);
-                      const target = e.currentTarget;
-                      target.style.display = 'none';
-                      const placeholder = target.parentElement?.querySelector('.photo-placeholder');
-                      if (placeholder) placeholder.classList.remove('hidden');
-                    }}
+                    onError={handlePhotoError}
                   />
                 ) : null}
                 {!teacher.photo_path && (
