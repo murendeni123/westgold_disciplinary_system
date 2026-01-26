@@ -62,7 +62,7 @@ router.put('/change', authenticateToken, async (req, res) => {
         // Fetch user from database
         console.log('\n--- Fetching user from database ---');
         const user = await dbGet(
-            'SELECT id, email, name, role, password_hash FROM public.users WHERE id = $1',
+            'SELECT id, email, name, role, password FROM public.users WHERE id = $1',
             [userId]
         );
 
@@ -77,14 +77,14 @@ router.put('/change', authenticateToken, async (req, res) => {
         console.log('DB User ID:', user.id);
         console.log('DB User Email:', user.email);
         console.log('DB User Name:', user.name);
-        console.log('Password hash length:', user.password_hash?.length || 0);
+        console.log('Password hash length:', user.password?.length || 0);
 
         // Verify current password
         console.log('\n--- Verifying current password ---');
         let isPasswordValid = false;
         
         try {
-            isPasswordValid = await verifyPassword(currentPassword, user.password_hash);
+            isPasswordValid = await verifyPassword(currentPassword, user.password);
             console.log('Password verification result:', isPasswordValid);
         } catch (verifyError) {
             console.error('❌ Password verification error:', verifyError.message);
@@ -123,7 +123,7 @@ router.put('/change', authenticateToken, async (req, res) => {
         
         try {
             updateResult = await dbRun(
-                'UPDATE public.users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+                'UPDATE public.users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
                 [newPasswordHash, userId]
             );
             
@@ -146,7 +146,7 @@ router.put('/change', authenticateToken, async (req, res) => {
         // Verify the update by fetching the user again
         console.log('\n--- Verifying password update ---');
         const updatedUser = await dbGet(
-            'SELECT password_hash, updated_at FROM public.users WHERE id = $1',
+            'SELECT password, updated_at FROM public.users WHERE id = $1',
             [userId]
         );
 
@@ -155,7 +155,7 @@ router.put('/change', authenticateToken, async (req, res) => {
             console.log('Updated at:', updatedUser.updated_at);
             
             // Verify new password works
-            const newPasswordWorks = await verifyPassword(newPassword, updatedUser.password_hash);
+            const newPasswordWorks = await verifyPassword(newPassword, updatedUser.password);
             console.log('New password verification:', newPasswordWorks ? '✅ WORKS' : '❌ FAILED');
             
             if (!newPasswordWorks) {
