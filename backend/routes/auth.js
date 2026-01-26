@@ -589,9 +589,23 @@ router.put('/change-password', authenticateToken, async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
+        // DUAL PASSWORD VERIFICATION: Check both normal and HTML-escaped versions
+        // This handles passwords that were stored during the HTML escaping bug period
+        // Once user changes password, new one will be stored correctly (no escaping)
         const isValidPassword = await verifyPassword(currentPassword, user.password_hash);
-
+        
+        // If normal verification fails, try escaped version (backward compatibility)
+        let isValidEscaped = false;
         if (!isValidPassword) {
+            const validator = require('validator');
+            const escapedPassword = validator.escape(currentPassword);
+            // Only try escaped version if it's different from original
+            if (escapedPassword !== currentPassword) {
+                isValidEscaped = await verifyPassword(escapedPassword, user.password_hash);
+            }
+        }
+
+        if (!isValidPassword && !isValidEscaped) {
             return res.status(401).json({ error: 'Current password is incorrect' });
         }
 
