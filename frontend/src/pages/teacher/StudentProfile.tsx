@@ -373,7 +373,7 @@ const StudentProfile: React.FC = () => {
                   <Button
                     variant="secondary"
                     onClick={handleRegenerateLinkCode}
-                    className="text-xs py-2 px-3 rounded-lg sm:rounded-xl w-full min-h-[44px] bg-gradient-to-r from-orange-50 to-red-50 border-orange-200 text-orange-700 hover:from-orange-100 hover:to-red-100"
+                    className="text-xs py-2 px-3 rounded-lg sm:rounded-xl w-full min-h-[44px]"
                   >
                     <RefreshCw size={14} className="mr-1" />
                     Regenerate
