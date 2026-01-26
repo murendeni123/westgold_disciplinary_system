@@ -120,6 +120,13 @@ const Students: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.student_id || !formData.first_name || !formData.last_name) {
+      error('Student ID, First Name, and Last Name are required');
+      return;
+    }
+    
     try {
       if (editingStudent) {
         await api.updateStudent(editingStudent.id, formData);
@@ -131,7 +138,8 @@ const Students: React.FC = () => {
       setIsModalOpen(false);
       fetchStudents();
     } catch (err: any) {
-      error(err.response?.data?.error || 'Error saving student');
+      console.error('Error saving student:', err);
+      error(err.response?.data?.error || 'Error saving student. Please check all fields and try again.');
     }
   };
 
