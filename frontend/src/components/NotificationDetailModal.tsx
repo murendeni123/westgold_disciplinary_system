@@ -44,19 +44,19 @@ const NotificationDetailModal: React.FC<NotificationDetailModalProps> = ({
       
       switch (notification.related_type) {
         case 'incident':
-          response = await api.get(`/api/behaviour/${notification.related_id}`);
+          response = await api.getIncident(notification.related_id);
           break;
         case 'merit':
-          response = await api.get(`/api/merits/${notification.related_id}`);
+          response = await api.getMerits({ id: notification.related_id });
           break;
         case 'detention':
-          response = await api.get(`/api/detentions/${notification.related_id}`);
+          response = await api.getDetention(notification.related_id);
           break;
         case 'intervention':
-          response = await api.get(`/api/interventions/${notification.related_id}`);
+          response = await api.getIntervention(notification.related_id);
           break;
         case 'consequence':
-          response = await api.get(`/api/consequences/${notification.related_id}`);
+          response = await api.getConsequence(notification.related_id);
           break;
         case 'student':
           response = await api.getStudent(notification.related_id);
