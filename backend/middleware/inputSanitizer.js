@@ -336,6 +336,13 @@ const sanitizeBody = (req, res, next) => {
             continue;
         }
         
+        // SECURITY: Skip sanitization for password fields - they should be hashed as-is
+        // Sanitizing passwords with HTML escape breaks authentication
+        if (key.toLowerCase().includes('password')) {
+            sanitized[key] = value;
+            continue;
+        }
+        
         // Sanitize based on common field names
         if (key.toLowerCase().includes('email')) {
             sanitized[key] = sanitizeEmail(value);
