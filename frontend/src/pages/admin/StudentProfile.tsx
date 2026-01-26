@@ -267,10 +267,10 @@ const StudentProfile: React.FC = () => {
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Basic Information</h2>
             <User className="text-amber-600" size={24} />
           </div>
-          <div className="flex gap-6">
+          <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
             {/* Photo in top left corner */}
             <div className="flex-shrink-0">
-              <div className="w-32 h-32 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center mx-auto sm:mx-0">
                 {student.photo_path ? (
                   <img
                     src={(() => {
@@ -295,7 +295,7 @@ const StudentProfile: React.FC = () => {
                 )}
                 <span className="text-gray-400 text-sm photo-placeholder hidden">Photo not found</span>
               </div>
-              <div className="flex flex-col space-y-2 mt-3">
+              <div className="flex flex-row sm:flex-col gap-2 mt-3 justify-center sm:justify-start">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -311,23 +311,23 @@ const StudentProfile: React.FC = () => {
                   onChange={handleFileSelect}
                   className="hidden"
                 />
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1 sm:flex-none">
                   <Button
                     variant="secondary"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
-                    className="text-xs py-1 px-2 rounded-xl"
+                    className="text-xs py-2.5 px-3 rounded-lg sm:rounded-xl w-full min-h-[44px]"
                   >
                     <Upload size={14} className="mr-1" />
                     Upload
                   </Button>
                 </motion.div>
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="flex-1 sm:flex-none">
                   <Button
                     variant="secondary"
                     onClick={handleCameraCapture}
                     disabled={uploading}
-                    className="text-xs py-1 px-2 rounded-xl"
+                    className="text-xs py-2.5 px-3 rounded-lg sm:rounded-xl w-full min-h-[44px]"
                   >
                     <Camera size={14} className="mr-1" />
                     Camera
@@ -337,35 +337,35 @@ const StudentProfile: React.FC = () => {
             </div>
 
             {/* Information on the right */}
-            <div className="flex-1 space-y-4">
-              <div className="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
-                <p className="text-sm text-gray-600 mb-1">Student ID</p>
-                <p className="text-lg font-semibold text-amber-700">{student.student_id}</p>
+            <div className="flex-1 space-y-3 sm:space-y-4">
+              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Student ID</p>
+                <p className="text-base sm:text-lg font-semibold text-amber-700">{student.student_id}</p>
               </div>
-              <div className="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
-                <p className="text-sm text-gray-600 mb-1">Full Name</p>
-                <p className="text-lg font-semibold text-amber-700">
+              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Full Name</p>
+                <p className="text-base sm:text-lg font-semibold text-amber-700 break-words">
                   {student.first_name} {student.last_name}
                 </p>
               </div>
-              <div className="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
-                <p className="text-sm text-gray-600 mb-1">Date of Birth</p>
-                <p className="text-lg font-semibold text-amber-700">{student.date_of_birth || 'N/A'}</p>
+              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Date of Birth</p>
+                <p className="text-base sm:text-lg font-semibold text-amber-700">{student.date_of_birth || 'N/A'}</p>
               </div>
-              <div className="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
-                <p className="text-sm text-gray-600 mb-1">Grade Level</p>
-                <p className="text-lg font-semibold text-amber-700">{student.grade_level || 'Not assigned'}</p>
+              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Grade Level</p>
+                <p className="text-base sm:text-lg font-semibold text-amber-700">{student.grade_level || 'Not assigned'}</p>
               </div>
-              <div className="p-3 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
-                <p className="text-sm text-gray-600 mb-1">Class</p>
-                <div className="flex items-center space-x-2">
-                  <p className="text-lg font-semibold text-amber-700">{student.class_name || 'Not assigned'}</p>
-                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Class</p>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                  <p className="text-base sm:text-lg font-semibold text-amber-700">{student.class_name || 'Not assigned'}</p>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full sm:w-auto">
                     <Button
                       variant="secondary"
                       size="sm"
                       onClick={() => setIsClassModalOpen(true)}
-                      className="rounded-xl"
+                      className="rounded-lg sm:rounded-xl min-h-[44px] w-full sm:w-auto"
                     >
                       {student.class_id ? 'Change' : 'Assign'}
                     </Button>
