@@ -583,11 +583,19 @@ router.put('/change-password', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'New password must be at least 6 characters long' });
         }
 
+        console.log('🔍 Looking up user with ID from token:', req.user.id);
+        
         const user = await dbGet('SELECT * FROM public.users WHERE id = $1', [req.user.id]);
 
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            console.error('❌ User not found in database with ID:', req.user.id);
+            console.error('Token might be stale or invalid. User should logout and login again.');
+            return res.status(404).json({ 
+                error: 'User not found. Please logout and login again to refresh your session.' 
+            });
         }
+        
+        console.log('✅ Found user:', { id: user.id, email: user.email, name: user.name });
 
         // DUAL PASSWORD VERIFICATION: Check both normal and HTML-escaped versions
         // This handles passwords that were stored during the HTML escaping bug period
