@@ -47,12 +47,17 @@ const seedDefaultTypes = async (schoolId, schemaName) => {
         ];
         
         for (const type of incidentTypes) {
-            await client.query(`
-                INSERT INTO incident_types (name, default_points, default_severity, description, is_active, school_id)
-                VALUES ($1, $2, $3, $4, true, $5)
-                ON CONFLICT (name, school_id) DO NOTHING
-            `, [type.name, type.points, type.severity, type.description, schoolId]);
-            counts.incidentTypes++;
+            const existing = await client.query(
+                `SELECT id FROM incident_types WHERE name = $1`,
+                [type.name]
+            );
+            if (existing.rows.length === 0) {
+                await client.query(`
+                    INSERT INTO incident_types (name, points, severity, description, is_active)
+                    VALUES ($1, $2, $3, $4, true)
+                `, [type.name, type.points, type.severity, type.description]);
+                counts.incidentTypes++;
+            }
         }
         
         // ============================================
@@ -72,12 +77,17 @@ const seedDefaultTypes = async (schoolId, schemaName) => {
         ];
         
         for (const type of meritTypes) {
-            await client.query(`
-                INSERT INTO merit_types (name, default_points, description, is_active, school_id)
-                VALUES ($1, $2, $3, true, $4)
-                ON CONFLICT (name, school_id) DO NOTHING
-            `, [type.name, type.points, type.description, schoolId]);
-            counts.meritTypes++;
+            const existing = await client.query(
+                `SELECT id FROM merit_types WHERE name = $1`,
+                [type.name]
+            );
+            if (existing.rows.length === 0) {
+                await client.query(`
+                    INSERT INTO merit_types (name, points, description, is_active)
+                    VALUES ($1, $2, $3, true)
+                `, [type.name, type.points, type.description]);
+                counts.meritTypes++;
+            }
         }
         
         // ============================================
@@ -97,12 +107,17 @@ const seedDefaultTypes = async (schoolId, schemaName) => {
         ];
         
         for (const type of interventionTypes) {
-            await client.query(`
-                INSERT INTO intervention_types (name, description, default_duration, is_active, school_id)
-                VALUES ($1, $2, $3, true, $4)
-                ON CONFLICT (name, school_id) DO NOTHING
-            `, [type.name, type.description, type.duration, schoolId]);
-            counts.interventionTypes++;
+            const existing = await client.query(
+                `SELECT id FROM intervention_types WHERE name = $1`,
+                [type.name]
+            );
+            if (existing.rows.length === 0) {
+                await client.query(`
+                    INSERT INTO intervention_types (name, description, default_duration, is_active, school_id)
+                    VALUES ($1, $2, $3, true, $4)
+                `, [type.name, type.description, type.duration, schoolId]);
+                counts.interventionTypes++;
+            }
         }
         
         await client.query('COMMIT');
