@@ -74,26 +74,26 @@ const ParentProfile: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">My Profile</h1>
-        <p className="text-gray-600 mt-2">Manage your profile information</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">My Profile</h1>
+        <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">Manage your profile information</p>
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
-          <AlertCircle size={20} />
-          {error}
+        <div className="bg-red-50 border border-red-200 text-red-700 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg flex items-center gap-2 text-sm sm:text-base">
+          <AlertCircle size={18} className="flex-shrink-0" />
+          <span className="break-words">{error}</span>
         </div>
       )}
 
       {success && (
-        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+        <div className="bg-green-50 border border-green-200 text-green-700 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base">
           {success}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Account Information */}
         <Card title="Account Information">
           <div className="space-y-4">
@@ -187,7 +187,7 @@ const ParentProfile: React.FC = () => {
               placeholder="Enter your home address"
               required
             />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
                 label="City"
                 value={formData.city}
@@ -205,8 +205,8 @@ const ParentProfile: React.FC = () => {
         </Card>
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={loading}>
-            <Save size={20} className="mr-2" />
+          <Button type="submit" disabled={loading} className="w-full sm:w-auto min-h-[48px]">
+            <Save size={18} className="mr-2" />
             {loading ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
