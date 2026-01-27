@@ -14,7 +14,7 @@ interface SchoolSwitcherProps {
 }
 
 const SchoolSwitcher: React.FC<SchoolSwitcherProps> = ({ onSchoolChange }) => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, refreshUser } = useAuth();
   const [schools, setSchools] = useState<School[]>([]);
   const [currentSchool, setCurrentSchool] = useState<School | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -92,8 +92,8 @@ const SchoolSwitcher: React.FC<SchoolSwitcherProps> = ({ onSchoolChange }) => {
         onSchoolChange(school.id);
       }
 
-      // Refresh page data if needed
-      window.location.reload();
+      // Refresh user data instead of full page reload
+      await refreshUser();
     } catch (error) {
       console.error('Error switching school:', error);
     } finally {

@@ -102,9 +102,8 @@ const LinkSchool: React.FC = () => {
       const updatedUser = { ...user, school_id: schoolId };
       updateUser(updatedUser);
       
-      // Refresh page data
+      // Refresh user data
       await refreshUser();
-      window.location.reload();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Error switching school');
     } finally {

@@ -1,10 +1,12 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { PlatformAuthProvider } from './contexts/PlatformAuthContext';
 import { SchoolThemeProvider } from './contexts/SchoolThemeContext';
 import { FeatureFlagsProvider } from './contexts/FeatureFlagsContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { setNavigationCallback } from './services/api';
 import Login from './pages/Login';
 import ParentSignup from './pages/ParentSignup';
 import AuthCallback from './pages/AuthCallback';
@@ -90,6 +92,19 @@ import LinkSchool from './pages/parent/LinkSchool';
 import ParentOnboarding from './pages/parent/Onboarding';
 import ParentProfile from './pages/parent/ParentProfile';
 
+// Component to set up navigation callback for API interceptor
+function NavigationSetup() {
+  const navigate = useNavigate();
+  
+  useEffect(() => {
+    setNavigationCallback((path: string) => {
+      navigate(path, { replace: true });
+    });
+  }, [navigate]);
+  
+  return null;
+}
+
 function App() {
   return (
     <Router>
@@ -99,6 +114,7 @@ function App() {
             <PlatformAuthProvider>
               <FeatureFlagsProvider>
                 <ToastProvider>
+                  <NavigationSetup />
             <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<ParentSignup />} />
