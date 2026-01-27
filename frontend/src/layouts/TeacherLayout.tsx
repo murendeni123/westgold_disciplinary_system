@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import QuickStudentSearch from '../components/QuickStudentSearch';
 import NotificationBell from '../components/NotificationBell';
+import TokenExpirationWarning from '../components/TokenExpirationWarning';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
 import { motion } from 'framer-motion';
 import { Menu, X, GraduationCap } from 'lucide-react';
@@ -65,6 +66,7 @@ const TeacherLayout: React.FC = () => {
         />
       </div>
 
+      <TokenExpirationWarning />
       <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
       
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-80 relative z-10">

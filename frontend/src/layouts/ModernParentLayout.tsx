@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import ModernSidebar from '../components/ModernSidebar';
 import QuickStudentSearch from '../components/QuickStudentSearch';
 import NotificationBell from '../components/NotificationBell';
+import TokenExpirationWarning from '../components/TokenExpirationWarning';
 import SchoolSwitcher from '../components/SchoolSwitcher';
 import PageTransition from '../components/PageTransition';
 import AnimatedBackground from '../components/AnimatedBackground';
@@ -95,6 +96,7 @@ const ModernParentLayout: React.FC = () => {
       {/* Animated Background */}
       <AnimatedBackground />
       
+      <TokenExpirationWarning />
       <ModernSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
       
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-80">
