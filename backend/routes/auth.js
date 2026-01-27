@@ -639,7 +639,7 @@ router.put('/change-password', authenticateToken, async (req, res) => {
         });
         
         const updateResult = await dbRun(
-            'UPDATE public.users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+            'UPDATE public.users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
             [hashedPassword, req.user.id]
         );
         

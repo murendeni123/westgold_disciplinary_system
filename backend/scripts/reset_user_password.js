@@ -42,7 +42,7 @@ async function resetPassword() {
         console.log(`💾 Updating password in database...`);
 
         await dbRun(
-            'UPDATE public.users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+            'UPDATE public.users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
             [hashedPassword, user.id]
         );
 

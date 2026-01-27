@@ -124,7 +124,7 @@ router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
 
         // Create user in public.users
         const userResult = await dbRun(
-            `INSERT INTO public.users (email, password_hash, role, name, primary_school_id, is_active) 
+            `INSERT INTO public.users (email, password, role, name, primary_school_id, is_active) 
              VALUES ($1, $2, $3, $4, $5, true) RETURNING id`,
             [email.toLowerCase(), hashedPassword, 'teacher', name, req.schoolId]
         );
@@ -207,7 +207,7 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
 
         if (password) {
             const hashedPassword = await bcrypt.hash(password, 10);
-            await dbRun('UPDATE public.users SET password_hash = $1 WHERE id = $2', [hashedPassword, existing.user_id]);
+            await dbRun('UPDATE public.users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [hashedPassword, existing.user_id]);
         }
 
         const teacher = await schemaGet(req, `
