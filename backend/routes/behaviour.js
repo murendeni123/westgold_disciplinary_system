@@ -114,8 +114,13 @@ router.get('/:id', authenticateToken, async (req, res) => {
 // Create incident
 router.post('/', authenticateToken, async (req, res) => {
     try {
+        console.log('=== CREATE INCIDENT REQUEST ===');
+        console.log('User:', req.user ? { id: req.user.id, role: req.user.role, email: req.user.email } : 'undefined');
+        console.log('Request body:', req.body);
+        
         const { student_id, incident_date, incident_time, incident_type, incident_type_id, description, severity, points } = req.body;
         const schema = getSchema(req);
+        console.log('Schema:', schema);
 
         if (!student_id || !incident_date) {
             return res.status(400).json({ error: 'Student ID and incident date are required' });
@@ -131,17 +136,28 @@ router.post('/', authenticateToken, async (req, res) => {
 
         // Get teacher ID from school schema
         // For admins, teacher record is optional - they can log incidents on behalf of the school
+        console.log('Fetching teacher record for user_id:', req.user.id);
         const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
+        console.log('Teacher record:', teacher);
+        
         if (!teacher && req.user.role !== 'admin') {
+            console.log('ERROR: No teacher record and user is not admin');
             return res.status(403).json({ error: 'Teacher record not found. Only teachers and admins can log incidents.' });
         }
         
         // Use teacher ID if available, otherwise null for admin-created incidents
         const teacherId = teacher ? teacher.id : null;
+        console.log('Teacher ID to use:', teacherId);
 
         // Check badge eligibility BEFORE logging incident
+        console.log('Calculating badge eligibility before incident for student:', student_id);
         const beforeEligibility = await calculateBadgeEligibility(req, student_id);
+        console.log('Before eligibility:', beforeEligibility);
 
+        console.log('Inserting incident into database...');
+        console.log('Insert params:', [student_id, teacherId, incident_date, incident_time || null, incident_type_id || null, 
+             String(description).trim(), severity || 'minor', points || 0]);
+        
         const result = await schemaRun(req,
             `INSERT INTO behaviour_incidents 
              (student_id, teacher_id, date, time, incident_type_id, description, severity, points_deducted)
@@ -149,32 +165,45 @@ router.post('/', authenticateToken, async (req, res) => {
             [student_id, teacherId, incident_date, incident_time || null, incident_type_id || null, 
              String(description).trim(), severity || 'minor', points || 0]
         );
+        console.log('Incident inserted, ID:', result.id);
 
+        console.log('Fetching created incident...');
         const incident = await schemaGet(req, 'SELECT * FROM behaviour_incidents WHERE id = $1', [result.id]);
+        console.log('Incident fetched:', incident ? 'success' : 'failed');
         
         // Check badge eligibility AFTER logging incident
+        console.log('Calculating badge eligibility after incident...');
         const afterEligibility = await calculateBadgeEligibility(req, student_id);
+        console.log('After eligibility:', afterEligibility);
         
         // Get student details for notification
+        console.log('Fetching student details for notifications...');
         const student = await schemaGet(req, 
             'SELECT s.*, s.first_name || \' \' || s.last_name as student_name, s.class_id FROM students s WHERE s.id = $1', 
             [student_id]
         );
+        console.log('Student:', student ? { id: student.id, name: student.student_name, parent_id: student.parent_id } : 'not found');
         
         // Get logging teacher details (only if teacher exists)
+        console.log('Fetching logging teacher details...');
         let loggingTeacher = null;
         if (teacher) {
+            console.log('Teacher exists, fetching teacher details...');
             loggingTeacher = await schemaGet(req,
                 'SELECT t.id, u.name as teacher_name FROM teachers t JOIN public.users u ON t.user_id = u.id WHERE t.id = $1',
                 [teacher.id]
             );
+            console.log('Logging teacher:', loggingTeacher);
         } else if (req.user.role === 'admin') {
+            console.log('Admin user, fetching admin details...');
             // For admin-created incidents, use admin's name
             const adminUser = await schemaGet(req,
                 'SELECT id, name FROM public.users WHERE id = $1',
                 [req.user.id]
             );
+            console.log('Admin user:', adminUser);
             loggingTeacher = { teacher_name: adminUser?.name || 'Admin' };
+            console.log('Logging teacher (admin):', loggingTeacher);
         }
         
         // Get class teacher if student has a class
@@ -265,7 +294,8 @@ router.post('/', authenticateToken, async (req, res) => {
         }
         
         // Return incident with badge status information
-        res.status(201).json({
+        console.log('Preparing response...');
+        const response = {
             ...incident,
             badgeStatusChange: badgeStatusChange.statusChanged ? {
                 badgeEarned: badgeStatusChange.badgeEarned || false,
@@ -274,10 +304,18 @@ router.post('/', authenticateToken, async (req, res) => {
                 cleanPoints: afterEligibility.cleanPoints,
                 totalMerits: afterEligibility.totalMerits
             } : null
-        });
+        };
+        console.log('SUCCESS: Incident created successfully, ID:', result.id);
+        res.status(201).json(response);
     } catch (error) {
-        console.error('Error creating incident:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('❌ ERROR creating incident:', error);
+        console.error('Error stack:', error.stack);
+        console.error('Error details:', {
+            message: error.message,
+            code: error.code,
+            detail: error.detail
+        });
+        res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 });
 

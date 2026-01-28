@@ -86,8 +86,13 @@ router.get('/', authenticateToken, async (req, res) => {
 // Create merit
 router.post('/', authenticateToken, async (req, res) => {
   try {
+    console.log('=== CREATE MERIT REQUEST ===');
+    console.log('User:', req.user ? { id: req.user.id, role: req.user.role, email: req.user.email } : 'undefined');
+    console.log('Request body:', req.body);
+    
     const { student_id, merit_date, merit_type, merit_type_id, description, points } = req.body;
     const schema = getSchema(req);
+    console.log('Schema:', schema);
 
     if (!student_id || !merit_date) {
       return res.status(400).json({ error: 'Student ID and date are required' });
@@ -103,33 +108,50 @@ router.post('/', authenticateToken, async (req, res) => {
 
     // Get teacher ID from school schema
     // For admins, teacher record is optional - they can award merits on behalf of the school
+    console.log('Fetching teacher record for user_id:', req.user.id);
     const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
+    console.log('Teacher record:', teacher);
+    
     if (!teacher && req.user.role !== 'admin') {
+      console.log('ERROR: No teacher record and user is not admin');
       return res.status(403).json({ error: 'Teacher record not found. Only teachers and admins can award merits.' });
     }
     
     // Use teacher ID if available, otherwise null for admin-created merits
     const teacherId = teacher ? teacher.id : null;
+    console.log('Teacher ID to use:', teacherId);
 
     // Check badge eligibility BEFORE awarding merit
+    console.log('Calculating badge eligibility before merit for student:', student_id);
     const beforeEligibility = await calculateBadgeEligibility(req, student_id);
+    console.log('Before eligibility:', beforeEligibility);
 
+    console.log('Inserting merit into database...');
+    console.log('Insert params:', [student_id, teacherId, merit_date, merit_type_id || null, String(description).trim(), points || 1]);
+    
     const result = await schemaRun(req,
       `INSERT INTO merits (student_id, teacher_id, date, merit_type_id, description, points)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
       [student_id, teacherId, merit_date, merit_type_id || null, String(description).trim(), points || 1]
     );
+    console.log('Merit inserted, ID:', result.id);
 
+    console.log('Fetching created merit...');
     const merit = await schemaGet(req, 'SELECT * FROM merits WHERE id = $1', [result.id]);
+    console.log('Merit fetched:', merit ? 'success' : 'failed');
     
     // Check badge eligibility AFTER awarding merit
+    console.log('Calculating badge eligibility after merit...');
     const afterEligibility = await calculateBadgeEligibility(req, student_id);
+    console.log('After eligibility:', afterEligibility);
     
     // Get student details for notification
+    console.log('Fetching student details for notifications...');
     const student = await schemaGet(req, 
       'SELECT s.*, s.first_name || \' \' || s.last_name as student_name FROM students s WHERE s.id = $1', 
       [student_id]
     );
+    console.log('Student:', student ? { id: student.id, name: student.student_name, parent_id: student.parent_id } : 'not found');
     
     // Notify parent if exists
     if (student && student.parent_id) {
@@ -153,7 +175,8 @@ router.post('/', authenticateToken, async (req, res) => {
     );
     
     // Return merit with badge status information
-    res.status(201).json({
+    console.log('Preparing response...');
+    const response = {
       ...merit,
       badgeStatusChange: badgeStatusChange.statusChanged ? {
         badgeEarned: badgeStatusChange.badgeEarned || false,
@@ -162,10 +185,18 @@ router.post('/', authenticateToken, async (req, res) => {
         cleanPoints: afterEligibility.cleanPoints,
         totalMerits: afterEligibility.totalMerits
       } : null
-    });
+    };
+    console.log('SUCCESS: Merit created successfully, ID:', result.id);
+    res.status(201).json(response);
   } catch (error) {
-    console.error('Error creating merit:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('❌ ERROR creating merit:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail
+    });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 
