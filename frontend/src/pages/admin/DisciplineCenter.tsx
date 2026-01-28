@@ -21,9 +21,10 @@ import {
   ThumbsUp,
   ThumbsDown,
   X,
+  Award,
 } from 'lucide-react';
 
-type TabType = 'behaviour' | 'detentions' | 'interventions' | 'consequences';
+type TabType = 'behaviour' | 'detentions' | 'interventions' | 'consequences' | 'merits';
 
 interface Incident {
   id: number;
@@ -75,6 +76,19 @@ interface Consequence {
   completed: boolean;
 }
 
+interface Merit {
+  id: number;
+  student_id: number;
+  student_name: string;
+  merit_type: string;
+  merit_type_id?: number;
+  description: string;
+  points: number;
+  date: string;
+  teacher_name: string;
+  created_at: string;
+}
+
 const DisciplineCenter: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('behaviour');
   const [loading, setLoading] = useState(true);
@@ -86,6 +100,7 @@ const DisciplineCenter: React.FC = () => {
   const [detentions, setDetentions] = useState<Detention[]>([]);
   const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [consequences, setConsequences] = useState<Consequence[]>([]);
+  const [merits, setMerits] = useState<Merit[]>([]);
 
   // Stats
   const [stats, setStats] = useState({
@@ -93,6 +108,7 @@ const DisciplineCenter: React.FC = () => {
     pendingDetentions: 0,
     activeInterventions: 0,
     pendingConsequences: 0,
+    totalMerits: 0,
   });
 
   // Decline modal state
@@ -153,14 +169,19 @@ const DisciplineCenter: React.FC = () => {
           const consequencesRes = await api.getConsequences();
           setConsequences(consequencesRes.data || []);
           break;
+        case 'merits':
+          const meritsRes = await api.getMerits();
+          setMerits(meritsRes.data || []);
+          break;
       }
       
       // Fetch stats
-      const [incRes, detRes, intRes, conRes] = await Promise.all([
+      const [incRes, detRes, intRes, conRes, merRes] = await Promise.all([
         api.getIncidents(),
         api.getDetentions(),
         api.getInterventions(),
         api.getConsequences(),
+        api.getMerits(),
       ]);
       
       setStats({
@@ -168,6 +189,7 @@ const DisciplineCenter: React.FC = () => {
         pendingDetentions: detRes.data?.filter((d: any) => d.status === 'pending' || d.status === 'scheduled').length || 0,
         activeInterventions: intRes.data?.filter((i: any) => i.status === 'active' || i.status === 'in_progress').length || 0,
         pendingConsequences: conRes.data?.filter((c: any) => !c.completed && c.status !== 'completed').length || 0,
+        totalMerits: merRes.data?.length || 0,
       });
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -228,13 +250,14 @@ const DisciplineCenter: React.FC = () => {
     { id: 'detentions' as TabType, label: 'Detentions', icon: Clock, color: 'from-amber-500 to-yellow-500' },
     { id: 'interventions' as TabType, label: 'Interventions', icon: Shield, color: 'from-blue-500 to-cyan-500' },
     { id: 'consequences' as TabType, label: 'Consequences', icon: FileText, color: 'from-purple-500 to-pink-500' },
+    { id: 'merits' as TabType, label: 'Merits', icon: Award, color: 'from-green-500 to-emerald-500' },
   ];
 
   const statCards = [
     { label: 'Total Incidents', value: stats.totalIncidents, icon: AlertTriangle, color: 'from-red-500 to-orange-500', trend: 'down' },
     { label: 'Pending Detentions', value: stats.pendingDetentions, icon: Clock, color: 'from-amber-500 to-yellow-500', trend: 'neutral' },
     { label: 'Active Interventions', value: stats.activeInterventions, icon: Shield, color: 'from-blue-500 to-cyan-500', trend: 'up' },
-    { label: 'Pending Consequences', value: stats.pendingConsequences, icon: FileText, color: 'from-purple-500 to-pink-500', trend: 'down' },
+    { label: 'Total Merits', value: stats.totalMerits, icon: Award, color: 'from-green-500 to-emerald-500', trend: 'up' },
   ];
 
   const getSeverityBadge = (severity: string) => {
@@ -526,6 +549,61 @@ const DisciplineCenter: React.FC = () => {
     </table>
   );
 
+  const renderMeritsTable = () => (
+    <table className="w-full">
+      <thead className="bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
+          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Merit Type</th>
+          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Description</th>
+          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Points</th>
+          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase">Awarded By</th>
+          <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100">
+        {merits.map((merit, index) => (
+          <motion.tr
+            key={merit.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.03 }}
+            className="hover:bg-gray-50 transition-colors cursor-pointer"
+            onClick={() => handleRowClick(merit, 'merits')}
+          >
+            <td className="px-6 py-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center text-white font-bold">
+                  {merit.student_name?.charAt(0) || 'S'}
+                </div>
+                <span className="font-medium text-gray-900">{merit.student_name}</span>
+              </div>
+            </td>
+            <td className="px-6 py-4 text-gray-600">{merit.merit_type || 'Merit'}</td>
+            <td className="px-6 py-4 text-gray-600 max-w-xs truncate">{merit.description}</td>
+            <td className="px-6 py-4">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                +{merit.points || 1}
+              </span>
+            </td>
+            <td className="px-6 py-4 text-gray-500">
+              <div className="flex flex-col">
+                <span className="font-medium">{new Date(merit.date).toLocaleDateString()}</span>
+              </div>
+            </td>
+            <td className="px-6 py-4 text-gray-600 text-sm">{merit.teacher_name || 'Admin'}</td>
+            <td className="px-6 py-4 text-right">
+              <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                <Eye size={18} />
+              </button>
+            </td>
+          </motion.tr>
+        ))}
+      </tbody>
+    </table>
+  );
+
   const renderTable = () => {
     switch (activeTab) {
       case 'behaviour':
@@ -536,6 +614,8 @@ const DisciplineCenter: React.FC = () => {
         return renderInterventionsTable();
       case 'consequences':
         return renderConsequencesTable();
+      case 'merits':
+        return renderMeritsTable();
     }
   };
 
@@ -549,6 +629,8 @@ const DisciplineCenter: React.FC = () => {
         return interventions;
       case 'consequences':
         return consequences;
+      case 'merits':
+        return merits;
     }
   };
 
@@ -785,6 +867,7 @@ const DisciplineCenter: React.FC = () => {
                 detailType === 'behaviour' ? 'from-red-500 to-orange-500' :
                 detailType === 'detentions' ? 'from-amber-500 to-yellow-500' :
                 detailType === 'interventions' ? 'from-blue-500 to-cyan-500' :
+                detailType === 'merits' ? 'from-green-500 to-emerald-500' :
                 'from-purple-500 to-pink-500'
               }`}>
                 <div className="flex items-center justify-between">
@@ -793,11 +876,13 @@ const DisciplineCenter: React.FC = () => {
                     {detailType === 'detentions' && <Clock size={24} />}
                     {detailType === 'interventions' && <Shield size={24} />}
                     {detailType === 'consequences' && <FileText size={24} />}
+                    {detailType === 'merits' && <Award size={24} />}
                     <div>
                       <h2 className="text-xl font-bold">
                         {detailType === 'behaviour' ? 'Behaviour Incident Details' :
                          detailType === 'detentions' ? 'Detention Details' :
                          detailType === 'interventions' ? 'Intervention Details' :
+                         detailType === 'merits' ? 'Merit Details' :
                          'Consequence Details'}
                       </h2>
                       <p className="text-white/80 text-sm">{selectedItem.student_name}</p>
