@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { api } from '../../services/api';
+import { motion } from 'framer-motion';
+import { exportToExcel } from '../../utils/excelExport';
 import { useToast } from '../../contexts/ToastContext';
 import {
   BarChart3,
@@ -116,7 +117,7 @@ const ReportsAnalytics: React.FC = () => {
         inc.status,
         inc.description || ''
       ]);
-      downloadCSV('incidents', incidentHeaders, incidentData, timestamp);
+      downloadExcel('incidents_report', incidentHeaders, incidentData);
     }
 
     // Export Merits
@@ -129,7 +130,7 @@ const ReportsAnalytics: React.FC = () => {
         merit.points || 0,
         merit.description || ''
       ]);
-      downloadCSV('merits', meritHeaders, meritData, timestamp);
+      downloadExcel('merits_report', meritHeaders, meritData);
     }
 
     // Export Detentions
@@ -143,7 +144,7 @@ const ReportsAnalytics: React.FC = () => {
         det.student_count || 0,
         det.location || 'N/A'
       ]);
-      downloadCSV('detentions', detentionHeaders, detentionData, timestamp);
+      downloadExcel('detentions_report', detentionHeaders, detentionData);
     }
 
     // Export Student Summary
@@ -163,7 +164,7 @@ const ReportsAnalytics: React.FC = () => {
           meritPoints - incidentPoints
         ];
       });
-      downloadCSV('student_summary', studentHeaders, studentData, timestamp);
+      downloadExcel('student_summary_report', studentHeaders, studentData);
     }
 
     showSuccess('Reports exported successfully! Check your downloads folder.');
@@ -185,7 +186,7 @@ const ReportsAnalytics: React.FC = () => {
             inc.status,
             inc.description || ''
           ]);
-          downloadCSV('behaviour_report', headers, data, timestamp);
+          downloadExcel('behaviour_report', headers, data);
         } else {
           showWarning('No incident data available to export');
         }
@@ -201,7 +202,7 @@ const ReportsAnalytics: React.FC = () => {
             merit.points || 0,
             merit.description || ''
           ]);
-          downloadCSV('merit_report', headers, data, timestamp);
+          downloadExcel('merit_report', headers, data);
         } else {
           showWarning('No merit data available to export');
         }
@@ -224,7 +225,7 @@ const ReportsAnalytics: React.FC = () => {
               meritPoints - incidentPoints
             ];
           });
-          downloadCSV('student_progress', headers, data, timestamp);
+          downloadExcel('student_progress_report', headers, data);
         } else {
           showWarning('No student data available to export');
         }
@@ -251,7 +252,7 @@ const ReportsAnalytics: React.FC = () => {
             stats.merits,
             stats.students > 0 ? (stats.incidents / stats.students).toFixed(2) : '0'
           ]);
-          downloadCSV('class_analytics', headers, data, timestamp);
+          downloadExcel('class_analytics_report', headers, data);
         } else {
           showWarning('No class data available to export');
         }
@@ -264,7 +265,7 @@ const ReportsAnalytics: React.FC = () => {
           ['Total Merits Awarded', allMerits.length],
           ['Total Detentions', allDetentions.length]
         ];
-        downloadCSV('teacher_activity', headers, data, timestamp);
+        downloadExcel('teacher_activity_report', headers, data);
         break;
         
       default:
@@ -272,21 +273,8 @@ const ReportsAnalytics: React.FC = () => {
     }
   };
 
-  const downloadCSV = (reportName: string, headers: string[], data: any[][], timestamp: string) => {
-    const csvContent = [
-      headers.join(','),
-      ...data.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${reportName}_${timestamp}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadExcel = (reportName: string, headers: string[], data: any[][]) => {
+    exportToExcel(reportName, headers, data);
   };
 
   const statCards = [
