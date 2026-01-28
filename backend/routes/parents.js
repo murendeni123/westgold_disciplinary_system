@@ -152,12 +152,18 @@ router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
             return res.status(403).json({ error: 'School context required' });
         }
 
-        // Get parents who have children in this school's schema
+        // Get parents who have children in this school's schema with detailed info
         const parents = await schemaAll(req, `
             SELECT DISTINCT u.id, u.email, u.name, u.role, u.created_at,
+                   p.phone, p.work_phone, p.preferred_contact_method,
+                   p.relationship_to_child,
+                   p.emergency_contact_1_name, p.emergency_contact_1_phone,
+                   p.emergency_contact_2_name, p.emergency_contact_2_phone,
+                   p.home_address, p.city, p.postal_code,
                    (SELECT COUNT(*) FROM students WHERE parent_id = u.id) as children_count
             FROM public.users u
             INNER JOIN students s ON s.parent_id = u.id
+            LEFT JOIN parents p ON p.user_id = u.id
             WHERE u.role = 'parent'
             ORDER BY u.name
         `);
