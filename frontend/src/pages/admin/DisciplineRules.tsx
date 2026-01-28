@@ -38,6 +38,18 @@ interface Consequence {
   is_active: number;
 }
 
+interface ConsequenceRule {
+  id: number;
+  name: string;
+  description: string;
+  consequence_type: 'verbal_warning' | 'written_warning' | 'suspension' | 'other';
+  trigger_type: 'incident_count' | 'detention_count' | 'points_threshold';
+  trigger_value: number;
+  time_period_days: number;
+  requires_admin_approval: boolean;
+  is_active: boolean;
+}
+
 interface DetentionSettings {
   max_students_per_session: number;
   default_duration_minutes: number;
@@ -72,9 +84,10 @@ interface InterventionType {
 }
 
 const DisciplineRules: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'incidents' | 'merits' | 'interventions' | 'consequences' | 'detention' | 'settings'>('incidents');
+  const [activeTab, setActiveTab] = useState<'incidents' | 'merits' | 'interventions' | 'consequences' | 'consequence_rules' | 'detention' | 'settings'>('incidents');
   const [detentionRules, setDetentionRules] = useState<DetentionRule[]>([]);
   const [consequences, setConsequences] = useState<Consequence[]>([]);
+  const [consequenceRules, setConsequenceRules] = useState<ConsequenceRule[]>([]);
   const [detentionSettings, setDetentionSettings] = useState<DetentionSettings>({
     max_students_per_session: 20,
     default_duration_minutes: 60,
@@ -86,8 +99,10 @@ const DisciplineRules: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [showDetentionRuleModal, setShowDetentionRuleModal] = useState(false);
   const [showConsequenceModal, setShowConsequenceModal] = useState(false);
+  const [showConsequenceRuleModal, setShowConsequenceRuleModal] = useState(false);
   const [editingDetentionRule, setEditingDetentionRule] = useState<DetentionRule | null>(null);
   const [editingConsequence, setEditingConsequence] = useState<Consequence | null>(null);
+  const [editingConsequenceRule, setEditingConsequenceRule] = useState<ConsequenceRule | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // New state for types management
@@ -123,6 +138,43 @@ const DisciplineRules: React.FC = () => {
       setMeritTypes(meritTypesRes.data || []);
       setInterventionTypes(interventionTypesRes.data || []);
       setConsequences(consequencesRes.data || []);
+      
+      // Initialize consequence rules (auto-assignment rules)
+      setConsequenceRules([
+        {
+          id: 1,
+          name: 'First Warning',
+          description: 'Automatic verbal warning after 2 minor incidents',
+          consequence_type: 'verbal_warning',
+          trigger_type: 'incident_count',
+          trigger_value: 2,
+          time_period_days: 7,
+          requires_admin_approval: false,
+          is_active: true,
+        },
+        {
+          id: 2,
+          name: 'Written Warning',
+          description: 'Written warning after 3 incidents in 2 weeks',
+          consequence_type: 'written_warning',
+          trigger_type: 'incident_count',
+          trigger_value: 3,
+          time_period_days: 14,
+          requires_admin_approval: false,
+          is_active: true,
+        },
+        {
+          id: 3,
+          name: 'Suspension Review',
+          description: 'Suspension consideration after 5 incidents or 10+ points',
+          consequence_type: 'suspension',
+          trigger_type: 'points_threshold',
+          trigger_value: 10,
+          time_period_days: 30,
+          requires_admin_approval: true,
+          is_active: true,
+        },
+      ]);
 
       // Map database rules to frontend format
       const mappedRules = (detentionRulesRes.data || []).map((rule: any) => ({
@@ -277,6 +329,50 @@ const DisciplineRules: React.FC = () => {
     }
   };
 
+  // Handlers for Consequence Rules (Auto-assignment)
+  const handleSaveConsequenceRule = async (rule: Partial<ConsequenceRule>) => {
+    setSaving(true);
+    try {
+      if (editingConsequenceRule) {
+        setConsequenceRules(consequenceRules.map(r => 
+          r.id === editingConsequenceRule.id ? { ...r, ...rule } : r
+        ));
+        setMessage({ type: 'success', text: 'Consequence rule updated successfully' });
+      } else {
+        const newRule: ConsequenceRule = {
+          id: Date.now(),
+          name: rule.name || '',
+          description: rule.description || '',
+          consequence_type: rule.consequence_type || 'verbal_warning',
+          trigger_type: rule.trigger_type || 'incident_count',
+          trigger_value: rule.trigger_value || 2,
+          time_period_days: rule.time_period_days || 30,
+          requires_admin_approval: rule.requires_admin_approval || false,
+          is_active: true,
+        };
+        setConsequenceRules([...consequenceRules, newRule]);
+        setMessage({ type: 'success', text: 'Consequence rule created successfully' });
+      }
+      setShowConsequenceRuleModal(false);
+      setEditingConsequenceRule(null);
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to save consequence rule' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteConsequenceRule = (id: number) => {
+    setConsequenceRules(consequenceRules.filter(r => r.id !== id));
+    setMessage({ type: 'success', text: 'Consequence rule deleted' });
+  };
+
+  const handleToggleConsequenceRule = (id: number) => {
+    setConsequenceRules(consequenceRules.map(r => 
+      r.id === id ? { ...r, is_active: !r.is_active } : r
+    ));
+  };
+
   const handleSaveDetentionRule = async (rule: Partial<DetentionRule>) => {
     setSaving(true);
     try {
@@ -367,6 +463,7 @@ const DisciplineRules: React.FC = () => {
     { id: 'merits' as const, label: 'Merit Types', icon: Award },
     { id: 'interventions' as const, label: 'Interventions', icon: Heart },
     { id: 'consequences' as const, label: 'Consequences', icon: AlertTriangle },
+    { id: 'consequence_rules' as const, label: 'Consequence Rules', icon: Scale },
     { id: 'detention' as const, label: 'Detention Rules', icon: Clock },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
@@ -965,6 +1062,137 @@ const DisciplineRules: React.FC = () => {
           </div>
         )}
 
+        {/* Consequence Rules Tab (Auto-assignment) */}
+        {activeTab === 'consequence_rules' && (
+          <div className="space-y-6">
+            {/* Info Card */}
+            <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-6 border border-purple-100">
+              <div className="flex items-start space-x-3">
+                <Info className="text-purple-600 mt-1" size={20} />
+                <div>
+                  <h3 className="font-semibold text-purple-900">How Consequence Rules Work</h3>
+                  <p className="text-purple-700 text-sm mt-1">
+                    Consequences are automatically suggested when students meet the defined criteria. 
+                    Some consequences require admin approval before being applied. Teachers can also manually assign consequences.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Add Rule Button */}
+            <div className="flex justify-end">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setEditingConsequenceRule(null);
+                  setShowConsequenceRuleModal(true);
+                }}
+                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all"
+              >
+                <Plus size={20} />
+                <span>Add Consequence Rule</span>
+              </motion.button>
+            </div>
+
+            {/* Rules List */}
+            <div className="space-y-4">
+              {consequenceRules.map((rule, index) => (
+                <motion.div
+                  key={rule.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className={`bg-white rounded-2xl p-6 shadow-lg border ${
+                    rule.is_active ? 'border-gray-100' : 'border-gray-200 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        rule.consequence_type === 'verbal_warning' ? 'bg-gradient-to-br from-yellow-400 to-amber-500' :
+                        rule.consequence_type === 'written_warning' ? 'bg-gradient-to-br from-orange-500 to-red-500' :
+                        rule.consequence_type === 'suspension' ? 'bg-gradient-to-br from-red-500 to-rose-600' :
+                        'bg-gradient-to-br from-gray-400 to-gray-500'
+                      }`}>
+                        <AlertTriangle className="text-white" size={24} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg text-gray-900">{rule.name}</h3>
+                        <p className="text-gray-500 text-sm mt-1">{rule.description}</p>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            rule.consequence_type === 'verbal_warning' ? 'bg-yellow-100 text-yellow-700' :
+                            rule.consequence_type === 'written_warning' ? 'bg-orange-100 text-orange-700' :
+                            rule.consequence_type === 'suspension' ? 'bg-red-100 text-red-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {rule.consequence_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                          </span>
+                          <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                            {rule.trigger_type === 'incident_count' && `${rule.trigger_value} incidents`}
+                            {rule.trigger_type === 'detention_count' && `${rule.trigger_value} detentions`}
+                            {rule.trigger_type === 'points_threshold' && `${rule.trigger_value} points`}
+                          </span>
+                          <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
+                            Within {rule.time_period_days} days
+                          </span>
+                          {rule.requires_admin_approval && (
+                            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                              Requires Approval
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleToggleConsequenceRule(rule.id)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          rule.is_active 
+                            ? 'bg-green-100 text-green-600 hover:bg-green-200' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        <CheckCircle size={18} />
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => {
+                          setEditingConsequenceRule(rule);
+                          setShowConsequenceRuleModal(true);
+                        }}
+                        className="p-2 rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                      >
+                        <Edit2 size={18} />
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleDeleteConsequenceRule(rule.id)}
+                        className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </motion.button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+
+              {consequenceRules.length === 0 && (
+                <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
+                  <Scale className="mx-auto text-gray-300" size={48} />
+                  <p className="text-gray-500 mt-4">No consequence rules configured</p>
+                  <p className="text-gray-400 text-sm">Add a rule to automatically suggest consequences</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Settings Tab */}
         {activeTab === 'settings' && (
           <div className="space-y-6">
@@ -1145,6 +1373,21 @@ const DisciplineRules: React.FC = () => {
             onClose={() => {
               setShowConsequenceModal(false);
               setEditingConsequence(null);
+            }}
+            saving={saving}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Consequence Rule Modal */}
+      <AnimatePresence>
+        {showConsequenceRuleModal && (
+          <ConsequenceRuleModal
+            rule={editingConsequenceRule}
+            onSave={handleSaveConsequenceRule}
+            onClose={() => {
+              setShowConsequenceRuleModal(false);
+              setEditingConsequenceRule(null);
             }}
             saving={saving}
           />
@@ -1346,10 +1589,10 @@ const DetentionRuleModal: React.FC<{
   );
 };
 
-// Legacy Consequence Rule Modal Component (kept for backwards compatibility but not used)
+// Consequence Rule Modal Component
 const ConsequenceRuleModal: React.FC<{
-  rule: any | null;
-  onSave: (rule: any) => void;
+  rule: ConsequenceRule | null;
+  onSave: (rule: Partial<ConsequenceRule>) => void;
   onClose: () => void;
   saving: boolean;
 }> = ({ rule, onSave, onClose, saving }) => {
