@@ -78,6 +78,256 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
+// Analytics endpoint for Behaviour Dashboard - MUST be before /:id route
+router.get('/analytics', authenticateToken, async (req, res) => {
+    try {
+        const { start_date, end_date, days = 30 } = req.query;
+        const schema = getSchema(req);
+        
+        if (!schema) {
+            return res.status(403).json({ error: 'School context required' });
+        }
+
+        // Calculate date range
+        const endDate = end_date ? new Date(end_date) : new Date();
+        const startDate = start_date ? new Date(start_date) : new Date(endDate.getTime() - (parseInt(days) * 24 * 60 * 60 * 1000));
+
+        // Get incidents within date range
+        const incidents = await schemaAll(req, `
+            SELECT bi.*, 
+                   s.first_name || ' ' || s.last_name as student_name,
+                   COALESCE(it.name, bi.incident_type) as incident_type_name
+            FROM behaviour_incidents bi
+            JOIN students s ON bi.student_id = s.id
+            LEFT JOIN incident_types it ON bi.incident_type_id = it.id
+            WHERE bi.date >= $1 AND bi.date <= $2
+            ORDER BY bi.date DESC
+        `, [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]]);
+
+        // Severity breakdown
+        const severityBreakdown = {
+            high: incidents.filter(i => i.severity === 'high' || i.severity === 'critical').length,
+            medium: incidents.filter(i => i.severity === 'medium' || i.severity === 'moderate').length,
+            low: incidents.filter(i => i.severity === 'low' || i.severity === 'minor').length
+        };
+
+        // Incident trends (group by date)
+        const trendsByDate = {};
+        incidents.forEach(incident => {
+            const date = incident.date.toISOString().split('T')[0];
+            if (!trendsByDate[date]) {
+                trendsByDate[date] = { date, high: 0, medium: 0, low: 0, total: 0 };
+            }
+            trendsByDate[date].total++;
+            if (incident.severity === 'high' || incident.severity === 'critical') {
+                trendsByDate[date].high++;
+            } else if (incident.severity === 'medium' || incident.severity === 'moderate') {
+                trendsByDate[date].medium++;
+            } else {
+                trendsByDate[date].low++;
+            }
+        });
+        const trends = Object.values(trendsByDate).sort((a, b) => a.date.localeCompare(b.date));
+
+        // Top incident types
+        const incidentTypeCount = {};
+        incidents.forEach(incident => {
+            const type = incident.incident_type_name || 'Unspecified';
+            incidentTypeCount[type] = (incidentTypeCount[type] || 0) + 1;
+        });
+        const topIncidentTypes = Object.entries(incidentTypeCount)
+            .map(([type, count]) => ({ type, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+
+        // Student behavior patterns (top 10 students with most incidents)
+        const studentIncidentCount = {};
+        incidents.forEach(incident => {
+            const studentId = incident.student_id;
+            const studentName = incident.student_name;
+            if (!studentIncidentCount[studentId]) {
+                studentIncidentCount[studentId] = { studentId, studentName, count: 0 };
+            }
+            studentIncidentCount[studentId].count++;
+        });
+        const topStudents = Object.values(studentIncidentCount)
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+
+        // Overall stats
+        const stats = {
+            totalIncidents: incidents.length,
+            highSeverity: severityBreakdown.high,
+            mediumSeverity: severityBreakdown.medium,
+            lowSeverity: severityBreakdown.low,
+            averagePerDay: incidents.length / parseInt(days),
+            pendingApproval: incidents.filter(i => i.status === 'pending' && (i.severity === 'high' || i.severity === 'critical')).length
+        };
+
+        res.json({
+            stats,
+            severityBreakdown,
+            trends,
+            topIncidentTypes,
+            topStudents,
+            dateRange: {
+                start: startDate.toISOString().split('T')[0],
+                end: endDate.toISOString().split('T')[0],
+                days: parseInt(days)
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching analytics:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Behaviour timeline for a single student - MUST be before /:id route
+router.get('/timeline/:studentId', authenticateToken, async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const schema = getSchema(req);
+
+        if (!schema) {
+            return res.status(403).json({ error: 'School context required' });
+        }
+
+        // Fetch incidents
+        const incidents = await schemaAll(req,
+            `SELECT bi.*, 
+                    s.first_name || ' ' || s.last_name as student_name,
+                    s.student_id as student_code
+             FROM behaviour_incidents bi
+             INNER JOIN students s ON bi.student_id = s.id
+             WHERE bi.student_id = $1`,
+            [studentId]
+        );
+
+        // Fetch merits
+        const merits = await schemaAll(req,
+            `SELECT m.*, 
+                    s.first_name || ' ' || s.last_name as student_name,
+                    s.student_id as student_code
+             FROM merits m
+             INNER JOIN students s ON m.student_id = s.id
+             WHERE m.student_id = $1`,
+            [studentId]
+        );
+
+        // Fetch assigned consequences
+        const consequences = await schemaAll(req,
+            `SELECT sc.*, 
+                    s.first_name || ' ' || s.last_name as student_name,
+                    s.student_id as student_code,
+                    c.name as consequence_name,
+                    c.severity as consequence_severity
+             FROM student_consequences sc
+             INNER JOIN students s ON sc.student_id = s.id
+             LEFT JOIN consequences c ON sc.consequence_id = c.id
+             WHERE sc.student_id = $1`,
+            [studentId]
+        );
+
+        // Fetch interventions
+        const interventions = await schemaAll(req,
+            `SELECT i.*, 
+                    s.first_name || ' ' || s.last_name as student_name,
+                    s.student_id as student_code
+             FROM interventions i
+             INNER JOIN students s ON i.student_id = s.id
+             WHERE i.student_id = $1`,
+            [studentId]
+        );
+
+        // Normalise into a single list
+        const timeline = [];
+
+        incidents.forEach((row) => {
+            timeline.push({
+                source: 'incident',
+                id: row.id,
+                student_id: row.student_id,
+                student_code: row.student_code,
+                student_name: row.student_name,
+                date: row.date,
+                time: row.time,
+                title: row.incident_type || 'Incident',
+                description: row.description,
+                severity: row.severity,
+                points: row.points_deducted,
+                status: row.status,
+                created_at: row.created_at,
+            });
+        });
+
+        merits.forEach((row) => {
+            timeline.push({
+                source: 'merit',
+                id: row.id,
+                student_id: row.student_id,
+                student_code: row.student_code,
+                student_name: row.student_name,
+                date: row.date,
+                time: null,
+                title: row.merit_type || 'Merit',
+                description: row.description,
+                severity: null,
+                points: row.points,
+                status: null,
+                created_at: row.created_at,
+            });
+        });
+
+        consequences.forEach((row) => {
+            timeline.push({
+                source: 'consequence',
+                id: row.id,
+                student_id: row.student_id,
+                student_code: row.student_code,
+                student_name: row.student_name,
+                date: row.assigned_date,
+                time: null,
+                title: row.consequence_name || 'Consequence',
+                description: row.notes,
+                severity: row.consequence_severity,
+                points: null,
+                status: row.status,
+                created_at: row.created_at,
+            });
+        });
+
+        interventions.forEach((row) => {
+            timeline.push({
+                source: 'intervention',
+                id: row.id,
+                student_id: row.student_id,
+                student_code: row.student_code,
+                student_name: row.student_name,
+                date: row.start_date,
+                time: null,
+                title: row.type || 'Intervention',
+                description: row.description,
+                severity: null,
+                points: null,
+                status: row.status,
+                created_at: row.created_at,
+            });
+        });
+
+        // Sort newest first
+        timeline.sort((a, b) => {
+            const aKey = `${a.date || ''} ${a.time || ''} ${a.created_at || ''}`;
+            const bKey = `${b.date || ''} ${b.time || ''} ${b.created_at || ''}`;
+            return aKey < bKey ? 1 : aKey > bKey ? -1 : 0;
+        });
+
+        res.json(timeline);
+    } catch (error) {
+        console.error('Error fetching timeline:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Get incident by ID
 router.get('/:id', authenticateToken, async (req, res) => {
     try {
@@ -390,256 +640,6 @@ router.delete('/:id', authenticateToken, async (req, res) => {
         res.json({ message: 'Incident deleted successfully' });
     } catch (error) {
         console.error('Error deleting incident:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Analytics endpoint for Behaviour Dashboard
-router.get('/analytics', authenticateToken, async (req, res) => {
-    try {
-        const { start_date, end_date, days = 30 } = req.query;
-        const schema = getSchema(req);
-        
-        if (!schema) {
-            return res.status(403).json({ error: 'School context required' });
-        }
-
-        // Calculate date range
-        const endDate = end_date ? new Date(end_date) : new Date();
-        const startDate = start_date ? new Date(start_date) : new Date(endDate.getTime() - (parseInt(days) * 24 * 60 * 60 * 1000));
-
-        // Get incidents within date range
-        const incidents = await schemaAll(req, `
-            SELECT bi.*, 
-                   s.first_name || ' ' || s.last_name as student_name,
-                   COALESCE(it.name, bi.incident_type) as incident_type_name
-            FROM behaviour_incidents bi
-            JOIN students s ON bi.student_id = s.id
-            LEFT JOIN incident_types it ON bi.incident_type_id = it.id
-            WHERE bi.date >= $1 AND bi.date <= $2
-            ORDER BY bi.date DESC
-        `, [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]]);
-
-        // Severity breakdown
-        const severityBreakdown = {
-            high: incidents.filter(i => i.severity === 'high' || i.severity === 'critical').length,
-            medium: incidents.filter(i => i.severity === 'medium' || i.severity === 'moderate').length,
-            low: incidents.filter(i => i.severity === 'low' || i.severity === 'minor').length
-        };
-
-        // Incident trends (group by date)
-        const trendsByDate = {};
-        incidents.forEach(incident => {
-            const date = incident.date.toISOString().split('T')[0];
-            if (!trendsByDate[date]) {
-                trendsByDate[date] = { date, high: 0, medium: 0, low: 0, total: 0 };
-            }
-            trendsByDate[date].total++;
-            if (incident.severity === 'high' || incident.severity === 'critical') {
-                trendsByDate[date].high++;
-            } else if (incident.severity === 'medium' || incident.severity === 'moderate') {
-                trendsByDate[date].medium++;
-            } else {
-                trendsByDate[date].low++;
-            }
-        });
-        const trends = Object.values(trendsByDate).sort((a, b) => a.date.localeCompare(b.date));
-
-        // Top incident types
-        const incidentTypeCount = {};
-        incidents.forEach(incident => {
-            const type = incident.incident_type_name || 'Unspecified';
-            incidentTypeCount[type] = (incidentTypeCount[type] || 0) + 1;
-        });
-        const topIncidentTypes = Object.entries(incidentTypeCount)
-            .map(([type, count]) => ({ type, count }))
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 10);
-
-        // Student behavior patterns (top 10 students with most incidents)
-        const studentIncidentCount = {};
-        incidents.forEach(incident => {
-            const studentId = incident.student_id;
-            const studentName = incident.student_name;
-            if (!studentIncidentCount[studentId]) {
-                studentIncidentCount[studentId] = { studentId, studentName, count: 0 };
-            }
-            studentIncidentCount[studentId].count++;
-        });
-        const topStudents = Object.values(studentIncidentCount)
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 10);
-
-        // Overall stats
-        const stats = {
-            totalIncidents: incidents.length,
-            highSeverity: severityBreakdown.high,
-            mediumSeverity: severityBreakdown.medium,
-            lowSeverity: severityBreakdown.low,
-            averagePerDay: incidents.length / parseInt(days),
-            pendingApproval: incidents.filter(i => i.status === 'pending' && (i.severity === 'high' || i.severity === 'critical')).length
-        };
-
-        res.json({
-            stats,
-            severityBreakdown,
-            trends,
-            topIncidentTypes,
-            topStudents,
-            dateRange: {
-                start: startDate.toISOString().split('T')[0],
-                end: endDate.toISOString().split('T')[0],
-                days: parseInt(days)
-            }
-        });
-    } catch (error) {
-        console.error('Error fetching analytics:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Behaviour timeline for a single student
-router.get('/timeline/:studentId', authenticateToken, async (req, res) => {
-    try {
-        const { studentId } = req.params;
-        const schema = getSchema(req);
-
-        if (!schema) {
-            return res.status(403).json({ error: 'School context required' });
-        }
-
-        // Fetch incidents
-        const incidents = await schemaAll(req,
-            `SELECT bi.*, 
-                    s.first_name || ' ' || s.last_name as student_name,
-                    s.student_id as student_code
-             FROM behaviour_incidents bi
-             INNER JOIN students s ON bi.student_id = s.id
-             WHERE bi.student_id = $1`,
-            [studentId]
-        );
-
-        // Fetch merits
-        const merits = await schemaAll(req,
-            `SELECT m.*, 
-                    s.first_name || ' ' || s.last_name as student_name,
-                    s.student_id as student_code
-             FROM merits m
-             INNER JOIN students s ON m.student_id = s.id
-             WHERE m.student_id = $1`,
-            [studentId]
-        );
-
-        // Fetch assigned consequences
-        const consequences = await schemaAll(req,
-            `SELECT sc.*, 
-                    s.first_name || ' ' || s.last_name as student_name,
-                    s.student_id as student_code,
-                    c.name as consequence_name,
-                    c.severity as consequence_severity
-             FROM student_consequences sc
-             INNER JOIN students s ON sc.student_id = s.id
-             LEFT JOIN consequences c ON sc.consequence_id = c.id
-             WHERE sc.student_id = $1`,
-            [studentId]
-        );
-
-        // Fetch interventions
-        const interventions = await schemaAll(req,
-            `SELECT i.*, 
-                    s.first_name || ' ' || s.last_name as student_name,
-                    s.student_id as student_code
-             FROM interventions i
-             INNER JOIN students s ON i.student_id = s.id
-             WHERE i.student_id = $1`,
-            [studentId]
-        );
-
-        // Normalise into a single list
-        const timeline = [];
-
-        incidents.forEach((row) => {
-            timeline.push({
-                source: 'incident',
-                id: row.id,
-                student_id: row.student_id,
-                student_code: row.student_code,
-                student_name: row.student_name,
-                date: row.date,
-                time: row.time,
-                title: row.incident_type || 'Incident',
-                description: row.description,
-                severity: row.severity,
-                points: row.points_deducted,
-                status: row.status,
-                created_at: row.created_at,
-            });
-        });
-
-        merits.forEach((row) => {
-            timeline.push({
-                source: 'merit',
-                id: row.id,
-                student_id: row.student_id,
-                student_code: row.student_code,
-                student_name: row.student_name,
-                date: row.date,
-                time: null,
-                title: row.merit_type || 'Merit',
-                description: row.description,
-                severity: null,
-                points: row.points,
-                status: null,
-                created_at: row.created_at,
-            });
-        });
-
-        consequences.forEach((row) => {
-            timeline.push({
-                source: 'consequence',
-                id: row.id,
-                student_id: row.student_id,
-                student_code: row.student_code,
-                student_name: row.student_name,
-                date: row.assigned_date,
-                time: null,
-                title: row.consequence_name || 'Consequence',
-                description: row.notes,
-                severity: row.consequence_severity,
-                points: null,
-                status: row.status,
-                created_at: row.created_at,
-            });
-        });
-
-        interventions.forEach((row) => {
-            timeline.push({
-                source: 'intervention',
-                id: row.id,
-                student_id: row.student_id,
-                student_code: row.student_code,
-                student_name: row.student_name,
-                date: row.start_date,
-                time: null,
-                title: row.type || 'Intervention',
-                description: row.description,
-                severity: null,
-                points: null,
-                status: row.status,
-                created_at: row.created_at,
-            });
-        });
-
-        // Sort newest first
-        timeline.sort((a, b) => {
-            const aKey = `${a.date || ''} ${a.time || ''} ${a.created_at || ''}`;
-            const bKey = `${b.date || ''} ${b.time || ''} ${b.created_at || ''}`;
-            return aKey < bKey ? 1 : aKey > bKey ? -1 : 0;
-        });
-
-        res.json(timeline);
-    } catch (error) {
-        console.error('Error fetching timeline:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
