@@ -226,6 +226,7 @@ router.get('/class-profile/:classId', authenticateToken, async (req, res) => {
                    t.id as teacher_id, u.name as teacher_name
             FROM classes c
             LEFT JOIN teachers t ON c.teacher_id = t.id
+            LEFT JOIN public.users u ON t.user_id = u.id
             WHERE c.id = $1
         `, [classId]);
 
