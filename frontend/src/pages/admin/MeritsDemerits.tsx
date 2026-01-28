@@ -410,7 +410,11 @@ const MeritsDemerits: React.FC = () => {
                   acc[date] = (acc[date] || 0) + 1;
                   return acc;
                 }, {})
-              ).map(([date, count]) => ({ date, count })).slice(-7)}>
+              ).map(([date, count]) => ({ 
+                date, 
+                displayDate: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                count 
+              })).slice(-7)}>
                 <defs>
                   <linearGradient id="demeritGradient" x1="0" y1="0" x2="1" y2="0">
                     <stop offset="0%" stopColor="#EF4444" />
@@ -418,7 +422,7 @@ const MeritsDemerits: React.FC = () => {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="date" stroke="#6b7280" />
+                <XAxis dataKey="displayDate" stroke="#6b7280" />
                 <YAxis stroke="#6b7280" />
                 <Tooltip
                   contentStyle={{
@@ -456,7 +460,11 @@ const MeritsDemerits: React.FC = () => {
                 }
                 return acc;
               }, {})
-            ).map(([date, count]) => ({ date, count })).slice(-7)}>
+            ).map(([date, count]) => ({ 
+              date, 
+              displayDate: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              count 
+            })).slice(-7)}>
               <defs>
                 <linearGradient id="meritGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#10B981" />
@@ -464,7 +472,7 @@ const MeritsDemerits: React.FC = () => {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="date" stroke="#6b7280" />
+              <XAxis dataKey="displayDate" stroke="#6b7280" />
               <YAxis stroke="#6b7280" />
               <Tooltip
                 contentStyle={{
