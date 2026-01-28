@@ -130,7 +130,10 @@ function App() {
             <Route path="teachers" element={<Teachers />} />
             <Route path="teachers/:id" element={<AdminTeacherProfile />} />
             <Route path="parents" element={<Parents />} />
+            <Route path="behaviour" element={<BehaviourDashboard />} />
             <Route path="behaviour-dashboard" element={<BehaviourDashboard />} />
+            <Route path="behaviour/log" element={<LogIncident />} />
+            <Route path="merits/award" element={<AwardMerit />} />
             <Route path="discipline" element={<DisciplineCenter />} />
             <Route path="discipline-rules" element={<DisciplineRules />} />
             <Route path="detention-sessions" element={<DetentionSessions />} />

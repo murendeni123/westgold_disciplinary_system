@@ -196,8 +196,8 @@ const AdminDashboard: React.FC = () => {
   const COLORS = ['#10B981', '#EF4444', '#F59E0B'];
 
   const quickActions = [
-    { label: 'Log Incident', desc: 'Record new incident', icon: AlertTriangle, color: 'from-red-500 to-pink-500', path: '/admin/behaviour-dashboard' },
-    { label: 'Award Merit', desc: 'Award student merit', icon: Award, color: 'from-green-500 to-emerald-500', path: '/admin/merits' },
+    { label: 'Log Incident', desc: 'Record new incident', icon: AlertTriangle, color: 'from-red-500 to-pink-500', path: '/admin/behaviour/log' },
+    { label: 'Award Merit', desc: 'Award student merit', icon: Award, color: 'from-green-500 to-emerald-500', path: '/admin/merits/award' },
     { label: 'Assign Consequence', desc: 'Assign consequence', icon: Shield, color: 'from-purple-500 to-indigo-500', path: '/admin/consequence-management' },
     { label: 'Schedule Detention', desc: 'Assign detention', icon: Gavel, color: 'from-orange-500 to-amber-500', path: '/admin/detention-sessions' },
   ];
