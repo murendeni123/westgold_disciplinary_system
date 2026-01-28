@@ -9,12 +9,30 @@ const router = express.Router();
 router.get('/profile/me', authenticateToken, requireRole('parent'), async (req, res) => {
     try {
         const profile = await dbGet(
-            `SELECT id, email, name, role FROM users WHERE id = $1 AND role = 'parent'`,
+            `SELECT id, email, name, role, school_id, primary_school_id FROM users WHERE id = $1 AND role = 'parent'`,
             [req.user.id]
         );
 
         if (!profile) {
             return res.status(404).json({ error: 'Parent not found' });
+        }
+
+        // Get detailed parent data from schema.parents if user has a school
+        const schoolId = profile.school_id || profile.primary_school_id;
+        if (schoolId) {
+            const school = await dbGet('SELECT schema_name FROM public.schools WHERE id = $1', [schoolId]);
+            
+            if (school && school.schema_name) {
+                const parentDetails = await dbGet(
+                    `SELECT * FROM ${school.schema_name}.parents WHERE user_id = $1`,
+                    [req.user.id]
+                );
+
+                if (parentDetails) {
+                    // Merge user data with parent details
+                    Object.assign(profile, parentDetails);
+                }
+            }
         }
 
         res.json(profile);
@@ -57,10 +75,13 @@ router.put('/profile/me', authenticateToken, requireRole('parent'), async (req, 
         await dbRun('UPDATE public.users SET name = $1, email = $2 WHERE id = $3', [name, email, req.user.id]);
 
         // Get user's school to update schema-specific parent data
-        const user = await dbGet('SELECT school_id FROM public.users WHERE id = $1', [req.user.id]);
+        const user = await dbGet('SELECT school_id, primary_school_id FROM public.users WHERE id = $1', [req.user.id]);
         
-        if (user && user.school_id) {
-            const school = await dbGet('SELECT schema_name FROM public.schools WHERE id = $1', [user.school_id]);
+        // Use school_id or primary_school_id (fallback for Google Auth users)
+        const schoolId = user.school_id || user.primary_school_id;
+        
+        if (user && schoolId) {
+            const school = await dbGet('SELECT schema_name FROM public.schools WHERE id = $1', [schoolId]);
             
             if (school && school.schema_name) {
                 // Check if parent record exists in schema.parents table
@@ -105,7 +126,7 @@ router.put('/profile/me', authenticateToken, requireRole('parent'), async (req, 
                         req.user.id, phone, work_phone, preferred_contact_method, relationship_to_child,
                         emergency_contact_1_name, emergency_contact_1_phone,
                         emergency_contact_2_name, emergency_contact_2_phone,
-                        home_address, city, postal_code, user.school_id
+                        home_address, city, postal_code, schoolId
                     ]);
                 }
             }
