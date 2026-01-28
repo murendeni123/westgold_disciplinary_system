@@ -46,8 +46,11 @@ const StudentProfile: React.FC = () => {
       setStudent(response.data);
       setSelectedClassId(response.data.class_id ? String(response.data.class_id) : '');
       
-      // Fetch parent data if parent_id exists
-      if (response.data.parent_id) {
+      // Use parent_details from student response if available
+      if (response.data.parent_details) {
+        setParentData(response.data.parent_details);
+      } else if (response.data.parent_id) {
+        // Fallback to separate API call if parent_details not available
         try {
           const parentResponse = await api.getParent(response.data.parent_id);
           setParentData(parentResponse.data);
