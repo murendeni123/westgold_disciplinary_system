@@ -161,11 +161,21 @@ router.post('/', authenticateToken, async (req, res) => {
             [student_id]
         );
         
-        // Get logging teacher details
-        const loggingTeacher = await schemaGet(req,
-            'SELECT t.id, u.name as teacher_name FROM teachers t JOIN public.users u ON t.user_id = u.id WHERE t.id = $1',
-            [teacher.id]
-        );
+        // Get logging teacher details (only if teacher exists)
+        let loggingTeacher = null;
+        if (teacher) {
+            loggingTeacher = await schemaGet(req,
+                'SELECT t.id, u.name as teacher_name FROM teachers t JOIN public.users u ON t.user_id = u.id WHERE t.id = $1',
+                [teacher.id]
+            );
+        } else if (req.user.role === 'admin') {
+            // For admin-created incidents, use admin's name
+            const adminUser = await schemaGet(req,
+                'SELECT id, name FROM public.users WHERE id = $1',
+                [req.user.id]
+            );
+            loggingTeacher = { teacher_name: adminUser?.name || 'Admin' };
+        }
         
         // Get class teacher if student has a class
         let classTeacher = null;
