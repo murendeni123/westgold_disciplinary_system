@@ -49,8 +49,8 @@ interface DetentionSettings {
 interface IncidentType {
   id: number;
   name: string;
-  default_points: number;
-  default_severity: 'low' | 'medium' | 'high';
+  points: number;
+  severity: 'low' | 'medium' | 'high';
   description: string;
   is_active: number;
 }
@@ -58,7 +58,7 @@ interface IncidentType {
 interface MeritType {
   id: number;
   name: string;
-  default_points: number;
+  points: number;
   description: string;
   is_active: number;
 }
@@ -499,8 +499,8 @@ const DisciplineRules: React.FC = () => {
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      type.default_severity === 'high' ? 'bg-gradient-to-br from-red-500 to-rose-600' :
-                      type.default_severity === 'medium' ? 'bg-gradient-to-br from-orange-500 to-amber-500' :
+                      type.severity === 'high' ? 'bg-gradient-to-br from-red-500 to-rose-600' :
+                      type.severity === 'medium' ? 'bg-gradient-to-br from-orange-500 to-amber-500' :
                       'bg-gradient-to-br from-yellow-400 to-amber-400'
                     }`}>
                       <FileWarning className="text-white" size={20} />
@@ -531,14 +531,14 @@ const DisciplineRules: React.FC = () => {
                   <p className="text-gray-500 text-sm mt-1 line-clamp-2">{type.description || 'No description'}</p>
                   <div className="flex flex-wrap gap-2 mt-3">
                     <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium">
-                      {type.default_points} pts
+                      {type.points} pts
                     </span>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      type.default_severity === 'high' ? 'bg-red-100 text-red-700' :
-                      type.default_severity === 'medium' ? 'bg-orange-100 text-orange-700' :
+                      type.severity === 'high' ? 'bg-red-100 text-red-700' :
+                      type.severity === 'medium' ? 'bg-orange-100 text-orange-700' :
                       'bg-yellow-100 text-yellow-700'
                     }`}>
-                      {type.default_severity}
+                      {type.severity}
                     </span>
                   </div>
                 </motion.div>
@@ -626,7 +626,7 @@ const DisciplineRules: React.FC = () => {
                   <p className="text-gray-500 text-sm mt-1 line-clamp-2">{type.description || 'No description'}</p>
                   <div className="flex flex-wrap gap-2 mt-3">
                     <span className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                      +{type.default_points} pts
+                      +{type.points} pts
                     </span>
                   </div>
                 </motion.div>
@@ -1516,8 +1516,8 @@ const IncidentTypeModal: React.FC<{
   const [formData, setFormData] = useState({
     name: type?.name || '',
     description: type?.description || '',
-    default_points: type?.default_points || 1,
-    default_severity: type?.default_severity || 'low',
+    points: type?.points || 1,
+    severity: type?.severity || 'low',
   });
 
   return (
@@ -1574,8 +1574,8 @@ const IncidentTypeModal: React.FC<{
               <label className="block text-sm font-medium text-gray-700 mb-2">Default Points</label>
               <input
                 type="number"
-                value={formData.default_points}
-                onChange={(e) => setFormData({ ...formData, default_points: parseInt(e.target.value) || 0 })}
+                value={formData.points}
+                onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) || 0 })}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 min="0"
               />
@@ -1584,8 +1584,8 @@ const IncidentTypeModal: React.FC<{
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Severity</label>
               <select
-                value={formData.default_severity}
-                onChange={(e) => setFormData({ ...formData, default_severity: e.target.value as any })}
+                value={formData.severity}
+                onChange={(e) => setFormData({ ...formData, severity: e.target.value as any })}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-red-500 focus:border-transparent"
               >
                 <option value="low">Low</option>
@@ -1630,7 +1630,7 @@ const MeritTypeModal: React.FC<{
   const [formData, setFormData] = useState({
     name: type?.name || '',
     description: type?.description || '',
-    default_points: type?.default_points || 1,
+    points: type?.points || 1,
   });
 
   return (
@@ -1686,8 +1686,8 @@ const MeritTypeModal: React.FC<{
             <label className="block text-sm font-medium text-gray-700 mb-2">Default Points</label>
             <input
               type="number"
-              value={formData.default_points}
-              onChange={(e) => setFormData({ ...formData, default_points: parseInt(e.target.value) || 0 })}
+              value={formData.points}
+              onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) || 0 })}
               className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent"
               min="1"
             />
