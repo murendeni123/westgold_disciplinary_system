@@ -79,6 +79,34 @@ router.get('/:id', authenticateToken, async (req, res) => {
             }
         }
 
+        // Fetch detailed parent information from schema.parents table
+        if (student.parent_id) {
+            const parentDetails = await schemaGet(req, `
+                SELECT p.*, u.name, u.email
+                FROM parents p
+                INNER JOIN public.users u ON p.user_id = u.id
+                WHERE p.user_id = $1
+            `, [student.parent_id]);
+
+            if (parentDetails) {
+                student.parent_details = parentDetails;
+            }
+        }
+
+        // Fetch secondary parent details if exists
+        if (student.secondary_parent_id) {
+            const secondaryParentDetails = await schemaGet(req, `
+                SELECT p.*, u.name, u.email
+                FROM parents p
+                INNER JOIN public.users u ON p.user_id = u.id
+                WHERE p.user_id = $1
+            `, [student.secondary_parent_id]);
+
+            if (secondaryParentDetails) {
+                student.secondary_parent_details = secondaryParentDetails;
+            }
+        }
+
         res.json(student);
     } catch (error) {
         console.error('Error fetching student:', error);

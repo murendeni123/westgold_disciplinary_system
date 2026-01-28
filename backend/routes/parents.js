@@ -27,7 +27,21 @@ router.get('/profile/me', authenticateToken, requireRole('parent'), async (req, 
 // Update parent profile (current user)
 router.put('/profile/me', authenticateToken, requireRole('parent'), async (req, res) => {
     try {
-        const { name, email } = req.body;
+        const { 
+            name, 
+            email, 
+            phone, 
+            work_phone, 
+            preferred_contact_method,
+            relationship_to_child,
+            emergency_contact_1_name,
+            emergency_contact_1_phone,
+            emergency_contact_2_name,
+            emergency_contact_2_phone,
+            home_address,
+            city,
+            postal_code
+        } = req.body;
 
         if (!name || !email) {
             return res.status(400).json({ error: 'Name and email are required' });
@@ -39,7 +53,63 @@ router.put('/profile/me', authenticateToken, requireRole('parent'), async (req, 
             return res.status(400).json({ error: 'Email already in use' });
         }
 
+        // Update public.users table
         await dbRun('UPDATE public.users SET name = $1, email = $2 WHERE id = $3', [name, email, req.user.id]);
+
+        // Get user's school to update schema-specific parent data
+        const user = await dbGet('SELECT school_id FROM public.users WHERE id = $1', [req.user.id]);
+        
+        if (user && user.school_id) {
+            const school = await dbGet('SELECT schema_name FROM public.schools WHERE id = $1', [user.school_id]);
+            
+            if (school && school.schema_name) {
+                // Check if parent record exists in schema.parents table
+                const existingParent = await dbGet(
+                    `SELECT id FROM ${school.schema_name}.parents WHERE user_id = $1`,
+                    [req.user.id]
+                );
+
+                if (existingParent) {
+                    // Update existing parent record
+                    await dbRun(`
+                        UPDATE ${school.schema_name}.parents 
+                        SET phone = $1, 
+                            work_phone = $2, 
+                            preferred_contact_method = $3,
+                            relationship_to_child = $4,
+                            emergency_contact_1_name = $5,
+                            emergency_contact_1_phone = $6,
+                            emergency_contact_2_name = $7,
+                            emergency_contact_2_phone = $8,
+                            home_address = $9,
+                            city = $10,
+                            postal_code = $11,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE user_id = $12
+                    `, [
+                        phone, work_phone, preferred_contact_method, relationship_to_child,
+                        emergency_contact_1_name, emergency_contact_1_phone,
+                        emergency_contact_2_name, emergency_contact_2_phone,
+                        home_address, city, postal_code, req.user.id
+                    ]);
+                } else {
+                    // Create new parent record
+                    await dbRun(`
+                        INSERT INTO ${school.schema_name}.parents 
+                        (user_id, phone, work_phone, preferred_contact_method, relationship_to_child,
+                         emergency_contact_1_name, emergency_contact_1_phone,
+                         emergency_contact_2_name, emergency_contact_2_phone,
+                         home_address, city, postal_code, school_id)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                    `, [
+                        req.user.id, phone, work_phone, preferred_contact_method, relationship_to_child,
+                        emergency_contact_1_name, emergency_contact_1_phone,
+                        emergency_contact_2_name, emergency_contact_2_phone,
+                        home_address, city, postal_code, user.school_id
+                    ]);
+                }
+            }
+        }
 
         const updatedProfile = await dbGet(
             `SELECT id, email, name, role FROM public.users WHERE id = $1 AND role = 'parent'`,
