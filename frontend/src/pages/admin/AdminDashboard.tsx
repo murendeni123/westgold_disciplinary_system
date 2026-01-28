@@ -196,10 +196,10 @@ const AdminDashboard: React.FC = () => {
   const COLORS = ['#10B981', '#EF4444', '#F59E0B'];
 
   const quickActions = [
-    { label: 'Take Attendance', desc: 'Mark daily attendance', icon: ClipboardList, color: 'from-emerald-500 to-teal-500', path: '/admin/attendance' },
-    { label: 'Log Incident', desc: 'Record new incident', icon: AlertTriangle, color: 'from-red-500 to-pink-500', path: '/admin/behaviour' },
-    { label: 'Schedule Detention', desc: 'Assign detention', icon: Gavel, color: 'from-orange-500 to-amber-500', path: '/admin/detentions' },
-    { label: 'Message Parents', desc: 'Send notifications', icon: MessageSquare, color: 'from-blue-500 to-indigo-500', path: '/admin/messages' },
+    { label: 'Log Incident', desc: 'Record new incident', icon: AlertTriangle, color: 'from-red-500 to-pink-500', path: '/admin/behaviour-dashboard' },
+    { label: 'Award Merit', desc: 'Award student merit', icon: Award, color: 'from-green-500 to-emerald-500', path: '/admin/merits' },
+    { label: 'Assign Consequence', desc: 'Assign consequence', icon: Shield, color: 'from-purple-500 to-indigo-500', path: '/admin/consequence-management' },
+    { label: 'Schedule Detention', desc: 'Assign detention', icon: Gavel, color: 'from-orange-500 to-amber-500', path: '/admin/detention-sessions' },
   ];
 
   return (
@@ -763,8 +763,8 @@ const AdminDashboard: React.FC = () => {
               {[
                 { label: 'Manage Students', path: '/admin/students', icon: Users },
                 { label: 'View Reports', path: '/admin/reports', icon: FileText },
-                { label: 'Incident Types', path: '/admin/incident-types', icon: Target },
-                { label: 'Merit Types', path: '/admin/merit-types', icon: Award },
+                { label: 'Discipline Rules', path: '/admin/discipline-rules', icon: Target },
+                { label: 'Behaviour Dashboard', path: '/admin/behaviour', icon: AlertCircle },
               ].map((item, idx) => {
                 const Icon = item.icon;
                 return (
