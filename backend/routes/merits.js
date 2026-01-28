@@ -102,10 +102,14 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     // Get teacher ID from school schema
+    // For admins, teacher record is optional - they can award merits on behalf of the school
     const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
-    if (!teacher) {
-      return res.status(403).json({ error: 'Teacher record not found' });
+    if (!teacher && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Teacher record not found. Only teachers and admins can award merits.' });
     }
+    
+    // Use teacher ID if available, otherwise null for admin-created merits
+    const teacherId = teacher ? teacher.id : null;
 
     // Check badge eligibility BEFORE awarding merit
     const beforeEligibility = await calculateBadgeEligibility(req, student_id);
@@ -113,7 +117,7 @@ router.post('/', authenticateToken, async (req, res) => {
     const result = await schemaRun(req,
       `INSERT INTO merits (student_id, teacher_id, date, merit_type_id, description, points)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-      [student_id, teacher.id, merit_date, merit_type_id || null, String(description).trim(), points || 1]
+      [student_id, teacherId, merit_date, merit_type_id || null, String(description).trim(), points || 1]
     );
 
     const merit = await schemaGet(req, 'SELECT * FROM merits WHERE id = $1', [result.id]);

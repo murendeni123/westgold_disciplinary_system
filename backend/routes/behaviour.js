@@ -130,10 +130,14 @@ router.post('/', authenticateToken, async (req, res) => {
         }
 
         // Get teacher ID from school schema
+        // For admins, teacher record is optional - they can log incidents on behalf of the school
         const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
-        if (!teacher) {
-            return res.status(403).json({ error: 'Teacher record not found' });
+        if (!teacher && req.user.role !== 'admin') {
+            return res.status(403).json({ error: 'Teacher record not found. Only teachers and admins can log incidents.' });
         }
+        
+        // Use teacher ID if available, otherwise null for admin-created incidents
+        const teacherId = teacher ? teacher.id : null;
 
         // Check badge eligibility BEFORE logging incident
         const beforeEligibility = await calculateBadgeEligibility(req, student_id);
@@ -142,7 +146,7 @@ router.post('/', authenticateToken, async (req, res) => {
             `INSERT INTO behaviour_incidents 
              (student_id, teacher_id, date, time, incident_type_id, description, severity, points_deducted)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-            [student_id, teacher.id, incident_date, incident_time || null, incident_type_id || null, 
+            [student_id, teacherId, incident_date, incident_time || null, incident_type_id || null, 
              String(description).trim(), severity || 'minor', points || 0]
         );
 
