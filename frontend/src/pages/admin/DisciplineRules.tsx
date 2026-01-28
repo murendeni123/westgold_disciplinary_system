@@ -311,37 +311,6 @@ const DisciplineRules: React.FC = () => {
     }
   };
 
-  const handleSaveConsequenceRule = async (rule: Partial<ConsequenceRule>) => {
-    setSaving(true);
-    try {
-      if (editingConsequenceRule) {
-        setConsequenceRules(consequenceRules.map(r => 
-          r.id === editingConsequenceRule.id ? { ...r, ...rule } : r
-        ));
-        setMessage({ type: 'success', text: 'Consequence rule updated successfully' });
-      } else {
-        const newRule: ConsequenceRule = {
-          id: Date.now(),
-          name: rule.name || '',
-          description: rule.description || '',
-          consequence_type: rule.consequence_type || 'verbal_warning',
-          trigger_type: rule.trigger_type || 'incident_count',
-          trigger_value: rule.trigger_value || 3,
-          time_period_days: rule.time_period_days || 30,
-          requires_admin_approval: rule.requires_admin_approval || false,
-          is_active: true,
-        };
-        setConsequenceRules([...consequenceRules, newRule]);
-        setMessage({ type: 'success', text: 'Consequence rule created successfully' });
-      }
-      setShowConsequenceRuleModal(false);
-      setEditingConsequenceRule(null);
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to save consequence rule' });
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleDeleteDetentionRule = async (id: number) => {
     try {
@@ -359,10 +328,6 @@ const DisciplineRules: React.FC = () => {
     }
   };
 
-  const handleDeleteConsequenceRule = (id: number) => {
-    setConsequenceRules(consequenceRules.filter(r => r.id !== id));
-    setMessage({ type: 'success', text: 'Consequence rule deleted' });
-  };
 
   const handleToggleDetentionRule = async (id: number) => {
     try {
@@ -383,11 +348,6 @@ const DisciplineRules: React.FC = () => {
     }
   };
 
-  const handleToggleConsequenceRule = (id: number) => {
-    setConsequenceRules(consequenceRules.map(r => 
-      r.id === id ? { ...r, is_active: !r.is_active } : r
-    ));
-  };
 
   const handleSaveSettings = async () => {
     setSaving(true);
@@ -1386,10 +1346,10 @@ const DetentionRuleModal: React.FC<{
   );
 };
 
-// Consequence Rule Modal Component
+// Legacy Consequence Rule Modal Component (kept for backwards compatibility but not used)
 const ConsequenceRuleModal: React.FC<{
-  rule: ConsequenceRule | null;
-  onSave: (rule: Partial<ConsequenceRule>) => void;
+  rule: any | null;
+  onSave: (rule: any) => void;
   onClose: () => void;
   saving: boolean;
 }> = ({ rule, onSave, onClose, saving }) => {
