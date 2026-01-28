@@ -72,6 +72,7 @@ import GuidedIntervention from './pages/teacher/GuidedIntervention';
 import TeacherConsequences from './pages/teacher/Consequences';
 import AssignConsequence from './pages/teacher/AssignConsequence';
 import TeacherNotifications from './pages/teacher/NotificationsPage';
+import TeacherReports from './pages/teacher/TeacherReports';
 
 // Parent pages
 import ModernParentDashboard from './pages/parent/ModernParentDashboard';
@@ -163,6 +164,7 @@ function App() {
             <Route path="settings" element={<TeacherSettings />} />
             <Route path="students/:id" element={<TeacherStudentProfile />} />
             <Route path="notifications" element={<TeacherNotifications />} />
+            <Route path="reports" element={<TeacherReports />} />
           </Route>
 
           <Route path="/parent" element={<ProtectedRoute allowedRoles={['parent']}><OnboardingGuard><ModernParentLayout /></OnboardingGuard></ProtectedRoute>}>
