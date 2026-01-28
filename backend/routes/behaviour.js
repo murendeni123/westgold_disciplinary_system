@@ -23,12 +23,12 @@ router.get('/', authenticateToken, async (req, res) => {
                    s.first_name || ' ' || s.last_name as student_name,
                    s.student_id as student_number,
                    s.id as student_id,
-                   u.name as teacher_name,
+                   COALESCE(u.name, 'Admin') as teacher_name,
                    c.class_name,
                    COALESCE(it.name, bi.incident_type) as incident_type_name
             FROM behaviour_incidents bi
             INNER JOIN students s ON bi.student_id = s.id
-            INNER JOIN teachers t ON bi.teacher_id = t.id
+            LEFT JOIN teachers t ON bi.teacher_id = t.id
             LEFT JOIN public.users u ON t.user_id = u.id
             LEFT JOIN classes c ON s.class_id = c.id
             LEFT JOIN incident_types it ON bi.incident_type_id = it.id
@@ -340,11 +340,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
             SELECT bi.*, 
                    s.first_name || ' ' || s.last_name as student_name,
                    s.student_id,
-                   u.name as teacher_name,
+                   COALESCE(u.name, 'Admin') as teacher_name,
                    c.class_name
             FROM behaviour_incidents bi
             INNER JOIN students s ON bi.student_id = s.id
-            INNER JOIN teachers t ON bi.teacher_id = t.id
+            LEFT JOIN teachers t ON bi.teacher_id = t.id
             LEFT JOIN public.users u ON t.user_id = u.id
             LEFT JOIN classes c ON s.class_id = c.id
             WHERE bi.id = $1
@@ -665,7 +665,7 @@ router.put('/:id/approve', authenticateToken, async (req, res) => {
                    t.user_id as teacher_user_id
             FROM behaviour_incidents bi
             JOIN students s ON bi.student_id = s.id
-            JOIN teachers t ON bi.teacher_id = t.id
+            LEFT JOIN teachers t ON bi.teacher_id = t.id
             WHERE bi.id = $1
         `, [req.params.id]);
 
@@ -773,7 +773,7 @@ router.put('/:id/decline', authenticateToken, async (req, res) => {
                    t.user_id as teacher_user_id
             FROM behaviour_incidents bi
             JOIN students s ON bi.student_id = s.id
-            JOIN teachers t ON bi.teacher_id = t.id
+            LEFT JOIN teachers t ON bi.teacher_id = t.id
             WHERE bi.id = $1
         `, [req.params.id]);
 
