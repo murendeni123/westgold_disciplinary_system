@@ -589,7 +589,11 @@ const DisciplineCenter: React.FC = () => {
             </td>
             <td className="px-6 py-4 text-gray-500">
               <div className="flex flex-col">
-                <span className="font-medium">{new Date(merit.date).toLocaleDateString()}</span>
+                <span className="font-medium">
+                  {merit.date && !isNaN(new Date(merit.date).getTime()) 
+                    ? new Date(merit.date).toLocaleDateString() 
+                    : 'N/A'}
+                </span>
               </div>
             </td>
             <td className="px-6 py-4 text-gray-600 text-sm">{merit.teacher_name || 'Admin'}</td>
