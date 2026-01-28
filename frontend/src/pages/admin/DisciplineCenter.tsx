@@ -1017,6 +1017,37 @@ const DisciplineCenter: React.FC = () => {
                   </div>
                 )}
 
+                {detailType === 'merits' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Merit Type</p>
+                        <p className="font-semibold text-gray-900">{selectedItem.merit_type || 'Merit'}</p>
+                      </div>
+                      <div className="bg-green-50 rounded-xl p-4 border border-green-200">
+                        <p className="text-sm text-green-600 mb-1">Points Awarded</p>
+                        <p className="text-2xl font-bold text-green-700">+{selectedItem.points || 1}</p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Date</p>
+                        <p className="font-semibold text-gray-900">
+                          {selectedItem.date && !isNaN(new Date(selectedItem.date).getTime()) 
+                            ? new Date(selectedItem.date).toLocaleDateString() 
+                            : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4">
+                        <p className="text-sm text-gray-500 mb-1">Awarded By</p>
+                        <p className="font-semibold text-gray-900">{selectedItem.teacher_name || 'Admin'}</p>
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <p className="text-sm text-gray-500 mb-1">Description</p>
+                      <p className="text-gray-900">{selectedItem.description || 'No description provided'}</p>
+                    </div>
+                  </div>
+                )}
+
                 {detailType === 'consequences' && (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
@@ -1067,6 +1098,7 @@ const DisciplineCenter: React.FC = () => {
                       detailType === 'behaviour' ? 'from-red-500 to-orange-500' :
                       detailType === 'detentions' ? 'from-amber-500 to-yellow-500' :
                       detailType === 'interventions' ? 'from-blue-500 to-cyan-500' :
+                      detailType === 'merits' ? 'from-green-500 to-emerald-500' :
                       'from-purple-500 to-pink-500'
                     } hover:shadow-lg transition-all`}
                   >

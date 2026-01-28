@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import NotificationDetailModal from '../../components/NotificationDetailModal';
 import { 
   Bell, 
   Check, 
@@ -38,6 +39,8 @@ const NotificationsPage: React.FC = () => {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [stats, setStats] = useState({ total: 0, unread: 0, read: 0 });
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
     fetchNotifications();
@@ -131,21 +134,9 @@ const NotificationsPage: React.FC = () => {
       handleMarkRead(notification.id);
     }
 
-    if (notification.related_type && notification.related_id) {
-      switch (notification.related_type) {
-        case 'incident':
-          navigate(`/parent/child-behaviour`);
-          break;
-        case 'merit':
-          navigate(`/parent/child-merits`);
-          break;
-        case 'detention':
-          navigate(`/parent/child-detentions`);
-          break;
-        default:
-          break;
-      }
-    }
+    // Open detail modal for all notification types
+    setSelectedNotification(notification);
+    setShowDetailModal(true);
   };
 
   const getNotificationIcon = (type: string) => {
@@ -432,6 +423,13 @@ const NotificationsPage: React.FC = () => {
           </div>
         )}
       </motion.div>
+
+      {/* Notification Detail Modal */}
+      <NotificationDetailModal
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        notification={selectedNotification}
+      />
     </div>
   );
 };
