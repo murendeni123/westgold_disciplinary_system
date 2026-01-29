@@ -204,7 +204,8 @@ const NotificationBell: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 z-[9999] overflow-hidden"
+            className="absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
+            style={{ zIndex: 99999 }}
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-4 text-white">

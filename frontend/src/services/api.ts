@@ -318,6 +318,7 @@ export const api = {
 
   // Merits
   getMerits: (params?: any) => axiosInstance.get('/api/merits', { params }),
+  getMerit: (id: number) => axiosInstance.get(`/api/merits/${id}`),
   createMerit: (data: any) => axiosInstance.post('/api/merits', data),
   updateMerit: (id: number, data: any) => axiosInstance.put(`/api/merits/${id}`, data),
   deleteMerit: (id: number) => axiosInstance.delete(`/api/merits/${id}`),

@@ -83,6 +83,48 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
+// Get merit by ID
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+
+    const merit = await schemaGet(req, `
+      SELECT m.id,
+             m.student_id,
+             m.teacher_id,
+             m.merit_type_id,
+             m.description,
+             m.points,
+             m.date as merit_date,
+             m.created_at,
+             s.first_name || ' ' || s.last_name as student_name,
+             s.student_id as student_identifier,
+             u.name as teacher_name,
+             c.class_name,
+             mt.name as merit_type
+      FROM merits m
+      INNER JOIN students s ON m.student_id = s.id
+      LEFT JOIN teachers t ON m.teacher_id = t.id
+      LEFT JOIN public.users u ON t.user_id = u.id
+      LEFT JOIN classes c ON s.class_id = c.id
+      LEFT JOIN merit_types mt ON m.merit_type_id = mt.id
+      WHERE m.id = $1
+    `, [req.params.id]);
+
+    if (!merit) {
+      return res.status(404).json({ error: 'Merit not found' });
+    }
+
+    res.json(merit);
+  } catch (error) {
+    console.error('Error fetching merit:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Create merit
 router.post('/', authenticateToken, async (req, res) => {
   try {

@@ -61,6 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
     { path: '/teacher/detentions', label: 'Detentions', icon: Clock },
     { path: '/teacher/interventions', label: 'Interventions', icon: Shield },
     { path: '/teacher/assign-consequence', label: 'Assign Consequences', icon: Scale },
+    { path: '/teacher/reports', label: 'Reports', icon: BarChart3 },
     { path: '/teacher/notifications', label: 'Notifications', icon: Bell },
     { path: '/teacher/settings', label: 'Settings', icon: Settings },
   ];

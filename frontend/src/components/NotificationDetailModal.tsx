@@ -47,7 +47,7 @@ const NotificationDetailModal: React.FC<NotificationDetailModalProps> = ({
           response = await api.getIncident(notification.related_id);
           break;
         case 'merit':
-          response = await api.getMerits({ id: notification.related_id });
+          response = await api.getMerit(notification.related_id);
           break;
         case 'detention':
           response = await api.getDetention(notification.related_id);
@@ -225,11 +225,23 @@ const NotificationDetailModal: React.FC<NotificationDetailModalProps> = ({
       <div className="grid grid-cols-2 gap-4">
         <div className="p-3 bg-gray-50 rounded-lg">
           <p className="text-xs text-gray-600 mb-1">Student</p>
-          <p className="font-semibold text-gray-900">{details.student_name}</p>
+          <p className="font-semibold text-gray-900">{details.student_name || 'N/A'}</p>
         </div>
         <div className="p-3 bg-gray-50 rounded-lg">
           <p className="text-xs text-gray-600 mb-1">Consequence</p>
-          <p className="font-semibold text-gray-900">{details.consequence_name}</p>
+          <p className="font-semibold text-gray-900">{details.consequence_name || 'N/A'}</p>
+        </div>
+        <div className="p-3 bg-gray-50 rounded-lg">
+          <p className="text-xs text-gray-600 mb-1">Assigned Date</p>
+          <p className="font-semibold text-gray-900">
+            {details.assigned_date ? new Date(details.assigned_date).toLocaleDateString() : 'N/A'}
+          </p>
+        </div>
+        <div className="p-3 bg-gray-50 rounded-lg">
+          <p className="text-xs text-gray-600 mb-1">Due Date</p>
+          <p className="font-semibold text-gray-900">
+            {details.due_date ? new Date(details.due_date).toLocaleDateString() : 'N/A'}
+          </p>
         </div>
         <div className="p-3 bg-gray-50 rounded-lg">
           <p className="text-xs text-gray-600 mb-1">Severity</p>
@@ -238,9 +250,11 @@ const NotificationDetailModal: React.FC<NotificationDetailModalProps> = ({
               ? 'bg-red-100 text-red-800'
               : details.severity === 'medium'
               ? 'bg-yellow-100 text-yellow-800'
-              : 'bg-green-100 text-green-800'
+              : details.severity === 'low'
+              ? 'bg-green-100 text-green-800'
+              : 'bg-gray-100 text-gray-800'
           }`}>
-            {details.severity?.toUpperCase()}
+            {details.severity ? details.severity.toUpperCase() : 'N/A'}
           </span>
         </div>
         <div className="p-3 bg-gray-50 rounded-lg">
@@ -252,22 +266,20 @@ const NotificationDetailModal: React.FC<NotificationDetailModalProps> = ({
               ? 'bg-yellow-100 text-yellow-800'
               : 'bg-gray-100 text-gray-800'
           }`}>
-            {details.status?.toUpperCase()}
+            {details.status ? details.status.toUpperCase() : 'N/A'}
           </span>
         </div>
       </div>
-      {details.due_date && (
-        <div className="p-3 bg-gray-50 rounded-lg">
-          <p className="text-xs text-gray-600 mb-1">Due Date</p>
-          <p className="font-semibold text-gray-900">
-            {new Date(details.due_date).toLocaleDateString()}
-          </p>
-        </div>
-      )}
       {details.notes && (
         <div className="p-3 bg-gray-50 rounded-lg">
           <p className="text-xs text-gray-600 mb-2">Notes</p>
           <p className="text-sm text-gray-900">{details.notes}</p>
+        </div>
+      )}
+      {details.assigned_by_name && (
+        <div className="p-3 bg-gray-50 rounded-lg">
+          <p className="text-xs text-gray-600 mb-1">Assigned By</p>
+          <p className="font-semibold text-gray-900">{details.assigned_by_name}</p>
         </div>
       )}
     </div>
