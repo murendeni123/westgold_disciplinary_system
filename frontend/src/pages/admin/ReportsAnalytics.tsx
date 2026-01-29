@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../../services/api';
 import { motion } from 'framer-motion';
-import { exportToExcel } from '../../utils/excelExport';
+import { exportToExcel, exportMultiSheetExcel } from '../../utils/excelExport';
 import { useToast } from '../../contexts/ToastContext';
 import {
   BarChart3,
@@ -49,6 +49,9 @@ const ReportsAnalytics: React.FC = () => {
   const [allMerits, setAllMerits] = useState<any[]>([]);
   const [allDetentions, setAllDetentions] = useState<any[]>([]);
   const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [allClasses, setAllClasses] = useState<any[]>([]);
+  const [studentFilter, setStudentFilter] = useState('');
+  const [filteredStudents, setFilteredStudents] = useState<any[]>([]);
 
   useEffect(() => {
     fetchAnalytics();
@@ -73,9 +76,11 @@ const ReportsAnalytics: React.FC = () => {
       const detentions = detentionsRes.data || [];
 
       setAllStudents(students);
+      setFilteredStudents(students);
       setAllIncidents(incidents);
       setAllMerits(merits);
       setAllDetentions(detentions);
+      setAllClasses(classesRes.data || []);
 
       setStats({
         totalStudents: students.length,
@@ -168,6 +173,54 @@ const ReportsAnalytics: React.FC = () => {
     }
 
     showSuccess('Reports exported successfully! Check your downloads folder.');
+  };
+
+  const exportAllClassesReport = () => {
+    if (allClasses.length === 0 || allStudents.length === 0) {
+      showWarning('No class data available to export');
+      return;
+    }
+
+    const sheets = allClasses.map(cls => {
+      const classStudents = allStudents.filter(s => s.class_id === cls.id);
+      const headers = ['Student ID', 'Name', 'Incidents', 'Incident Points', 'Merits', 'Merit Points', 'Net Points'];
+      const data = classStudents.map(student => {
+        const studentIncidents = allIncidents.filter(i => i.student_id === student.id);
+        const studentMerits = allMerits.filter(m => m.student_id === student.id);
+        const incidentPoints = studentIncidents.reduce((sum, i) => sum + (i.points_deducted || 0), 0);
+        const meritPoints = studentMerits.reduce((sum, m) => sum + (m.points || 0), 0);
+        return [
+          student.student_id || student.id,
+          `${student.first_name} ${student.last_name}`,
+          studentIncidents.length,
+          incidentPoints,
+          studentMerits.length,
+          meritPoints,
+          meritPoints - incidentPoints
+        ];
+      });
+      return {
+        name: cls.class_name || `Class ${cls.id}`,
+        headers,
+        data
+      };
+    });
+
+    exportMultiSheetExcel('all_classes_report', sheets);
+    showSuccess('All classes report exported successfully!');
+  };
+
+  const handleStudentFilter = (value: string) => {
+    setStudentFilter(value);
+    if (!value.trim()) {
+      setFilteredStudents(allStudents);
+    } else {
+      const filtered = allStudents.filter(student => 
+        `${student.first_name} ${student.last_name}`.toLowerCase().includes(value.toLowerCase()) ||
+        student.student_id?.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredStudents(filtered);
+    }
   };
 
   const exportSingleReport = (reportType: string) => {
