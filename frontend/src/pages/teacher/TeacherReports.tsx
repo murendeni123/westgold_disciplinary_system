@@ -38,9 +38,9 @@ const TeacherReports: React.FC = () => {
     try {
       setLoading(true);
       
-      // Fetch teacher's assigned class
+      // Fetch teacher's assigned class (backend already filters by teacher role)
       const classesRes = await api.getClasses();
-      const teacherClass = classesRes.data?.find((c: any) => c.is_teacher_class);
+      const teacherClass = classesRes.data?.[0]; // Get first class (teacher's assigned class)
       
       if (teacherClass) {
         setMyClass(teacherClass);

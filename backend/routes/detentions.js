@@ -163,6 +163,25 @@ router.put('/sessions/:id/status', authenticateToken, async (req, res) => {
     // Update status
     await schemaRun(req, 'UPDATE detention_sessions SET status = $1 WHERE id = $2', [status, req.params.id]);
 
+    // If session is completed, mark incidents as resolved for students who attended
+    if (status === 'completed') {
+      const attendedStudents = await schemaAll(req, `
+        SELECT student_id 
+        FROM detention_assignments 
+        WHERE detention_id = $1 AND status = 'attended'
+      `, [req.params.id]);
+
+      for (const student of attendedStudents) {
+        await schemaRun(req, `
+          UPDATE behaviour_incidents 
+          SET status = 'resolved', resolved_at = NOW()
+          WHERE student_id = $1 
+            AND status != 'resolved'
+            AND points_deducted > 0
+        `, [student.student_id]);
+      }
+    }
+
     // Emit Socket.io event
     const io = req.app.get('io');
     if (io) {
@@ -239,6 +258,17 @@ router.put('/assignments/:id/attendance', authenticateToken, async (req, res) =>
       SET status = $1, notes = COALESCE($2, notes), updated_at = NOW()
       WHERE id = $3
     `, [dbStatus, notes || null, req.params.id]);
+
+    // If student attended detention, mark their unresolved incidents as resolved
+    if (dbStatus === 'attended') {
+      await schemaRun(req, `
+        UPDATE behaviour_incidents 
+        SET status = 'resolved', resolved_at = NOW()
+        WHERE student_id = $1 
+          AND status != 'resolved'
+          AND points_deducted > 0
+      `, [assignment.student_id]);
+    }
 
     // Send notifications for absent/late/excused
     if (['absent', 'late', 'excused'].includes(dbStatus)) {
