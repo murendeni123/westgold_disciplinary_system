@@ -332,19 +332,19 @@ router.get('/qualifying-students', authenticateToken, requireRole('admin'), asyn
         s.first_name || ' ' || s.last_name as student_name,
         c.class_name,
         COALESCE(SUM(bi.points_deducted), 0) as total_points,
-        (
-          SELECT COUNT(*) 
-          FROM detention_assignments da
-          INNER JOIN detention_sessions ds ON da.detention_id = ds.id
-          WHERE da.student_id = s.id 
-            AND ds.detention_date >= CURRENT_DATE
-            AND da.status IN ('assigned', 'late')
-        ) as upcoming_detentions
+        0 as upcoming_detentions
       FROM students s
       LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id
         AND bi.status != 'resolved'
       LEFT JOIN classes c ON s.class_id = c.id
       WHERE s.is_active = true
+        AND s.id NOT IN (
+          SELECT DISTINCT da.student_id
+          FROM detention_assignments da
+          INNER JOIN detention_sessions ds ON da.detention_id = ds.id
+          WHERE ds.detention_date >= CURRENT_DATE
+            AND da.status IN ('assigned', 'late', 'attended')
+        )
       GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
       HAVING COALESCE(SUM(bi.points_deducted), 0) >= 10
       ORDER BY COALESCE(SUM(bi.points_deducted), 0) DESC
