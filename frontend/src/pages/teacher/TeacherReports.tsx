@@ -27,6 +27,8 @@ const TeacherReports: React.FC = () => {
   const [merits, setMerits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [studentFilter, setStudentFilter] = useState('');
+  const [filteredStudents, setFilteredStudents] = useState<any[]>([]);
 
   useEffect(() => {
     fetchTeacherData();
@@ -45,7 +47,9 @@ const TeacherReports: React.FC = () => {
         
         // Fetch students in the class
         const studentsRes = await api.getStudents({ class_id: teacherClass.id });
-        setStudents(studentsRes.data || []);
+        const studentsList = studentsRes.data || [];
+        setStudents(studentsList);
+        setFilteredStudents(studentsList);
         
         // Fetch incidents for the class
         const incidentsRes = await api.getIncidents();
@@ -65,6 +69,19 @@ const TeacherReports: React.FC = () => {
       console.error('Error fetching teacher data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStudentFilter = (value: string) => {
+    setStudentFilter(value);
+    if (!value.trim()) {
+      setFilteredStudents(students);
+    } else {
+      const filtered = students.filter(student => 
+        `${student.first_name} ${student.last_name}`.toLowerCase().includes(value.toLowerCase()) ||
+        student.student_id?.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredStudents(filtered);
     }
   };
 
@@ -253,8 +270,19 @@ const TeacherReports: React.FC = () => {
         className="rounded-2xl bg-white shadow-xl border border-gray-100 overflow-hidden"
       >
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900">Student Reports</h2>
-          <p className="text-gray-500 text-sm mt-1">Export individual student reports</p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Student Reports</h2>
+              <p className="text-gray-500 text-sm mt-1">Export individual student reports</p>
+            </div>
+          </div>
+          <input
+            type="text"
+            placeholder="Search by student name or ID..."
+            value={studentFilter}
+            onChange={(e) => handleStudentFilter(e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+          />
         </div>
         
         <div className="overflow-x-auto">
@@ -270,7 +298,7 @@ const TeacherReports: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {students.map((student, index) => {
+              {filteredStudents.map((student, index) => {
                 const studentIncidents = incidents.filter(i => i.student_id === student.id);
                 const studentMerits = merits.filter(m => m.student_id === student.id);
                 const incidentPoints = studentIncidents.reduce((sum, i) => sum + (i.points_deducted || 0), 0);
