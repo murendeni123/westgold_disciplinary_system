@@ -33,10 +33,10 @@ const TeacherProfile: React.FC = () => {
   };
 
   const handlePhotoUpload = async (file: File) => {
-    if (!user?.id) return;
+    if (!teacher?.id) return;
     setUploading(true);
     try {
-      await api.uploadTeacherPhoto(user.id, file);
+      await api.uploadTeacherPhoto(teacher.id, file);
       fetchTeacher();
       success('Photo uploaded successfully!');
     } catch (err) {
