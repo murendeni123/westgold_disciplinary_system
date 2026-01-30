@@ -168,13 +168,27 @@ router.post('/', authenticateToken, async (req, res) => {
     const beforeEligibility = await calculateBadgeEligibility(req, student_id);
     console.log('Before eligibility:', beforeEligibility);
 
+    // Get merit_type text - either from request body or fetch from merit_types table
+    let meritTypeName = merit_type;
+    if (!meritTypeName && merit_type_id) {
+      const meritTypeRecord = await schemaGet(req, 'SELECT name FROM merit_types WHERE id = $1', [merit_type_id]);
+      if (meritTypeRecord) {
+        meritTypeName = meritTypeRecord.name;
+      }
+    }
+    
+    // Validate merit_type is present
+    if (!meritTypeName) {
+      return res.status(400).json({ error: 'Merit type is required' });
+    }
+
     console.log('Inserting merit into database...');
-    console.log('Insert params:', [student_id, teacherId, merit_date, merit_type_id || null, String(description).trim(), points || 1]);
+    console.log('Insert params:', [student_id, teacherId, merit_date, merit_type_id || null, meritTypeName, String(description).trim(), points || 1]);
     
     const result = await schemaRun(req,
-      `INSERT INTO merits (student_id, teacher_id, date, merit_type_id, description, points)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-      [student_id, teacherId, merit_date, merit_type_id || null, String(description).trim(), points || 1]
+      `INSERT INTO merits (student_id, teacher_id, date, merit_type_id, merit_type, description, points)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      [student_id, teacherId, merit_date, merit_type_id || null, meritTypeName, String(description).trim(), points || 1]
     );
     console.log('Merit inserted, ID:', result.id);
 
