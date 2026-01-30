@@ -160,6 +160,30 @@ const ParentSignup: React.FC = () => {
           accountData.name.trim()
         );
         
+        // Also save password to local database for backend login support
+        try {
+          await api.signup({
+            name: accountData.name.trim(),
+            email: accountData.email.trim().toLowerCase(),
+            password: accountData.password,
+            phone: accountData.phone.trim(),
+            work_phone: accountData.work_phone.trim() || undefined,
+            relationship_to_child: accountData.relationship_to_child.trim(),
+            emergency_contact_1_name: accountData.emergency_contact_1_name.trim(),
+            emergency_contact_1_phone: accountData.emergency_contact_1_phone.trim(),
+            emergency_contact_2_name: accountData.emergency_contact_2_name.trim(),
+            emergency_contact_2_phone: accountData.emergency_contact_2_phone.trim(),
+            home_address: accountData.home_address.trim(),
+            city: accountData.city.trim() || undefined,
+            postal_code: accountData.postal_code.trim() || undefined,
+          });
+        } catch (backendError: any) {
+          // If user already exists in backend (from Supabase sync), that's okay
+          if (!backendError.response?.data?.error?.includes('already registered')) {
+            console.error('Backend signup failed:', backendError);
+          }
+        }
+        
         if (result?.requiresVerification) {
           // Email verification required - show verification pending screen
           setVerificationEmail(accountData.email.trim().toLowerCase());

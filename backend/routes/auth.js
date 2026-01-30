@@ -699,25 +699,38 @@ router.post('/signup', signupLimiter, validateSignup, async (req, res) => {
 
         // Check if email already exists
         const existingUser = await dbGet(
-            'SELECT id FROM public.users WHERE email = $1',
+            'SELECT id, password, supabase_user_id FROM public.users WHERE email = $1',
             [email.toLowerCase()]
         );
-        if (existingUser) {
-            return res.status(400).json({ error: 'Email already registered' });
-        }
-
+        
         // Hash password
         const hashedPassword = await hashPassword(password);
-
-        // Create parent user in public.users (no school link yet)
-        const userResult = await dbRun(
-            `INSERT INTO public.users (email, password, role, name, phone, is_active)
-             VALUES ($1, $2, $3, $4, $5, $6)
-             RETURNING id`,
-            [email.toLowerCase(), hashedPassword, 'parent', name, phone, true]
-        );
-
-        const userId = userResult.id;
+        
+        let userId;
+        
+        if (existingUser) {
+            // User exists (likely from Supabase sync) - update password if it's NULL
+            if (!existingUser.password && existingUser.supabase_user_id) {
+                // This is a Supabase user without local password - update it
+                await dbRun(
+                    'UPDATE public.users SET password = $1, name = $2, phone = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4',
+                    [hashedPassword, name, phone, existingUser.id]
+                );
+                userId = existingUser.id;
+            } else {
+                // User already has a password - reject duplicate signup
+                return res.status(400).json({ error: 'Email already registered' });
+            }
+        } else {
+            // Create new parent user in public.users (no school link yet)
+            const userResult = await dbRun(
+                `INSERT INTO public.users (email, password, role, name, phone, is_active)
+                 VALUES ($1, $2, $3, $4, $5, $6)
+                 RETURNING id`,
+                [email.toLowerCase(), hashedPassword, 'parent', name, phone, true]
+            );
+            userId = userResult.id;
+        }
 
         // Generate token (without school context - parent needs to link to school)
         const token = jwt.sign(
