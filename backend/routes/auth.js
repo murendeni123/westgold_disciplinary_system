@@ -151,7 +151,7 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
         }
 
         // Check if user has a password set
-        if (!user.password_hash) {
+        if (!user.password) {
             return res.status(401).json({ 
                 error: 'Password not set',
                 message: 'Please contact your administrator to set up your password'
@@ -159,7 +159,7 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
         }
 
         // Verify password
-        const isValidPassword = await verifyPassword(password, user.password_hash);
+        const isValidPassword = await verifyPassword(password, user.password);
         if (!isValidPassword) {
             // Track failed login attempt
             const lockStatus = trackFailedLogin(email.toLowerCase());
@@ -639,7 +639,7 @@ router.put('/change-password', authenticateToken, async (req, res) => {
         });
         
         const updateResult = await dbRun(
-            'UPDATE public.users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+            'UPDATE public.users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
             [hashedPassword, req.user.id]
         );
         
@@ -711,7 +711,7 @@ router.post('/signup', signupLimiter, validateSignup, async (req, res) => {
 
         // Create parent user in public.users (no school link yet)
         const userResult = await dbRun(
-            `INSERT INTO public.users (email, password_hash, role, name, phone, is_active)
+            `INSERT INTO public.users (email, password, role, name, phone, is_active)
              VALUES ($1, $2, $3, $4, $5, $6)
              RETURNING id`,
             [email.toLowerCase(), hashedPassword, 'parent', name, phone, true]
@@ -909,9 +909,9 @@ router.post('/supabase-sync', async (req, res) => {
                     userResult = await pool.query('SELECT * FROM public.users WHERE id = $1', [user.id]);
                     user = userResult.rows[0];
                 } else {
-                    // Create new parent user (password_hash is NULL for OAuth users)
+                    // Create new parent user (password is NULL for OAuth users)
                     const insertResult = await pool.query(
-                        `INSERT INTO public.users (email, name, role, supabase_user_id, auth_provider, password_hash, created_at, last_sign_in)
+                        `INSERT INTO public.users (email, name, role, supabase_user_id, auth_provider, password, created_at, last_sign_in)
                          VALUES ($1, $2, 'parent', $3, $4, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                          RETURNING id`,
                         [email, name || email.split('@')[0], supabase_user_id, auth_provider || 'google']
