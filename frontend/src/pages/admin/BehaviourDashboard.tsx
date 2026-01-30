@@ -13,6 +13,7 @@ import { Filter, Download, AlertTriangle, Check, X, Eye, Edit2, Save, Scale, Tre
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { useToast } from '../../hooks/useToast';
 import { useFeatureFlags } from '../../contexts/FeatureFlagsContext';
+import { decodeHtmlEntities } from '../../utils/htmlDecode';
 
 const BehaviourDashboard: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
@@ -795,7 +796,7 @@ const BehaviourDashboard: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                   <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">
-                    {selectedIncident.description || 'No description provided'}
+                    {decodeHtmlEntities(selectedIncident.description) || 'No description provided'}
                   </p>
                 </div>
 

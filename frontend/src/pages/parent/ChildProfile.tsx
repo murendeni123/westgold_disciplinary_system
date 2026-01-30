@@ -7,6 +7,7 @@ import { api } from '../../services/api';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { ArrowLeft } from 'lucide-react';
+import { decodeHtmlEntities } from '../../utils/htmlDecode';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const ChildProfile: React.FC = () => {
@@ -149,7 +150,7 @@ const ChildProfile: React.FC = () => {
         activities.push({
           type: 'incident',
           date: incident.incident_date,
-          description: incident.description || 'Behavior incident',
+          description: decodeHtmlEntities(incident.description) || 'Behavior incident',
           points: -incident.points,
         });
       });

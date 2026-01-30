@@ -4,6 +4,7 @@ import { api } from '../../services/api';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { ArrowLeft } from 'lucide-react';
+import { decodeHtmlEntities } from '../../utils/htmlDecode';
 
 const BehaviourDetails: React.FC = () => {
   const { id } = useParams();
@@ -102,7 +103,7 @@ const BehaviourDetails: React.FC = () => {
         </Card>
 
         <Card title="Description">
-          <p className="text-gray-700">{incident.description || 'No description provided'}</p>
+          <p className="text-gray-700">{decodeHtmlEntities(incident.description) || 'No description provided'}</p>
           {incident.admin_notes && (
             <div className="mt-4 pt-4 border-t">
               <p className="text-sm text-gray-600 mb-2">Admin Notes:</p>

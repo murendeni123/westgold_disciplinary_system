@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Plus, AlertTriangle, Edit2, Trash2, Eye, TrendingUp } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { useToast } from '../../hooks/useToast';
+import { decodeHtmlEntities } from '../../utils/htmlDecode';
 
 const IncidentHistory: React.FC = () => {
   const navigate = useNavigate();
@@ -440,7 +441,7 @@ const IncidentHistory: React.FC = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                   <p className="text-gray-900 bg-gray-50 p-3 rounded-lg">
-                    {selectedIncident.description || 'No description provided'}
+                    {decodeHtmlEntities(selectedIncident.description) || 'No description provided'}
                   </p>
                 </div>
 
