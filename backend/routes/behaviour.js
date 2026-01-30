@@ -404,16 +404,30 @@ router.post('/', authenticateToken, async (req, res) => {
         const beforeEligibility = await calculateBadgeEligibility(req, student_id);
         console.log('Before eligibility:', beforeEligibility);
 
+        // Get incident_type text - either from request body or fetch from incident_types table
+        let incidentTypeName = incident_type;
+        if (!incidentTypeName && incident_type_id) {
+            const incidentTypeRecord = await schemaGet(req, 'SELECT name FROM incident_types WHERE id = $1', [incident_type_id]);
+            if (incidentTypeRecord) {
+                incidentTypeName = incidentTypeRecord.name;
+            }
+        }
+        
+        // Validate incident_type is present
+        if (!incidentTypeName) {
+            return res.status(400).json({ error: 'Incident type is required' });
+        }
+
         console.log('Inserting incident into database...');
         console.log('Insert params:', [student_id, teacherId, incident_date, incident_time || null, incident_type_id || null, 
-             String(description).trim(), severity || 'minor', points || 0]);
+             incidentTypeName, String(description).trim(), severity || 'minor', points || 0]);
         
         const result = await schemaRun(req,
             `INSERT INTO behaviour_incidents 
-             (student_id, teacher_id, date, time, incident_type_id, description, severity, points_deducted)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+             (student_id, teacher_id, date, time, incident_type_id, incident_type, description, severity, points_deducted)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
             [student_id, teacherId, incident_date, incident_time || null, incident_type_id || null, 
-             String(description).trim(), severity || 'minor', points || 0]
+             incidentTypeName, String(description).trim(), severity || 'minor', points || 0]
         );
         console.log('Incident inserted, ID:', result.id);
 
