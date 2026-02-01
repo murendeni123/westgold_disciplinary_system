@@ -85,6 +85,7 @@ interface Merit {
   description: string;
   points: number;
   date: string;
+  time?: string;
   teacher_name: string;
   created_at: string;
 }
