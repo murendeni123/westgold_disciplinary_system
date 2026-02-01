@@ -91,9 +91,6 @@ const AdminDashboard: React.FC = () => {
     fetchAllData();
   }, []);
 
-  // Use visibility-aware interval to prevent mobile reload issues
-  useVisibilityAwareInterval(fetchAllData, 5 * 60 * 1000, { pauseWhenHidden: true });
-
   const fetchAllData = async () => {
     try {
       console.log('Fetching dashboard data...');
@@ -143,6 +140,9 @@ const AdminDashboard: React.FC = () => {
       setRefreshing(false);
     }
   };
+
+  // Use visibility-aware interval to prevent mobile reload issues
+  useVisibilityAwareInterval(fetchAllData, 5 * 60 * 1000, { pauseWhenHidden: true });
 
   const handleRefresh = () => {
     setRefreshing(true);
