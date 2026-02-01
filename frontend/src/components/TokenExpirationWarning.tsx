@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, X, RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useVisibilityAwareInterval } from '../hooks/useVisibilityAwareInterval';
 
 const TokenExpirationWarning: React.FC = () => {
   const { user, refreshUser } = useAuth();
@@ -9,42 +10,40 @@ const TokenExpirationWarning: React.FC = () => {
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    const checkTokenExpiration = () => {
-      const token = localStorage.getItem('token') || localStorage.getItem('platform_token');
-      
-      if (!token || !user) {
+  const checkTokenExpiration = () => {
+    const token = localStorage.getItem('token') || localStorage.getItem('platform_token');
+    
+    if (!token || !user) {
+      setShowWarning(false);
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const expiresAt = payload.exp * 1000;
+      const now = Date.now();
+      const minutesRemaining = Math.floor((expiresAt - now) / 1000 / 60);
+
+      setTimeRemaining(minutesRemaining);
+
+      // Show warning if less than 5 minutes remaining
+      if (minutesRemaining <= 5 && minutesRemaining > 0) {
+        setShowWarning(true);
+      } else {
         setShowWarning(false);
-        return;
       }
+    } catch (e) {
+      console.error('Error checking token expiration:', e);
+    }
+  };
 
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const expiresAt = payload.exp * 1000;
-        const now = Date.now();
-        const minutesRemaining = Math.floor((expiresAt - now) / 1000 / 60);
-
-        setTimeRemaining(minutesRemaining);
-
-        // Show warning if less than 5 minutes remaining
-        if (minutesRemaining <= 5 && minutesRemaining > 0) {
-          setShowWarning(true);
-        } else {
-          setShowWarning(false);
-        }
-      } catch (e) {
-        console.error('Error checking token expiration:', e);
-      }
-    };
-
-    // Check immediately
+  // Check immediately on mount
+  useEffect(() => {
     checkTokenExpiration();
-
-    // Check every 30 seconds
-    const interval = setInterval(checkTokenExpiration, 30000);
-
-    return () => clearInterval(interval);
   }, [user]);
+
+  // Use visibility-aware interval to prevent mobile reload issues
+  useVisibilityAwareInterval(checkTokenExpiration, 30000, { pauseWhenHidden: true });
 
   const handleRefresh = async () => {
     setIsRefreshing(true);

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval';
 import { 
   Users, AlertTriangle, Clock, Calendar, Award, Gavel, TrendingDown, Bell, 
   UserCheck, BookOpen, ArrowRight, AlertCircle, XCircle, MessageSquare, 
@@ -88,9 +89,10 @@ const AdminDashboard: React.FC = () => {
     }
     
     fetchAllData();
-    const interval = setInterval(fetchAllData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
   }, []);
+
+  // Use visibility-aware interval to prevent mobile reload issues
+  useVisibilityAwareInterval(fetchAllData, 5 * 60 * 1000, { pauseWhenHidden: true });
 
   const fetchAllData = async () => {
     try {
