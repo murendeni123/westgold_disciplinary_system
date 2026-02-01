@@ -594,6 +594,7 @@ const DisciplineCenter: React.FC = () => {
                     ? new Date(merit.date).toLocaleDateString() 
                     : 'N/A'}
                 </span>
+                {merit.time && <span className="text-xs text-gray-400">{merit.time}</span>}
               </div>
             </td>
             <td className="px-6 py-4 text-gray-600 text-sm">{merit.teacher_name || 'Admin'}</td>

@@ -43,6 +43,16 @@ router.get('/', authenticateToken, async (req, res) => {
             params.push(req.user.id);
         }
 
+        // If user is a teacher, only show incidents they logged or for students in their classes
+        if (req.user.role === 'teacher') {
+            query += ` AND (bi.teacher_id IN (SELECT id FROM teachers WHERE user_id = $${paramIndex}) 
+                       OR s.class_id IN (SELECT c.id FROM classes c 
+                                        JOIN teachers t ON c.teacher_id = t.id 
+                                        WHERE t.user_id = $${paramIndex}))`;
+            params.push(req.user.id);
+            paramIndex++;
+        }
+
         if (student_id) {
             query += ` AND bi.student_id = $${paramIndex++}`;
             params.push(student_id);
@@ -92,8 +102,8 @@ router.get('/analytics', authenticateToken, async (req, res) => {
         const endDate = end_date ? new Date(end_date) : new Date();
         const startDate = start_date ? new Date(start_date) : new Date(endDate.getTime() - (parseInt(days) * 24 * 60 * 60 * 1000));
 
-        // Get incidents within date range
-        const incidents = await schemaAll(req, `
+        // Build query with access control
+        let analyticsQuery = `
             SELECT bi.*, 
                    s.first_name || ' ' || s.last_name as student_name,
                    COALESCE(it.name, bi.incident_type) as incident_type_name
@@ -101,8 +111,21 @@ router.get('/analytics', authenticateToken, async (req, res) => {
             JOIN students s ON bi.student_id = s.id
             LEFT JOIN incident_types it ON bi.incident_type_id = it.id
             WHERE bi.date >= $1 AND bi.date <= $2
-            ORDER BY bi.date DESC
-        `, [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]]);
+        `;
+        const analyticsParams = [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]];
+        
+        // Add teacher access control
+        if (req.user.role === 'teacher') {
+            analyticsQuery += ` AND (bi.teacher_id IN (SELECT id FROM teachers WHERE user_id = $3) 
+                               OR s.class_id IN (SELECT c.id FROM classes c 
+                                                JOIN teachers t ON c.teacher_id = t.id 
+                                                WHERE t.user_id = $3))`;
+            analyticsParams.push(req.user.id);
+        }
+        
+        analyticsQuery += ' ORDER BY bi.date DESC';
+        
+        const incidents = await schemaAll(req, analyticsQuery, analyticsParams);
 
         // Severity breakdown
         const severityBreakdown = {

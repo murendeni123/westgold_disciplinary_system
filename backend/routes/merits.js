@@ -30,13 +30,14 @@ router.get('/', authenticateToken, async (req, res) => {
              m.merit_type_id,
              m.description,
              m.points,
-             m.date as merit_date,
+             m.date,
+             CAST(m.created_at AS TIME) as time,
              m.created_at,
              s.first_name || ' ' || s.last_name as student_name,
              s.student_id as student_identifier,
              u.name as teacher_name,
              c.class_name,
-             mt.name as merit_type
+             COALESCE(mt.name, m.merit_type) as merit_type
       FROM merits m
       INNER JOIN students s ON m.student_id = s.id
       LEFT JOIN teachers t ON m.teacher_id = t.id
@@ -98,13 +99,14 @@ router.get('/:id', authenticateToken, async (req, res) => {
              m.merit_type_id,
              m.description,
              m.points,
-             m.date as merit_date,
+             m.date,
+             CAST(m.created_at AS TIME) as time,
              m.created_at,
              s.first_name || ' ' || s.last_name as student_name,
              s.student_id as student_identifier,
              u.name as teacher_name,
              c.class_name,
-             mt.name as merit_type
+             COALESCE(mt.name, m.merit_type) as merit_type
       FROM merits m
       INNER JOIN students s ON m.student_id = s.id
       LEFT JOIN teachers t ON m.teacher_id = t.id
