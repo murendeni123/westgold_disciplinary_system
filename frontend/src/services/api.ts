@@ -297,37 +297,37 @@ export const api = {
   getDetentionRules: () => axiosInstance.get('/detentions/rules'),
   saveDetentionRule: (data: any) => axiosInstance.post('/detentions/rules', data),
   getDetentions: (params?: any) => axiosInstance.get('/detentions', { params }),
-  getDetention: (id: number) => axiosInstance.get(`/api/detentions/${id}`),
+  getDetention: (id: number) => axiosInstance.get(`/detentions/${id}`),
   createDetention: (data: any) => axiosInstance.post('/detentions', data),
   createRecurringDetentions: (data: any) => axiosInstance.post('/detentions/recurring', data),
-  updateDetention: (id: number, data: any) => axiosInstance.put(`/api/detentions/${id}`, data),
-  assignToDetention: (id: number, data: any) => axiosInstance.post(`/api/detentions/${id}/assign`, data),
+  updateDetention: (id: number, data: any) => axiosInstance.put(`/detentions/${id}`, data),
+  assignToDetention: (id: number, data: any) => axiosInstance.post(`/detentions/${id}/assign`, data),
   autoAssignDetention: (data: any) => axiosInstance.post('/detentions/auto-assign', data),
   evaluateDetentionRules: (studentId: number) => axiosInstance.post('/detentions/evaluate-rules', { student_id: studentId }),
-  getStudentDetentionHistory: (studentId: number) => axiosInstance.get(`/api/detentions/student/${studentId}/history`),
+  getStudentDetentionHistory: (studentId: number) => axiosInstance.get(`/detentions/student/${studentId}/history`),
   updateDetentionAttendance: (assignmentId: number, data: { status: string; attendance_time?: string; notes?: string }) => 
-    axiosInstance.put(`/api/detentions/assignments/${assignmentId}`, data),
+    axiosInstance.put(`/detentions/assignments/${assignmentId}`, data),
   updateDetentionSessionStatus: (sessionId: number, status: string) => 
-    axiosInstance.put(`/api/detentions/sessions/${sessionId}/status`, { status }),
+    axiosInstance.put(`/detentions/sessions/${sessionId}/status`, { status }),
   markDetentionAttendance: (assignmentId: number, attendance_status: string, notes?: string) => 
-    axiosInstance.put(`/api/detentions/assignments/${assignmentId}/attendance`, { attendance_status, notes }),
-  deleteDetention: (id: number) => axiosInstance.delete(`/api/detentions/${id}`),
+    axiosInstance.put(`/detentions/assignments/${assignmentId}/attendance`, { attendance_status, notes }),
+  deleteDetention: (id: number) => axiosInstance.delete(`/detentions/${id}`),
   getDetentionQueue: () => axiosInstance.get('/detentions/queue'),
-  processDetentionQueue: (detentionId: number) => axiosInstance.post(`/api/detentions/${detentionId}/process-queue`),
+  processDetentionQueue: (detentionId: number) => axiosInstance.post(`/detentions/${detentionId}/process-queue`),
   getQualifyingStudents: () => axiosInstance.get('/detentions/qualifying-students'),
 
   // Merits
   getMerits: (params?: any) => axiosInstance.get('/merits', { params }),
-  getMerit: (id: number) => axiosInstance.get(`/api/merits/${id}`),
+  getMerit: (id: number) => axiosInstance.get(`/merits/${id}`),
   createMerit: (data: any) => axiosInstance.post('/merits', data),
-  updateMerit: (id: number, data: any) => axiosInstance.put(`/api/merits/${id}`, data),
-  deleteMerit: (id: number) => axiosInstance.delete(`/api/merits/${id}`),
+  updateMerit: (id: number, data: any) => axiosInstance.put(`/merits/${id}`, data),
+  deleteMerit: (id: number) => axiosInstance.delete(`/merits/${id}`),
 
   // Exports
   exportStudentRecord: (id: number, format: 'pdf' | 'excel') => 
-    axiosInstance.get(`/api/exports/students/${id}?format=${format}`, { responseType: 'blob' }),
+    axiosInstance.get(`/exports/students/${id}?format=${format}`, { responseType: 'blob' }),
   exportClassRecords: (id: number, format: 'pdf' | 'excel') => 
-    axiosInstance.get(`/api/exports/class/${id}?format=${format}`, { responseType: 'blob' }),
+    axiosInstance.get(`/exports/class/${id}?format=${format}`, { responseType: 'blob' }),
 
   // Bulk Import
   bulkImportStudents: (file: File) => {
@@ -419,22 +419,22 @@ export const api = {
   
   // Import History
   getImportHistory: (limit = 20, offset = 0) =>
-    axiosInstance.get(`/api/bulk-import-v2/history?limit=${limit}&offset=${offset}`),
+    axiosInstance.get(`/bulk-import-v2/history?limit=${limit}&offset=${offset}`),
   getImportHistoryDetail: (id: number) =>
-    axiosInstance.get(`/api/bulk-import-v2/history/${id}`),
+    axiosInstance.get(`/bulk-import-v2/history/${id}`),
 
   // Photo uploads
   uploadStudentPhoto: (id: number, file: File) => {
     const formData = new FormData();
     formData.append('photo', file);
-    return axiosInstance.post(`/api/students/${id}/photo`, formData, {
+    return axiosInstance.post(`/students/${id}/photo`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
   uploadTeacherPhoto: (id: number, file: File) => {
     const formData = new FormData();
     formData.append('photo', file);
-    return axiosInstance.post(`/api/teachers/${id}/photo`, formData, {
+    return axiosInstance.post(`/teachers/${id}/photo`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
@@ -442,9 +442,9 @@ export const api = {
   // Notifications
   getNotifications: (params?: any) => axiosInstance.get('/notifications', { params }),
   getUnreadCount: () => axiosInstance.get('/notifications/unread-count'),
-  markNotificationRead: (id: number) => axiosInstance.put(`/api/notifications/${id}/read`),
+  markNotificationRead: (id: number) => axiosInstance.put(`/notifications/${id}/read`),
   markAllNotificationsRead: () => axiosInstance.put('/notifications/read-all'),
-  deleteNotification: (id: number) => axiosInstance.delete(`/api/notifications/${id}`),
+  deleteNotification: (id: number) => axiosInstance.delete(`/notifications/${id}`),
 
   // Push Notifications
   getPushPublicKey: () => axiosInstance.get('/push/public-key'),
@@ -463,72 +463,72 @@ export const api = {
 
   // User Management (Admin)
   getUsers: () => axiosInstance.get('/users'),
-  getUser: (id: number) => axiosInstance.get(`/api/users/${id}`),
+  getUser: (id: number) => axiosInstance.get(`/users/${id}`),
   createUser: (data: { name: string; email: string; password: string; role: string }) => 
     axiosInstance.post('/users', data),
-  updateUserRole: (id: number, role: string) => axiosInstance.put(`/api/users/${id}/role`, { role }),
-  deleteUser: (id: number) => axiosInstance.delete(`/api/users/${id}`),
+  updateUserRole: (id: number, role: string) => axiosInstance.put(`/users/${id}/role`, { role }),
+  deleteUser: (id: number) => axiosInstance.delete(`/users/${id}`),
 
   // Incident Types
   getIncidentTypes: (params?: any) => axiosInstance.get('/incident-types', { params }),
-  getIncidentType: (id: number) => axiosInstance.get(`/api/incident-types/${id}`),
+  getIncidentType: (id: number) => axiosInstance.get(`/incident-types/${id}`),
   createIncidentType: (data: any) => axiosInstance.post('/incident-types', data),
-  updateIncidentType: (id: number, data: any) => axiosInstance.put(`/api/incident-types/${id}`, data),
-  deleteIncidentType: (id: number) => axiosInstance.delete(`/api/incident-types/${id}`),
+  updateIncidentType: (id: number, data: any) => axiosInstance.put(`/incident-types/${id}`, data),
+  deleteIncidentType: (id: number) => axiosInstance.delete(`/incident-types/${id}`),
 
   // Merit Types
   getMeritTypes: (params?: any) => axiosInstance.get('/merit-types', { params }),
-  getMeritType: (id: number) => axiosInstance.get(`/api/merit-types/${id}`),
+  getMeritType: (id: number) => axiosInstance.get(`/merit-types/${id}`),
   createMeritType: (data: any) => axiosInstance.post('/merit-types', data),
-  updateMeritType: (id: number, data: any) => axiosInstance.put(`/api/merit-types/${id}`, data),
-  deleteMeritType: (id: number) => axiosInstance.delete(`/api/merit-types/${id}`),
+  updateMeritType: (id: number, data: any) => axiosInstance.put(`/merit-types/${id}`, data),
+  deleteMeritType: (id: number) => axiosInstance.delete(`/merit-types/${id}`),
 
   // Interventions
   getInterventions: (params?: any) => axiosInstance.get('/interventions', { params }),
-  getIntervention: (id: number) => axiosInstance.get(`/api/interventions/${id}`),
+  getIntervention: (id: number) => axiosInstance.get(`/interventions/${id}`),
   createIntervention: (data: any) => axiosInstance.post('/interventions', data),
-  updateIntervention: (id: number, data: any) => axiosInstance.put(`/api/interventions/${id}`, data),
-  deleteIntervention: (id: number) => axiosInstance.delete(`/api/interventions/${id}`),
+  updateIntervention: (id: number, data: any) => axiosInstance.put(`/interventions/${id}`, data),
+  deleteIntervention: (id: number) => axiosInstance.delete(`/interventions/${id}`),
   getInterventionTypes: () => axiosInstance.get('/interventions/types/list'),
   createInterventionType: (data: any) => axiosInstance.post('/interventions/types', data),
-  updateInterventionType: (id: number, data: any) => axiosInstance.put(`/api/interventions/types/${id}`, data),
-  deleteInterventionType: (id: number) => axiosInstance.delete(`/api/interventions/types/${id}`),
-  getInterventionSessions: (id: number) => axiosInstance.get(`/api/interventions/${id}/sessions`),
-  createInterventionSession: (id: number, data: any) => axiosInstance.post(`/api/interventions/${id}/sessions`, data),
-  updateInterventionProgress: (id: number, data: any) => axiosInstance.put(`/api/interventions/${id}/progress`, data),
-  recordInterventionOutcome: (id: number, data: any) => axiosInstance.put(`/api/interventions/${id}/outcome`, data),
+  updateInterventionType: (id: number, data: any) => axiosInstance.put(`/interventions/types/${id}`, data),
+  deleteInterventionType: (id: number) => axiosInstance.delete(`/interventions/types/${id}`),
+  getInterventionSessions: (id: number) => axiosInstance.get(`/interventions/${id}/sessions`),
+  createInterventionSession: (id: number, data: any) => axiosInstance.post(`/interventions/${id}/sessions`, data),
+  updateInterventionProgress: (id: number, data: any) => axiosInstance.put(`/interventions/${id}/progress`, data),
+  recordInterventionOutcome: (id: number, data: any) => axiosInstance.put(`/interventions/${id}/outcome`, data),
   getInterventionStats: () => axiosInstance.get('/interventions/stats/overview'),
 
   // Guided Interventions
   getBehaviourCategories: () => axiosInstance.get('/guided-interventions/categories'),
   getInterventionStrategies: (category?: string) => axiosInstance.get('/guided-interventions/strategies', { params: { category } }),
   getSuggestedStrategies: (studentId: number, category: string) => axiosInstance.get('/guided-interventions/suggested-strategies', { params: { student_id: studentId, category } }),
-  getStudentInterventionHistory: (studentId: number) => axiosInstance.get(`/api/guided-interventions/student-history/${studentId}`),
+  getStudentInterventionHistory: (studentId: number) => axiosInstance.get(`/guided-interventions/student-history/${studentId}`),
   createGuidedIntervention: (data: any) => axiosInstance.post('/guided-interventions', data),
-  updateInterventionOutcome: (id: number, data: any) => axiosInstance.put(`/api/guided-interventions/${id}/outcome`, data),
+  updateInterventionOutcome: (id: number, data: any) => axiosInstance.put(`/guided-interventions/${id}/outcome`, data),
   getInterventionStatistics: (params?: any) => axiosInstance.get('/guided-interventions/statistics', { params }),
 
   // Consequences
   getConsequenceDefinitions: () => axiosInstance.get('/consequences/definitions'),
   createConsequenceDefinition: (data: any) => axiosInstance.post('/consequences/definitions', data),
-  updateConsequenceDefinition: (id: number, data: any) => axiosInstance.put(`/api/consequences/definitions/${id}`, data),
-  deleteConsequenceDefinition: (id: number) => axiosInstance.delete(`/api/consequences/definitions/${id}`),
+  updateConsequenceDefinition: (id: number, data: any) => axiosInstance.put(`/consequences/definitions/${id}`, data),
+  deleteConsequenceDefinition: (id: number) => axiosInstance.delete(`/consequences/definitions/${id}`),
   getConsequences: (params?: any) => axiosInstance.get('/consequences', { params }),
-  getConsequence: (id: number) => axiosInstance.get(`/api/consequences/${id}`),
-  getStudentConsequences: (studentId: number) => axiosInstance.get(`/api/consequences/student/${studentId}`),
+  getConsequence: (id: number) => axiosInstance.get(`/consequences/${id}`),
+  getStudentConsequences: (studentId: number) => axiosInstance.get(`/consequences/student/${studentId}`),
   assignConsequence: (data: any) => axiosInstance.post('/consequences/assign', data),
-  updateConsequence: (id: number, data: any) => axiosInstance.put(`/api/consequences/${id}`, data),
-  approveSuspension: (id: number, data: { approval_status: 'approved' | 'denied', approval_notes?: string }) => axiosInstance.put(`/api/consequences/${id}/approval`, data),
-  completeConsequence: (id: number) => axiosInstance.put(`/api/consequences/${id}/complete`),
-  acknowledgeConsequence: (id: number, data?: { parent_notes?: string }) => axiosInstance.put(`/api/consequences/${id}/acknowledge`, data || {}),
-  deleteConsequence: (id: number) => axiosInstance.delete(`/api/consequences/${id}`),
+  updateConsequence: (id: number, data: any) => axiosInstance.put(`/consequences/${id}`, data),
+  approveSuspension: (id: number, data: { approval_status: 'approved' | 'denied', approval_notes?: string }) => axiosInstance.put(`/consequences/${id}/approval`, data),
+  completeConsequence: (id: number) => axiosInstance.put(`/consequences/${id}/complete`),
+  acknowledgeConsequence: (id: number, data?: { parent_notes?: string }) => axiosInstance.put(`/consequences/${id}/acknowledge`, data || {}),
+  deleteConsequence: (id: number) => axiosInstance.delete(`/consequences/${id}`),
 
   // Consequence Assignments (Role-based)
   getConsequenceAssignments: (params?: any) => axiosInstance.get('/consequence-assignments', { params }),
   getAvailableConsequences: () => axiosInstance.get('/consequence-assignments/available-consequences'),
   assignConsequenceToStudent: (data: any) => axiosInstance.post('/consequence-assignments/assign', data),
-  updateConsequenceAssignment: (id: number, data: any) => axiosInstance.put(`/api/consequence-assignments/${id}`, data),
-  deleteConsequenceAssignment: (id: number) => axiosInstance.delete(`/api/consequence-assignments/${id}`),
+  updateConsequenceAssignment: (id: number, data: any) => axiosInstance.put(`/consequence-assignments/${id}`, data),
+  deleteConsequenceAssignment: (id: number) => axiosInstance.delete(`/consequence-assignments/${id}`),
   evaluateStudentConsequences: (studentId: number) => axiosInstance.post('/consequence-assignments/evaluate-student', { student_id: studentId }),
   getConsequenceStatistics: () => axiosInstance.get('/consequence-assignments/statistics'),
 
@@ -538,22 +538,22 @@ export const api = {
   updatePlatformSettings: (data: any) => axiosInstance.put('/platform/settings', data),
   getPlatformPlans: () => axiosInstance.get('/platform/plans'),
   createPlatformPlan: (data: any) => axiosInstance.post('/platform/plans', data),
-  updatePlatformPlan: (id: number, data: any) => axiosInstance.put(`/api/platform/plans/${id}`, data),
+  updatePlatformPlan: (id: number, data: any) => axiosInstance.put(`/platform/plans/${id}`, data),
   getPlatformSchools: (params?: any) => axiosInstance.get('/platform/schools', { params }),
-  getPlatformSchool: (id: number) => axiosInstance.get(`/api/platform/schools/${id}`),
-  getPlatformSchoolStats: (id: number) => axiosInstance.get(`/api/platform/schools/${id}/stats`),
-  getPlatformSchoolAnalytics: (id: number, range?: string) => axiosInstance.get(`/api/platform/schools/${id}/analytics`, { params: { range } }),
+  getPlatformSchool: (id: number) => axiosInstance.get(`/platform/schools/${id}`),
+  getPlatformSchoolStats: (id: number) => axiosInstance.get(`/platform/schools/${id}/stats`),
+  getPlatformSchoolAnalytics: (id: number, range?: string) => axiosInstance.get(`/platform/schools/${id}/analytics`, { params: { range } }),
   createPlatformSchool: (data: any) => axiosInstance.post('/platform/schools', data),
   onboardSchool: (data: any) => axiosInstance.post('/platform/schools/onboard', data),
-  updatePlatformSchool: (id: number, data: any) => axiosInstance.put(`/api/platform/schools/${id}`, data),
-  deletePlatformSchool: (id: number) => axiosInstance.delete(`/api/platform/schools/${id}`),
+  updatePlatformSchool: (id: number, data: any) => axiosInstance.put(`/platform/schools/${id}`, data),
+  deletePlatformSchool: (id: number) => axiosInstance.delete(`/platform/schools/${id}`),
   bulkUpdateSchoolStatus: (schoolIds: number[], status: string) => axiosInstance.put('/platform/schools/bulk/status', { school_ids: schoolIds, status }),
-  updateSchoolSubscription: (id: number, data: any) => axiosInstance.put(`/api/platform/schools/${id}/subscription`, data),
+  updateSchoolSubscription: (id: number, data: any) => axiosInstance.put(`/platform/schools/${id}/subscription`, data),
   // School Branding Management
-  getSchoolBranding: (id: number) => axiosInstance.get(`/api/platform/schools/${id}/branding`),
-  updateSchoolBranding: (id: number, data: any) => axiosInstance.put(`/api/platform/schools/${id}/branding`, data),
-  getSchoolBrandingHistory: (id: number) => axiosInstance.get(`/api/platform/schools/${id}/branding/history`),
-  revertSchoolBranding: (id: number) => axiosInstance.post(`/api/platform/schools/${id}/branding/revert`),
+  getSchoolBranding: (id: number) => axiosInstance.get(`/platform/schools/${id}/branding`),
+  updateSchoolBranding: (id: number, data: any) => axiosInstance.put(`/platform/schools/${id}/branding`, data),
+  getSchoolBrandingHistory: (id: number) => axiosInstance.get(`/platform/schools/${id}/branding/history`),
+  revertSchoolBranding: (id: number) => axiosInstance.post(`/platform/schools/${id}/branding/revert`),
   // Platform Analytics & Logs
   getPlatformAnalytics: (params?: any) => axiosInstance.get('/platform/analytics', { params }),
   getPlatformBilling: (params?: any) => axiosInstance.get('/platform/billing', { params }),
@@ -564,71 +564,71 @@ export const api = {
   updatePlatformUserProfile: (data: any) => axiosInstance.put('/platform/users/profile', data),
   changePlatformUserPassword: (currentPassword: string, newPassword: string) => axiosInstance.put('/platform/users/password', { currentPassword, newPassword }),
   createPlatformUser: (data: any) => axiosInstance.post('/platform/users', data),
-  updatePlatformUser: (id: number, data: any) => axiosInstance.put(`/api/platform/users/${id}`, data),
-  deletePlatformUser: (id: number) => axiosInstance.delete(`/api/platform/users/${id}`),
+  updatePlatformUser: (id: number, data: any) => axiosInstance.put(`/platform/users/${id}`, data),
+  deletePlatformUser: (id: number) => axiosInstance.delete(`/platform/users/${id}`),
 
   // School Information
   getCurrentSchoolInfo: () => axiosInstance.get('/school-info'),
 
   // School Customizations
-  getSchoolCustomizations: (schoolId: number) => axiosInstance.get(`/api/school-customizations/${schoolId}`),
-  updateSchoolCustomizations: (schoolId: number, data: any) => axiosInstance.put(`/api/school-customizations/${schoolId}`, data),
+  getSchoolCustomizations: (schoolId: number) => axiosInstance.get(`/school-customizations/${schoolId}`),
+  updateSchoolCustomizations: (schoolId: number, data: any) => axiosInstance.put(`/school-customizations/${schoolId}`, data),
   uploadSchoolLogo: (schoolId: number, file: File) => {
     const formData = new FormData();
     formData.append('logo', file);
-    return axiosInstance.post(`/api/school-customizations/${schoolId}/logo`, formData, {
+    return axiosInstance.post(`/school-customizations/${schoolId}/logo`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
   uploadSchoolFavicon: (schoolId: number, file: File) => {
     const formData = new FormData();
     formData.append('favicon', file);
-    return axiosInstance.post(`/api/school-customizations/${schoolId}/favicon`, formData, {
+    return axiosInstance.post(`/school-customizations/${schoolId}/favicon`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
   uploadLoginBackground: (schoolId: number, file: File) => {
     const formData = new FormData();
     formData.append('background', file);
-    return axiosInstance.post(`/api/school-customizations/${schoolId}/login-background`, formData, {
+    return axiosInstance.post(`/school-customizations/${schoolId}/login-background`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
   uploadDashboardBackground: (schoolId: number, file: File) => {
     const formData = new FormData();
     formData.append('background', file);
-    return axiosInstance.post(`/api/school-customizations/${schoolId}/dashboard-background`, formData, {
+    return axiosInstance.post(`/school-customizations/${schoolId}/dashboard-background`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
-  deleteSchoolLogo: (schoolId: number) => axiosInstance.delete(`/api/school-customizations/${schoolId}/logo`),
-  deleteSchoolFavicon: (schoolId: number) => axiosInstance.delete(`/api/school-customizations/${schoolId}/favicon`),
-  deleteLoginBackground: (schoolId: number) => axiosInstance.delete(`/api/school-customizations/${schoolId}/login-background`),
-  deleteDashboardBackground: (schoolId: number) => axiosInstance.delete(`/api/school-customizations/${schoolId}/dashboard-background`),
+  deleteSchoolLogo: (schoolId: number) => axiosInstance.delete(`/school-customizations/${schoolId}/logo`),
+  deleteSchoolFavicon: (schoolId: number) => axiosInstance.delete(`/school-customizations/${schoolId}/favicon`),
+  deleteLoginBackground: (schoolId: number) => axiosInstance.delete(`/school-customizations/${schoolId}/login-background`),
+  deleteDashboardBackground: (schoolId: number) => axiosInstance.delete(`/school-customizations/${schoolId}/dashboard-background`),
 
   // Period Timetables
   getTimetableTemplates: () => axiosInstance.get('/period-timetables/templates'),
-  getTimetableTemplate: (id: number) => axiosInstance.get(`/api/period-timetables/templates/${id}`),
+  getTimetableTemplate: (id: number) => axiosInstance.get(`/period-timetables/templates/${id}`),
   createTimetableTemplate: (data: any) => axiosInstance.post('/period-timetables/templates', data),
-  updateTimetableTemplate: (id: number, data: any) => axiosInstance.put(`/api/period-timetables/templates/${id}`, data),
-  deleteTimetableTemplate: (id: number) => axiosInstance.delete(`/api/period-timetables/templates/${id}`),
-  getTimeSlots: (templateId: number) => axiosInstance.get(`/api/period-timetables/templates/${templateId}/slots`),
-  createTimeSlot: (templateId: number, data: any) => axiosInstance.post(`/api/period-timetables/templates/${templateId}/slots`, data),
-  bulkCreateTimeSlots: (templateId: number, data: any) => axiosInstance.post(`/api/period-timetables/templates/${templateId}/slots/bulk`, data),
-  updateTimeSlot: (id: number, data: any) => axiosInstance.put(`/api/period-timetables/slots/${id}`, data),
-  deleteTimeSlot: (id: number) => axiosInstance.delete(`/api/period-timetables/slots/${id}`),
+  updateTimetableTemplate: (id: number, data: any) => axiosInstance.put(`/period-timetables/templates/${id}`, data),
+  deleteTimetableTemplate: (id: number) => axiosInstance.delete(`/period-timetables/templates/${id}`),
+  getTimeSlots: (templateId: number) => axiosInstance.get(`/period-timetables/templates/${templateId}/slots`),
+  createTimeSlot: (templateId: number, data: any) => axiosInstance.post(`/period-timetables/templates/${templateId}/slots`, data),
+  bulkCreateTimeSlots: (templateId: number, data: any) => axiosInstance.post(`/period-timetables/templates/${templateId}/slots/bulk`, data),
+  updateTimeSlot: (id: number, data: any) => axiosInstance.put(`/period-timetables/slots/${id}`, data),
+  deleteTimeSlot: (id: number) => axiosInstance.delete(`/period-timetables/slots/${id}`),
   getSubjects: () => axiosInstance.get('/subjects'),
-  getSubject: (id: number) => axiosInstance.get(`/api/subjects/${id}`),
+  getSubject: (id: number) => axiosInstance.get(`/subjects/${id}`),
   createSubject: (data: any) => axiosInstance.post('/subjects', data),
-  updateSubject: (id: number, data: any) => axiosInstance.put(`/api/subjects/${id}`, data),
-  deleteSubject: (id: number) => axiosInstance.delete(`/api/subjects/${id}`),
+  updateSubject: (id: number, data: any) => axiosInstance.put(`/subjects/${id}`, data),
+  deleteSubject: (id: number) => axiosInstance.delete(`/subjects/${id}`),
   getClassrooms: () => axiosInstance.get('/period-timetables/classrooms'),
   createClassroom: (data: any) => axiosInstance.post('/period-timetables/classrooms', data),
-  getClassTimetable: (classId: number) => axiosInstance.get(`/api/period-timetables/class/${classId}`),
-  getTeacherTimetable: (teacherId: number) => axiosInstance.get(`/api/period-timetables/teacher/${teacherId}`),
-  assignClassPeriod: (classId: number, data: any) => axiosInstance.post(`/api/period-timetables/class/${classId}/assign`, data),
-  updateClassTimetable: (id: number, data: any) => axiosInstance.put(`/api/period-timetables/class-timetable/${id}`, data),
-  deleteClassTimetable: (id: number) => axiosInstance.delete(`/api/period-timetables/class-timetable/${id}`),
+  getClassTimetable: (classId: number) => axiosInstance.get(`/period-timetables/class/${classId}`),
+  getTeacherTimetable: (teacherId: number) => axiosInstance.get(`/period-timetables/teacher/${teacherId}`),
+  assignClassPeriod: (classId: number, data: any) => axiosInstance.post(`/period-timetables/class/${classId}/assign`, data),
+  updateClassTimetable: (id: number, data: any) => axiosInstance.put(`/period-timetables/class-timetable/${id}`, data),
+  deleteClassTimetable: (id: number) => axiosInstance.delete(`/period-timetables/class-timetable/${id}`),
 
   // Period Register
   getTeacherPeriodsToday: (teacherId?: number) => axiosInstance.get('/period-register/teacher/today', { params: { teacher_id: teacherId } }),
@@ -636,7 +636,7 @@ export const api = {
   startPeriodSession: (data: any) => axiosInstance.post('/period-register/session/start', data),
   markAttendance: (data: any) => axiosInstance.post('/period-register/attendance/mark', data),
   bulkMarkAttendance: (data: any) => axiosInstance.post('/period-register/attendance/bulk-mark', data),
-  completePeriodSession: (sessionId: number) => axiosInstance.post(`/api/period-register/session/${sessionId}/complete`),
+  completePeriodSession: (sessionId: number) => axiosInstance.post(`/period-register/session/${sessionId}/complete`),
   dismissStudent: (data: any) => axiosInstance.post('/period-register/dismiss', data),
   returnStudent: (data: any) => axiosInstance.post('/period-register/return', data),
   recordLateArrival: (data: any) => axiosInstance.post('/period-register/late-arrival', data),
@@ -644,25 +644,25 @@ export const api = {
   // Attendance Management (Enhanced)
   getTodayDismissals: () => axiosInstance.get('/period-register/dismissals/today'),
   getAttendanceFlags: (params?: any) => axiosInstance.get('/period-register/flags', { params }),
-  resolveAttendanceFlag: (flagId: number, data: any) => axiosInstance.put(`/api/period-register/flags/${flagId}/resolve`, data),
+  resolveAttendanceFlag: (flagId: number, data: any) => axiosInstance.put(`/period-register/flags/${flagId}/resolve`, data),
   getAttendanceReport: (params: any) => axiosInstance.get('/period-register/reports/attendance', { params }),
 
   // Feature Flags
   getAllFeatureFlags: () => axiosInstance.get('/feature-flags/all'),
-  getSchoolFeatureFlags: (schoolId: number) => axiosInstance.get(`/api/feature-flags/school/${schoolId}`),
+  getSchoolFeatureFlags: (schoolId: number) => axiosInstance.get(`/feature-flags/school/${schoolId}`),
   getCurrentFeatureFlags: () => axiosInstance.get('/feature-flags/current'),
-  checkFeatureFlag: (featureName: string) => axiosInstance.get(`/api/feature-flags/check/${featureName}`),
+  checkFeatureFlag: (featureName: string) => axiosInstance.get(`/feature-flags/check/${featureName}`),
   toggleFeatureFlag: (schoolId: number, featureName: string, enabled: boolean) => 
-    axiosInstance.put(`/api/feature-flags/toggle/${schoolId}/${featureName}`, { enabled }),
+    axiosInstance.put(`/feature-flags/toggle/${schoolId}/${featureName}`, { enabled }),
   bulkToggleFeatureFlag: (featureName: string, schoolIds: number[], enabled: boolean) => 
-    axiosInstance.put(`/api/feature-flags/bulk-toggle/${featureName}`, { schoolIds, enabled }),
+    axiosInstance.put(`/feature-flags/bulk-toggle/${featureName}`, { schoolIds, enabled }),
 
   // Goldie Badge Configuration
   getGoldieBadgeConfig: () => axiosInstance.get('/goldie-badge/config'),
   updateGoldieBadgeConfig: (pointsThreshold: number) => 
     axiosInstance.put('/goldie-badge/config', { points_threshold: pointsThreshold }),
   checkBadgeEligibility: (studentId: number) => 
-    axiosInstance.get(`/api/goldie-badge/check-eligibility/${studentId}`),
+    axiosInstance.get(`/goldie-badge/check-eligibility/${studentId}`),
 };
 
 // Export the axios instance for direct use when needed
