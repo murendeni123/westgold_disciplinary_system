@@ -45,7 +45,7 @@ router.get('/teacher/today', authenticateToken, async (req, res) => {
       LEFT JOIN classrooms c ON ct.classroom_id = c.id
       LEFT JOIN period_sessions ps ON ps.class_timetable_id = ct.id AND ps.session_date = $2
       WHERE ct.teacher_id = $1 
-        AND ct.is_active = true
+        AND ct.is_active = 1
         AND ts.day_of_week = $3
         AND ts.is_break = false
         AND (ct.effective_to IS NULL OR ct.effective_to >= CURRENT_DATE)
@@ -89,7 +89,7 @@ router.get('/teacher/week', authenticateToken, async (req, res) => {
       LEFT JOIN subjects s ON ct.subject_id = s.id
       LEFT JOIN classrooms c ON ct.classroom_id = c.id
       WHERE ct.teacher_id = $1 
-        AND ct.is_active = true
+        AND ct.is_active = 1
         AND ts.is_break = false
         AND (ct.effective_to IS NULL OR ct.effective_to >= CURRENT_DATE)
       ORDER BY ts.day_of_week, ts.period_number
@@ -157,7 +157,7 @@ router.post('/session/start', authenticateToken, async (req, res) => {
     const dismissals = await schemaAll(req, `
       SELECT student_id, dismissed_at, dismissal_reason, returned_at
       FROM student_dismissals
-      WHERE dismissal_date = $1 AND is_active = true
+      WHERE dismissal_date = $1 AND is_active = 1
     `, [session_date]);
 
     // Check for late arrivals
@@ -373,7 +373,7 @@ router.post('/return', authenticateToken, requireRole(['admin']), async (req, re
       SET returned_at = CURRENT_TIMESTAMP,
           returned_by = $1,
           return_notes = $2,
-          is_active = false,
+          is_active = 0,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $3
       RETURNING *

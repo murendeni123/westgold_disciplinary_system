@@ -207,11 +207,11 @@ router.delete('/:id', authenticateToken, requireRole('admin'), async (req, res) 
         
         // Soft delete related records based on role
         if (user.role === 'teacher') {
-            await schemaRun(req, 'UPDATE teachers SET is_active = false WHERE user_id = $1', [userId]);
+            await schemaRun(req, 'UPDATE teachers SET is_active = 0 WHERE user_id = $1', [userId]);
         }
         
         // Soft delete the user
-        await dbRun('UPDATE public.users SET is_active = false WHERE id = $1', [userId]);
+        await dbRun('UPDATE public.users SET is_active = 0 WHERE id = $1', [userId]);
         
         res.json({ message: 'User deleted successfully' });
     } catch (error) {

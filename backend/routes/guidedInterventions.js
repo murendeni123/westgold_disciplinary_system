@@ -56,7 +56,7 @@ router.get('/strategies', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'School context required' });
     }
 
-    let query = 'SELECT * FROM intervention_strategies WHERE is_active = true';
+    let query = 'SELECT * FROM intervention_strategies WHERE is_active = 1';
     const params = [];
 
     if (category) {

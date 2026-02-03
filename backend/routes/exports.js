@@ -132,7 +132,7 @@ router.get('/class/:id', authenticateToken, requireRole('admin'), async (req, re
              (SELECT COALESCE(SUM(points_deducted), 0) FROM behaviour_incidents WHERE student_id = s.id) as demerit_points,
              (SELECT COALESCE(SUM(points), 0) FROM merits WHERE student_id = s.id) as merit_points
       FROM students s
-      WHERE s.class_id = $1 AND s.is_active = true
+      WHERE s.class_id = $1 AND s.is_active = 1
       ORDER BY s.last_name, s.first_name
     `, [classId]);
 

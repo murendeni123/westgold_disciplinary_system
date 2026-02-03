@@ -62,7 +62,7 @@ router.get('/', authenticateToken, async (req, res) => {
             FROM teachers t
             INNER JOIN public.users u ON t.user_id = u.id
             LEFT JOIN classes c ON t.class_teacher_of = c.id
-            WHERE t.is_active = true
+            WHERE t.is_active = 1
             ORDER BY u.name
         `;
 
@@ -239,7 +239,7 @@ router.delete('/:id', authenticateToken, requireRole('admin'), async (req, res) 
         }
 
         // Soft delete - set is_active to false
-        await schemaRun(req, 'UPDATE teachers SET is_active = false WHERE id = $1', [req.params.id]);
+        await schemaRun(req, 'UPDATE teachers SET is_active = 0 WHERE id = $1', [req.params.id]);
         
         res.json({ message: 'Teacher deleted successfully' });
     } catch (error) {

@@ -335,7 +335,7 @@ router.post('/select-school', async (req, res) => {
 
         // Get user
         const user = await dbGet(
-            'SELECT * FROM public.users WHERE id = $1 AND is_active = true',
+            'SELECT * FROM public.users WHERE id = $1 AND is_active = 1',
             [decoded.userId]
         );
 
@@ -1078,7 +1078,7 @@ router.post('/refresh-token', async (req, res) => {
         // Handle platform admin
         if (decoded.isPlatformAdmin) {
             const platformUser = await dbGet(
-                'SELECT * FROM public.platform_users WHERE id = $1 AND is_active = true',
+                'SELECT * FROM public.platform_users WHERE id = $1 AND is_active = 1',
                 [decoded.platformUserId]
             );
 
@@ -1092,7 +1092,7 @@ router.post('/refresh-token', async (req, res) => {
 
         // Regular user
         const user = await dbGet(
-            'SELECT * FROM public.users WHERE id = $1 AND is_active = true',
+            'SELECT * FROM public.users WHERE id = $1 AND is_active = 1',
             [decoded.userId]
         );
 

@@ -14,11 +14,11 @@ router.get('/', authenticateToken, async (req, res) => {
 
         let query = `
             SELECT c.*, u.name as teacher_name, u.email as teacher_email,
-                   (SELECT COUNT(*) FROM students WHERE class_id = c.id AND is_active = true) as student_count
+                   (SELECT COUNT(*) FROM students WHERE class_id = c.id AND is_active = 1) as student_count
             FROM classes c
             LEFT JOIN teachers t ON c.teacher_id = t.id
             LEFT JOIN public.users u ON t.user_id = u.id
-            WHERE c.is_active = true
+            WHERE c.is_active = 1
         `;
         const params = [];
         let paramIndex = 1;
@@ -66,7 +66,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
         const students = await schemaAll(req, `
             SELECT s.* 
             FROM students s
-            WHERE s.class_id = $1 AND s.is_active = true
+            WHERE s.class_id = $1 AND s.is_active = 1
             ORDER BY s.last_name, s.first_name
         `, [req.params.id]);
 
@@ -150,7 +150,7 @@ router.delete('/:id', authenticateToken, requireRole('admin'), async (req, res) 
             return res.status(404).json({ error: 'Class not found' });
         }
 
-        await schemaRun(req, 'UPDATE classes SET is_active = false WHERE id = $1', [req.params.id]);
+        await schemaRun(req, 'UPDATE classes SET is_active = 0 WHERE id = $1', [req.params.id]);
         res.json({ message: 'Class deleted successfully' });
     } catch (error) {
         console.error('Error deleting class:', error);

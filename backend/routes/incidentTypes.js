@@ -24,7 +24,7 @@ router.get('/', authenticateToken, async (req, res) => {
     let query = 'SELECT * FROM incident_types';
 
     if (active_only === 'true') {
-      query += ' WHERE is_active = true';
+      query += ' WHERE is_active = 1';
     }
 
     query += ' ORDER BY name';
