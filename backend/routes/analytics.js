@@ -21,7 +21,7 @@ router.get('/critical-alerts', authenticateToken, async (req, res) => {
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id
-            WHERE s.is_active = 1
+            WHERE s.is_active = true
             GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
             HAVING COALESCE(SUM(bi.points_deducted), 0) >= 50
             ORDER BY total_demerits DESC
@@ -32,18 +32,18 @@ router.get('/critical-alerts', authenticateToken, async (req, res) => {
         const today = new Date().toISOString().split('T')[0];
         const classesWithoutAttendance = await schemaAll(req, `
             SELECT c.id, c.class_name, u.name as teacher_name,
-                   (SELECT COUNT(*) FROM students WHERE class_id = c.id AND is_active = 1) as student_count
+                   (SELECT COUNT(*) FROM students WHERE class_id = c.id AND is_active = true) as student_count
             FROM classes c
             LEFT JOIN teachers t ON c.teacher_id = t.id
             LEFT JOIN public.users u ON t.user_id = u.id
-            WHERE c.is_active = 1
+            WHERE c.is_active = true
             AND c.id NOT IN (
                 SELECT DISTINCT s.class_id 
                 FROM attendance a
                 INNER JOIN students s ON a.student_id = s.id
                 WHERE a.date = $1 AND s.class_id IS NOT NULL
             )
-            AND (SELECT COUNT(*) FROM students WHERE class_id = c.id AND is_active = 1) > 0
+            AND (SELECT COUNT(*) FROM students WHERE class_id = c.id AND is_active = true) > 0
             ORDER BY c.class_name
         `, [today]);
 
@@ -109,7 +109,7 @@ router.get('/at-risk-students', authenticateToken, async (req, res) => {
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             INNER JOIN attendance a ON s.id = a.student_id
-            WHERE s.is_active = 1
+            WHERE s.is_active = true
             AND a.status = 'absent'
             AND a.date >= CURRENT_DATE - INTERVAL '30 days'
             GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
@@ -128,7 +128,7 @@ router.get('/at-risk-students', authenticateToken, async (req, res) => {
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             INNER JOIN behaviour_incidents bi ON s.id = bi.student_id
-            WHERE s.is_active = 1
+            WHERE s.is_active = true
             AND bi.created_at >= CURRENT_DATE - INTERVAL '30 days'
             GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
             HAVING COUNT(bi.id) >= 3
@@ -240,7 +240,7 @@ router.get('/class-profile/:classId', authenticateToken, async (req, res) => {
                    COALESCE((SELECT SUM(points) FROM merits WHERE student_id = s.id), 0) as merit_points,
                    COALESCE((SELECT COUNT(*) FROM behaviour_incidents WHERE student_id = s.id), 0) as incident_count
             FROM students s
-            WHERE s.class_id = $1 AND s.is_active = 1
+            WHERE s.class_id = $1 AND s.is_active = true
             ORDER BY demerit_points DESC
         `, [classId]);
 
@@ -306,7 +306,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
         let stats = {};
 
         if (role === 'admin') {
-            const totalStudents = await schemaGet(req, 'SELECT COUNT(*) as count FROM students WHERE is_active = 1');
+            const totalStudents = await schemaGet(req, 'SELECT COUNT(*) as count FROM students WHERE is_active = true');
             const totalIncidents = await schemaGet(req, 'SELECT COUNT(*) as count FROM behaviour_incidents');
             const totalMerits = await schemaGet(req, 'SELECT COUNT(*) as count FROM merits');
             const pendingApprovals = await schemaGet(req, 'SELECT COUNT(*) as count FROM behaviour_incidents WHERE follow_up_required = true');
@@ -328,7 +328,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                        COUNT(bi.id) as incident_count
                 FROM students s
                 LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id
-                WHERE s.is_active = 1
+                WHERE s.is_active = true
                 GROUP BY s.id
                 ORDER BY demerit_points DESC, incident_count DESC
                 LIMIT 10
@@ -342,7 +342,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 FROM classes c
                 LEFT JOIN students s ON c.id = s.class_id
                 LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id
-                WHERE c.is_active = 1
+                WHERE c.is_active = true
                 GROUP BY c.id
                 ORDER BY total_demerit_points DESC
                 LIMIT 10
@@ -356,7 +356,7 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 FROM teachers t
                 LEFT JOIN behaviour_incidents bi ON t.id = bi.teacher_id
                 LEFT JOIN merits m ON t.id = m.teacher_id
-                WHERE t.is_active = 1
+                WHERE t.is_active = true
                 GROUP BY t.id
                 ORDER BY incident_count DESC, merit_count DESC
                 LIMIT 10

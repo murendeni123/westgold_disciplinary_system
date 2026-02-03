@@ -308,7 +308,7 @@ router.get('/subjects', authenticateToken, async (req, res) => {
 
     const subjects = await schemaAll(req, `
       SELECT * FROM subjects 
-      WHERE is_active = 1 
+      WHERE is_active = true 
       ORDER BY name
     `);
 
@@ -360,7 +360,7 @@ router.get('/classrooms', authenticateToken, async (req, res) => {
 
     const classrooms = await schemaAll(req, `
       SELECT * FROM classrooms 
-      WHERE is_active = 1 
+      WHERE is_active = true 
       ORDER BY name
     `);
 
@@ -423,7 +423,7 @@ router.get('/class/:classId', authenticateToken, async (req, res) => {
       LEFT JOIN teachers t ON ct.teacher_id = t.id
       LEFT JOIN classrooms c ON ct.classroom_id = c.id
       WHERE ct.class_id = $1 
-        AND ct.is_active = 1
+        AND ct.is_active = true
         AND (ct.effective_to IS NULL OR ct.effective_to >= CURRENT_DATE)
       ORDER BY ts.period_number
     `, [req.params.classId]);
@@ -456,7 +456,7 @@ router.get('/teacher/:teacherId', authenticateToken, async (req, res) => {
       LEFT JOIN subjects s ON ct.subject_id = s.id
       LEFT JOIN classrooms c ON ct.classroom_id = c.id
       WHERE ct.teacher_id = $1 
-        AND ct.is_active = 1
+        AND ct.is_active = true
         AND (ct.effective_to IS NULL OR ct.effective_to >= CURRENT_DATE)
       ORDER BY ts.period_number
     `, [req.params.teacherId]);

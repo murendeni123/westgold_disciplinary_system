@@ -236,7 +236,7 @@ router.delete('/:id', authenticateToken, requireRole('admin'), async (req, res) 
         }
 
         // Soft delete - set is_active to false
-        await schemaRun(req, 'UPDATE students SET is_active = 0 WHERE id = $1', [req.params.id]);
+        await schemaRun(req, 'UPDATE students SET is_active = false WHERE id = $1', [req.params.id]);
         res.json({ message: 'Student deleted successfully' });
     } catch (error) {
         console.error('Error deleting student:', error);

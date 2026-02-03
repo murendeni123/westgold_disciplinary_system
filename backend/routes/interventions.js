@@ -197,7 +197,7 @@ router.get('/types/list', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'School context required' });
     }
 
-    const types = await schemaAll(req, 'SELECT * FROM intervention_types WHERE is_active = 1 ORDER BY name');
+    const types = await schemaAll(req, 'SELECT * FROM intervention_types WHERE is_active = true ORDER BY name');
     res.json(types);
   } catch (error) {
     console.error('Error fetching intervention types:', error);

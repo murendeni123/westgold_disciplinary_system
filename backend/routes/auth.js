@@ -83,7 +83,7 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
         let platformUser = null;
         try {
             platformUser = await dbGet(
-                'SELECT * FROM public.platform_users WHERE email = $1 AND is_active = 1',
+                'SELECT * FROM public.platform_users WHERE email = $1 AND is_active = true',
                 [email.toLowerCase()]
             );
         } catch (e) {
@@ -335,7 +335,7 @@ router.post('/select-school', async (req, res) => {
 
         // Get user
         const user = await dbGet(
-            'SELECT * FROM public.users WHERE id = $1 AND is_active = 1',
+            'SELECT * FROM public.users WHERE id = $1 AND is_active = true',
             [decoded.userId]
         );
 
@@ -1078,7 +1078,7 @@ router.post('/refresh-token', async (req, res) => {
         // Handle platform admin
         if (decoded.isPlatformAdmin) {
             const platformUser = await dbGet(
-                'SELECT * FROM public.platform_users WHERE id = $1 AND is_active = 1',
+                'SELECT * FROM public.platform_users WHERE id = $1 AND is_active = true',
                 [decoded.platformUserId]
             );
 
@@ -1092,7 +1092,7 @@ router.post('/refresh-token', async (req, res) => {
 
         // Regular user
         const user = await dbGet(
-            'SELECT * FROM public.users WHERE id = $1 AND is_active = 1',
+            'SELECT * FROM public.users WHERE id = $1 AND is_active = true',
             [decoded.userId]
         );
 

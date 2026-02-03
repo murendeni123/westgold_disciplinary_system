@@ -13,7 +13,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     console.log(`Fetching subjects for schema: ${schema}`);
     const subjects = await schemaAll(req,
-      'SELECT * FROM subjects WHERE is_active = 1 ORDER BY name ASC',
+      'SELECT * FROM subjects WHERE is_active = true ORDER BY name ASC',
       []
     );
 
@@ -144,7 +144,7 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
 
     await schemaRun(req, `
       UPDATE subjects 
-      SET is_active = 0, updated_at = CURRENT_TIMESTAMP
+      SET is_active = false, updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
     `, [req.params.id]);
 

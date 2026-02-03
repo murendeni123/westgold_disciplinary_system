@@ -23,7 +23,7 @@ router.post('/login', async (req, res) => {
         let platformUser = null;
         try {
             platformUser = await dbGet(
-                'SELECT * FROM platform_users WHERE email = ? AND is_active = 1',
+                'SELECT * FROM platform_users WHERE email = ? AND is_active = true',
                 [email]
             );
         } catch (dbError) {

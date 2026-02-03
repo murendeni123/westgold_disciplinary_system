@@ -337,7 +337,7 @@ router.get('/qualifying-students', authenticateToken, requireRole('admin'), asyn
       LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id
         AND bi.status != 'resolved'
       LEFT JOIN classes c ON s.class_id = c.id
-      WHERE s.is_active = 1
+      WHERE s.is_active = true
         AND s.id NOT IN (
           SELECT DISTINCT da.student_id
           FROM detention_assignments da
@@ -824,7 +824,7 @@ router.post('/auto-assign', authenticateToken, requireRole('admin'), async (req,
       FROM students s
       LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id
         AND bi.status != 'resolved'
-      WHERE s.is_active = 1
+      WHERE s.is_active = true
       GROUP BY s.id, s.first_name, s.last_name, s.parent_id
       HAVING COALESCE(SUM(bi.points_deducted), 0) >= 10
       ORDER BY COALESCE(SUM(bi.points_deducted), 0) DESC
@@ -934,7 +934,7 @@ router.post('/evaluate-rules', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Student ID is required' });
     }
 
-    // Get active detention rules
+    // Get active detention rules (is_active is INTEGER in detention_rules table)
     const rules = await schemaAll(req, 
       'SELECT * FROM detention_rules WHERE is_active = 1 ORDER BY min_points'
     );
