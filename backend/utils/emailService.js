@@ -31,6 +31,17 @@ transporter.verify((error, success) => {
  * @returns {Promise} - Resolves with info about sent message
  */
 const sendEmail = async ({ to, subject, text, html, from }) => {
+  const timestamp = new Date().toISOString();
+  
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('📧 EMAIL SEND ATTEMPT');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`⏰ Timestamp: ${timestamp}`);
+  console.log(`📬 To: ${to}`);
+  console.log(`📝 Subject: ${subject}`);
+  console.log(`👤 From: ${from || `"${process.env.FROM_NAME || 'LearsKool DMS'}" <${process.env.FROM_EMAIL}>`}`);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
   try {
     const mailOptions = {
       from: from || `"${process.env.FROM_NAME || 'LearsKool DMS'}" <${process.env.FROM_EMAIL}>`,
@@ -41,10 +52,24 @@ const sendEmail = async ({ to, subject, text, html, from }) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent successfully:', info.messageId);
+    
+    console.log('✅ EMAIL SENT SUCCESSFULLY');
+    console.log(`📧 Recipient: ${to}`);
+    console.log(`🆔 Message ID: ${info.messageId}`);
+    console.log(`📊 Response: ${info.response}`);
+    console.log(`✉️ Accepted: ${info.accepted?.join(', ') || 'N/A'}`);
+    console.log(`❌ Rejected: ${info.rejected?.length > 0 ? info.rejected.join(', ') : 'None'}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    
     return info;
   } catch (error) {
-    console.error('❌ Error sending email:', error);
+    console.error('❌ EMAIL SEND FAILED');
+    console.error(`📧 Recipient: ${to}`);
+    console.error(`📝 Subject: ${subject}`);
+    console.error(`⚠️ Error Code: ${error.code || 'N/A'}`);
+    console.error(`⚠️ Error Message: ${error.message}`);
+    console.error(`⚠️ Full Error:`, error);
+    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     throw error;
   }
 };

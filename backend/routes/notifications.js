@@ -117,15 +117,19 @@ const createNotification = async (req, userId, type, title, message, relatedId =
     const schema = getSchema(req);
     if (!schema) return;
 
+    console.log(`📢 Creating notification for user ID: ${userId}, type: ${type}`);
+
     // Create in-app notification
     await schemaRun(req,
       `INSERT INTO notifications (user_id, type, title, message, related_id, related_type)
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [userId, type, title, message, relatedId, relatedType]
     );
+    console.log(`✅ In-app notification created for user ${userId}`);
 
     // Send email if requested and user has email
     if (options.sendEmail) {
+      console.log(`📧 Email flag is TRUE - attempting to send email to user ${userId}`);
       try {
         const user = await dbGet(
           'SELECT email, name FROM public.users WHERE id = $1',
@@ -133,14 +137,21 @@ const createNotification = async (req, userId, type, title, message, relatedId =
         );
 
         if (user && user.email) {
+          console.log(`👤 User found: ${user.name} (${user.email})`);
           const actionUrl = options.actionUrl || process.env.FRONTEND_URL || 'https://westgold-disciplinary-system-hv69eeo2c.vercel.app';
           await sendGenericNotificationEmail(user.email, user.name, title, message, actionUrl);
-          console.log(`✅ Email notification sent to ${user.email}`);
+          console.log(`✅ Email notification successfully sent to ${user.email}`);
+        } else if (user && !user.email) {
+          console.warn(`⚠️ User ${userId} (${user.name}) has no email address - skipping email`);
+        } else {
+          console.warn(`⚠️ User ${userId} not found in database - skipping email`);
         }
       } catch (emailError) {
-        console.error('Error sending email notification:', emailError);
+        console.error(`❌ Error sending email notification to user ${userId}:`, emailError);
         // Don't fail the notification if email fails
       }
+    } else {
+      console.log(`📭 Email flag is FALSE - no email will be sent for this notification`);
     }
   } catch (error) {
     console.error('Error creating notification:', error);

@@ -525,9 +525,11 @@ router.post('/', authenticateToken, async (req, res) => {
 
             // Send detailed email to parent for high-severity incidents
             if (isHighSeverity) {
+                console.log(`🚨 High-severity incident detected - preparing to send email to parent`);
                 try {
                     const parent = await dbGet('SELECT email, name FROM public.users WHERE id = $1', [student.parent_id]);
                     if (parent && parent.email) {
+                        console.log(`📧 Sending incident email to parent: ${parent.name} (${parent.email})`);
                         await sendIncidentNotificationEmail(
                             parent.email,
                             parent.name,
@@ -537,9 +539,14 @@ router.post('/', authenticateToken, async (req, res) => {
                             String(description).trim(),
                             incident_date
                         );
+                        console.log(`✅ Incident email sent successfully to ${parent.email}`);
+                    } else if (parent && !parent.email) {
+                        console.warn(`⚠️ Parent ${parent.name} (ID: ${student.parent_id}) has no email - cannot send incident email`);
+                    } else {
+                        console.warn(`⚠️ Parent ID ${student.parent_id} not found - cannot send incident email`);
                     }
                 } catch (emailError) {
-                    console.error('Error sending incident email to parent:', emailError);
+                    console.error(`❌ Error sending incident email to parent (ID: ${student.parent_id}):`, emailError);
                 }
             }
         }
