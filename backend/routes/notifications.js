@@ -1,6 +1,8 @@
 const express = require('express');
 const { schemaAll, schemaGet, schemaRun, getSchema } = require('../utils/schemaHelper');
 const { authenticateToken } = require('../middleware/auth');
+const { dbAll, dbGet } = require('../database/db');
+const { sendGenericNotificationEmail } = require('../utils/emailService');
 
 const router = express.Router();
 
@@ -110,16 +112,36 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 });
 
 // Helper function to create notification (can be used by other routes)
-const createNotification = async (req, userId, type, title, message, relatedId = null, relatedType = null) => {
+const createNotification = async (req, userId, type, title, message, relatedId = null, relatedType = null, options = {}) => {
   try {
     const schema = getSchema(req);
     if (!schema) return;
 
+    // Create in-app notification
     await schemaRun(req,
       `INSERT INTO notifications (user_id, type, title, message, related_id, related_type)
        VALUES ($1, $2, $3, $4, $5, $6)`,
       [userId, type, title, message, relatedId, relatedType]
     );
+
+    // Send email if requested and user has email
+    if (options.sendEmail) {
+      try {
+        const user = await dbGet(
+          'SELECT email, name FROM public.users WHERE id = $1',
+          [userId]
+        );
+
+        if (user && user.email) {
+          const actionUrl = options.actionUrl || process.env.FRONTEND_URL || 'https://westgold-disciplinary-system-hv69eeo2c.vercel.app';
+          await sendGenericNotificationEmail(user.email, user.name, title, message, actionUrl);
+          console.log(`✅ Email notification sent to ${user.email}`);
+        }
+      } catch (emailError) {
+        console.error('Error sending email notification:', emailError);
+        // Don't fail the notification if email fails
+      }
+    }
   } catch (error) {
     console.error('Error creating notification:', error);
   }
@@ -140,11 +162,11 @@ const getSchoolAdmins = async (schoolId) => {
 };
 
 // Helper function to notify all school admins
-const notifySchoolAdmins = async (req, type, title, message, relatedId = null, relatedType = null) => {
+const notifySchoolAdmins = async (req, type, title, message, relatedId = null, relatedType = null, options = {}) => {
   try {
     const admins = await getSchoolAdmins(req.schoolId);
     for (const admin of admins) {
-      await createNotification(req, admin.id, type, title, message, relatedId, relatedType);
+      await createNotification(req, admin.id, type, title, message, relatedId, relatedType, options);
     }
   } catch (error) {
     console.error('Error notifying school admins:', error);

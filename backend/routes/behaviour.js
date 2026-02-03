@@ -3,6 +3,8 @@ const { schemaAll, schemaGet, schemaRun, getSchema } = require('../utils/schemaH
 const { authenticateToken } = require('../middleware/auth');
 const { createNotification, notifySchoolAdmins } = require('./notifications');
 const { calculateBadgeEligibility, checkBadgeStatusChange } = require('../utils/goldieBadgeHelper');
+const { sendIncidentNotificationEmail } = require('../utils/emailService');
+const { dbGet } = require('../database/db');
 
 const router = express.Router();
 
@@ -517,8 +519,29 @@ router.post('/', authenticateToken, async (req, res) => {
                 isHighSeverity ? '⚠️ High-Severity Incident Notification' : 'Behaviour Incident Reported',
                 parentMessage,
                 result.id,
-                'incident'
+                'incident',
+                { sendEmail: isHighSeverity } // Send email for high-severity incidents
             );
+
+            // Send detailed email to parent for high-severity incidents
+            if (isHighSeverity) {
+                try {
+                    const parent = await dbGet('SELECT email, name FROM public.users WHERE id = $1', [student.parent_id]);
+                    if (parent && parent.email) {
+                        await sendIncidentNotificationEmail(
+                            parent.email,
+                            parent.name,
+                            student.student_name,
+                            incidentTypeName,
+                            severity,
+                            String(description).trim(),
+                            incident_date
+                        );
+                    }
+                } catch (emailError) {
+                    console.error('Error sending incident email to parent:', emailError);
+                }
+            }
         }
         
         // Notify admins for high severity incidents
@@ -529,7 +552,8 @@ router.post('/', authenticateToken, async (req, res) => {
                 '⚠️ High-Severity Incident Requires Review',
                 `${loggingTeacher?.teacher_name || 'A teacher'} logged a ${severity} incident for ${student.student_name}: ${String(description).trim().substring(0, 100)}. Please review and approve/decline.`,
                 result.id,
-                'incident'
+                'incident',
+                { sendEmail: true } // Send email to admins for high-severity incidents
             );
         }
         
