@@ -16,11 +16,15 @@ const app = express();
 const server = http.createServer(app);
 
 // CORS configuration for Socket.io
+// Get frontend URL from environment variable or use default
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+
 const allowedOriginPatterns = [
   /^http:\/\/localhost:\d+$/,
   /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
   /^https:\/\/.*\.vercel\.app$/,
-  "https://greenstem-disciplinary-management-system.vercel.app",
+  /^https:\/\/.*\.onrender\.com$/,
+  frontendUrl, // Dynamic frontend URL from environment variable
 ];
 
 const socketCors = {
