@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { dbAll, dbGet, dbRun, pool } = require('../database/db');
 const { authenticateToken } = require('../middleware/auth');
 const { createSchoolSchema, generateSchemaName } = require('../database/schemaManager');
+const { seedDefaultTypes } = require('../database/seedDefaultTypes');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -418,6 +419,19 @@ router.post('/schools/onboard', requirePlatformAdmin, async (req, res) => {
             throw new Error(`Failed to create school schema: ${schemaResult.error}`);
         }
         console.log(`✅ Created schema: ${schemaName} for school: ${school_name}`);
+
+        // 3. Seed default incident types, merit types, and interventions
+        try {
+            const seedResult = await seedDefaultTypes(school_id, schemaName);
+            if (!seedResult.success) {
+                console.warn('⚠️ Warning: Could not seed default types:', seedResult.error);
+            } else {
+                console.log('✅ Seeded default types for new school:', seedResult.counts);
+            }
+        } catch (seedError) {
+            console.warn('⚠️ Warning: Error seeding default types:', seedError.message);
+            // Non-fatal - admin can add types manually
+        }
 
         // 4. Create initial admin account
         const hashedPassword = await bcrypt.hash(admin_password, 10);
