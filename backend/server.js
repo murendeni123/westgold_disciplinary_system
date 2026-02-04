@@ -165,6 +165,7 @@ app.use('/api/goldie-badge', authenticateToken, setSchemaFromToken, enforceSchem
 app.use('/api/invoices', require('./routes/invoices'));
 app.use('/api/billing-schedules', require('./routes/billingSchedules'));
 app.use('/api/school-admins', require('./routes/schoolAdmins'));
+app.use('/api/features', require('./routes/features'));
 
 // Health check
 app.get('/api/health', (req, res) => {
