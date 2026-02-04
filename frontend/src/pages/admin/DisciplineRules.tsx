@@ -311,38 +311,6 @@ const DisciplineRules: React.FC = () => {
     }
   };
 
-  const handleSaveConsequenceRule = async (rule: Partial<ConsequenceRule>) => {
-    setSaving(true);
-    try {
-      if (editingConsequenceRule) {
-        setConsequenceRules(consequenceRules.map(r => 
-          r.id === editingConsequenceRule.id ? { ...r, ...rule } : r
-        ));
-        setMessage({ type: 'success', text: 'Consequence rule updated successfully' });
-      } else {
-        const newRule: ConsequenceRule = {
-          id: Date.now(),
-          name: rule.name || '',
-          description: rule.description || '',
-          consequence_type: rule.consequence_type || 'verbal_warning',
-          trigger_type: rule.trigger_type || 'incident_count',
-          trigger_value: rule.trigger_value || 3,
-          time_period_days: rule.time_period_days || 30,
-          requires_admin_approval: rule.requires_admin_approval || false,
-          is_active: true,
-        };
-        setConsequenceRules([...consequenceRules, newRule]);
-        setMessage({ type: 'success', text: 'Consequence rule created successfully' });
-      }
-      setShowConsequenceRuleModal(false);
-      setEditingConsequenceRule(null);
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to save consequence rule' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleDeleteDetentionRule = async (id: number) => {
     try {
       // Call API to delete rule (need to implement delete endpoint)
@@ -359,34 +327,18 @@ const DisciplineRules: React.FC = () => {
     }
   };
 
-  const handleDeleteConsequenceRule = (id: number) => {
-    setConsequenceRules(consequenceRules.filter(r => r.id !== id));
-    setMessage({ type: 'success', text: 'Consequence rule deleted' });
-  };
-
   const handleToggleDetentionRule = async (id: number) => {
     try {
       const rule = detentionRules.find(r => r.id === id);
       if (!rule) return;
-
-      // Call API to toggle rule active status
-      await api.saveDetentionRule({ 
-        id, 
-        is_active: !rule.is_active 
-      });
       
-      // Refresh rules from database
+      await api.saveDetentionRule({ id, is_active: !rule.is_active });
       await fetchRules();
+      setMessage({ type: 'success', text: `Detention rule ${!rule.is_active ? 'enabled' : 'disabled'}` });
     } catch (error) {
       console.error('Error toggling detention rule:', error);
       setMessage({ type: 'error', text: 'Failed to toggle detention rule' });
     }
-  };
-
-  const handleToggleConsequenceRule = (id: number) => {
-    setConsequenceRules(consequenceRules.map(r => 
-      r.id === id ? { ...r, is_active: !r.is_active } : r
-    ));
   };
 
   const handleSaveSettings = async () => {
@@ -1377,166 +1329,6 @@ const DetentionRuleModal: React.FC<{
             onClick={() => onSave(formData)}
             disabled={saving || !formData.name}
             className="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl font-medium shadow-lg disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Save Rule'}
-          </motion.button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-};
-
-// Consequence Rule Modal Component
-const ConsequenceRuleModal: React.FC<{
-  rule: ConsequenceRule | null;
-  onSave: (rule: Partial<ConsequenceRule>) => void;
-  onClose: () => void;
-  saving: boolean;
-}> = ({ rule, onSave, onClose, saving }) => {
-  const [formData, setFormData] = useState({
-    name: rule?.name || '',
-    description: rule?.description || '',
-    consequence_type: rule?.consequence_type || 'verbal_warning',
-    trigger_type: rule?.trigger_type || 'incident_count',
-    trigger_value: rule?.trigger_value || 3,
-    time_period_days: rule?.time_period_days || 30,
-    requires_admin_approval: rule?.requires_admin_approval || false,
-  });
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-6 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-gray-900">
-              {rule ? 'Edit Consequence Rule' : 'Add Consequence Rule'}
-            </h2>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <X size={20} />
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Rule Name</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-              placeholder="e.g., First Warning"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-              rows={2}
-              placeholder="Describe when this consequence applies..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Consequence Type</label>
-            <select
-              value={formData.consequence_type}
-              onChange={(e) => setFormData({ ...formData, consequence_type: e.target.value as any })}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-            >
-              <option value="verbal_warning">Verbal Warning</option>
-              <option value="written_warning">Written Warning</option>
-              <option value="suspension">Suspension</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Trigger Type</label>
-            <select
-              value={formData.trigger_type}
-              onChange={(e) => setFormData({ ...formData, trigger_type: e.target.value as any })}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-            >
-              <option value="incident_count">Number of Incidents</option>
-              <option value="detention_count">Number of Detentions</option>
-              <option value="points_threshold">Points Threshold</option>
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {formData.trigger_type === 'incident_count' ? 'Number of Incidents' :
-                 formData.trigger_type === 'detention_count' ? 'Number of Detentions' : 'Points Threshold'}
-              </label>
-              <input
-                type="number"
-                value={formData.trigger_value}
-                onChange={(e) => setFormData({ ...formData, trigger_value: parseInt(e.target.value) || 0 })}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                min="1"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Time Period (days)</label>
-              <input
-                type="number"
-                value={formData.time_period_days}
-                onChange={(e) => setFormData({ ...formData, time_period_days: parseInt(e.target.value) || 0 })}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                min="1"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="flex items-center space-x-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={formData.requires_admin_approval}
-                onChange={(e) => setFormData({ ...formData, requires_admin_approval: e.target.checked })}
-                className="w-5 h-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
-              />
-              <span className="text-sm font-medium text-gray-700">Requires Admin Approval</span>
-            </label>
-            <p className="text-xs text-gray-500 mt-1 ml-8">
-              If enabled, this consequence must be approved by an admin before being applied
-            </p>
-          </div>
-        </div>
-
-        <div className="p-6 border-t border-gray-100 flex justify-end space-x-3">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onClose}
-            className="px-6 py-3 rounded-xl font-medium text-gray-600 hover:bg-gray-100 transition-colors"
-          >
-            Cancel
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => onSave(formData)}
-            disabled={saving || !formData.name}
-            className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl font-medium shadow-lg disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save Rule'}
           </motion.button>
