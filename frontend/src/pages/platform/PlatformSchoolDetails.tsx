@@ -6,6 +6,7 @@ import Button from '../../components/Button';
 import Select from '../../components/Select';
 import Input from '../../components/Input';
 import Modal from '../../components/Modal';
+import SchoolAdminManagement from '../../components/SchoolAdminManagement';
 import { ArrowLeft, Save, Palette, Edit, Trash2, Power, Building2, Users, GraduationCap, CreditCard, TrendingUp, Activity, Clock, BarChart3 } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
@@ -550,6 +551,16 @@ const PlatformSchoolDetails: React.FC = () => {
           </div>
         </motion.div>
       )}
+
+      {/* School Administrators Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+      >
+        <SchoolAdminManagement schoolId={Number(id)} schoolName={school.name} />
+      </motion.div>
 
       {/* Edit Modal */}
       <AnimatePresence>
