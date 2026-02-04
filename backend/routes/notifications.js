@@ -21,7 +21,7 @@ router.get('/', authenticateToken, async (req, res) => {
     let paramIndex = 2;
 
     if (is_read !== undefined) {
-      query += ` AND is_read = $${paramIndex++}`;
+      query += ` AND CAST(is_read AS BOOLEAN) = $${paramIndex++}`;
       params.push(is_read === 'true');
     }
 
@@ -44,7 +44,7 @@ router.get('/unread-count', authenticateToken, async (req, res) => {
     }
 
     const result = await schemaGet(req,
-      'SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND is_read = false',
+      'SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND NOT is_read',
       [req.user.id]
     );
     res.json({ count: parseInt(result?.count) || 0 });
@@ -63,7 +63,7 @@ router.put('/:id/read', authenticateToken, async (req, res) => {
     }
 
     await schemaRun(req,
-      'UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2',
+      'UPDATE notifications SET is_read = 1 WHERE id = $1 AND user_id = $2',
       [req.params.id, req.user.id]
     );
     res.json({ message: 'Notification marked as read' });
@@ -82,7 +82,7 @@ router.put('/read-all', authenticateToken, async (req, res) => {
     }
 
     await schemaRun(req,
-      'UPDATE notifications SET is_read = true WHERE user_id = $1',
+      'UPDATE notifications SET is_read = 1 WHERE user_id = $1',
       [req.user.id]
     );
     res.json({ message: 'All notifications marked as read' });
