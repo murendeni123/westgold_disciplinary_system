@@ -1,8 +1,8 @@
 /**
  * Schema Repair Utility
  * 
- * Ensures all school schemas have required tables for the application to function.
- * Does NOT modify existing table structures - only creates missing tables.
+ * Ensures all school schemas have required tables and columns.
+ * Adds missing columns to support both old and new schema versions.
  */
 
 const { pool } = require('../database/db');
@@ -11,7 +11,7 @@ const { pool } = require('../database/db');
  * Repair all school schemas
  */
 const repairAllSchoolSchemas = async () => {
-    console.log('🔧 Checking school schemas for missing tables...');
+    console.log('🔧 Repairing school schemas...');
     
     try {
         // Get all school schemas
@@ -22,28 +22,52 @@ const repairAllSchoolSchemas = async () => {
         `);
         
         const schemas = result.rows.map(r => r.schema_name);
-        console.log(`Found ${schemas.length} school schemas to check`);
+        console.log(`Found ${schemas.length} school schemas to repair`);
         
         for (const schemaName of schemas) {
-            await ensureRequiredTables(schemaName);
+            await repairSchema(schemaName);
         }
         
-        console.log('✅ Schema check completed successfully');
+        console.log('✅ Schema repair completed successfully');
     } catch (error) {
-        console.error('❌ Schema check failed:', error);
+        console.error('❌ Schema repair failed:', error);
         // Don't crash the server - just log the error
     }
 };
 
 /**
- * Ensure a schema has all required tables
+ * Repair a single schema
  */
-const ensureRequiredTables = async (schemaName) => {
-    console.log(`  Checking schema: ${schemaName}`);
+const repairSchema = async (schemaName) => {
+    console.log(`  Repairing schema: ${schemaName}`);
     
     const client = await pool.connect();
     try {
         await client.query(`SET search_path TO ${schemaName}, public`);
+        
+        // Add missing columns to behaviour_incidents
+        await client.query(`ALTER TABLE behaviour_incidents ADD COLUMN IF NOT EXISTS incident_time TIME;`);
+        await client.query(`ALTER TABLE behaviour_incidents ADD COLUMN IF NOT EXISTS time TIME;`);
+        await client.query(`ALTER TABLE behaviour_incidents ADD COLUMN IF NOT EXISTS points_deducted INTEGER DEFAULT 0;`);
+        
+        // Sync time columns
+        await client.query(`UPDATE behaviour_incidents SET incident_time = time WHERE incident_time IS NULL AND time IS NOT NULL;`);
+        await client.query(`UPDATE behaviour_incidents SET time = incident_time WHERE time IS NULL AND incident_time IS NOT NULL;`);
+        
+        // Sync points columns
+        await client.query(`UPDATE behaviour_incidents SET points_deducted = points WHERE points_deducted = 0 AND points > 0;`);
+        
+        // Add missing columns to merits
+        await client.query(`ALTER TABLE merits ADD COLUMN IF NOT EXISTS date DATE;`);
+        
+        // Sync date column (merit_date is primary, date is alias)
+        await client.query(`UPDATE merits SET date = merit_date WHERE date IS NULL AND merit_date IS NOT NULL;`);
+        
+        // Add missing columns to attendance
+        await client.query(`ALTER TABLE attendance ADD COLUMN IF NOT EXISTS date DATE;`);
+        
+        // Sync date column (attendance_date is primary, date is alias)
+        await client.query(`UPDATE attendance SET date = attendance_date WHERE date IS NULL AND attendance_date IS NOT NULL;`);
         
         // Create consequence_assignments table if it doesn't exist
         await client.query(`
@@ -88,9 +112,9 @@ const ensureRequiredTables = async (schemaName) => {
             WHERE NOT EXISTS (SELECT 1 FROM goldie_badge_config);
         `);
         
-        console.log(`  ✓ Schema ${schemaName} checked`);
+        console.log(`  ✓ Schema ${schemaName} repaired`);
     } catch (error) {
-        console.error(`  ✗ Error checking schema ${schemaName}:`, error.message);
+        console.error(`  ✗ Error repairing schema ${schemaName}:`, error.message);
     } finally {
         client.release();
     }

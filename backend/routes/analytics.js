@@ -16,14 +16,14 @@ router.get('/critical-alerts', authenticateToken, async (req, res) => {
         const thresholdStudents = await schemaAll(req, `
             SELECT s.id, s.student_id, s.first_name || ' ' || s.last_name as name,
                    c.class_name,
-                   COALESCE(SUM(bi.points), 0) as total_demerits,
+                   COALESCE(SUM(bi.points_deducted), 0) as total_demerits,
                    COUNT(bi.id) as incident_count
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id
             WHERE s.is_active = true
             GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
-            HAVING COALESCE(SUM(bi.points), 0) >= 50
+            HAVING COALESCE(SUM(bi.points_deducted), 0) >= 50
             ORDER BY total_demerits DESC
             LIMIT 10
         `);
@@ -41,7 +41,7 @@ router.get('/critical-alerts', authenticateToken, async (req, res) => {
                 SELECT DISTINCT s.class_id 
                 FROM attendance a
                 INNER JOIN students s ON a.student_id = s.id
-                WHERE a.attendance_date = $1 AND s.class_id IS NOT NULL
+                WHERE a.date = $1 AND s.class_id IS NOT NULL
             )
             AND (SELECT COUNT(*) FROM students WHERE class_id = c.id AND is_active = true) > 0
             ORDER BY c.class_name
@@ -49,7 +49,7 @@ router.get('/critical-alerts', authenticateToken, async (req, res) => {
 
         // Pending incidents requiring approval
         const pendingIncidents = await schemaAll(req, `
-            SELECT bi.id, bi.description, bi.points as points_deducted, bi.created_at,
+            SELECT bi.id, bi.description, bi.points_deducted, bi.created_at,
                    s.first_name || ' ' || s.last_name as student_name,
                    u.name as teacher_name
             FROM behaviour_incidents bi
@@ -105,13 +105,13 @@ router.get('/at-risk-students', authenticateToken, async (req, res) => {
             SELECT s.id, s.student_id, s.first_name || ' ' || s.last_name as name,
                    c.class_name,
                    COUNT(a.id) as absence_count,
-                   MAX(a.attendance_date) as last_absence
+                   MAX(a.date) as last_absence
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             INNER JOIN attendance a ON s.id = a.student_id
             WHERE s.is_active = true
             AND a.status = 'absent'
-            AND a.attendance_date >= CURRENT_DATE - INTERVAL '30 days'
+            AND a.date >= CURRENT_DATE - INTERVAL '30 days'
             GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
             HAVING COUNT(a.id) >= 3
             ORDER BY absence_count DESC
@@ -123,7 +123,7 @@ router.get('/at-risk-students', authenticateToken, async (req, res) => {
             SELECT s.id, s.student_id, s.first_name || ' ' || s.last_name as name,
                    c.class_name,
                    COUNT(bi.id) as incident_count,
-                   COALESCE(SUM(bi.points), 0) as total_points,
+                   COALESCE(SUM(bi.points_deducted), 0) as total_points,
                    MAX(bi.created_at) as last_incident
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
@@ -170,7 +170,7 @@ router.get('/teacher-activity/:teacherId', authenticateToken, async (req, res) =
         }
 
         const recentIncidents = await schemaAll(req, `
-            SELECT bi.id, bi.description, bi.points as points_deducted, bi.created_at,
+            SELECT bi.id, bi.description, bi.points_deducted, bi.created_at,
                    s.first_name || ' ' || s.last_name as student_name,
                    it.name as incident_type
             FROM behaviour_incidents bi
@@ -236,7 +236,7 @@ router.get('/class-profile/:classId', authenticateToken, async (req, res) => {
 
         const students = await schemaAll(req, `
             SELECT s.id, s.student_id, s.first_name || ' ' || s.last_name as name,
-                   COALESCE((SELECT SUM(points) FROM behaviour_incidents WHERE student_id = s.id), 0) as demerit_points,
+                   COALESCE((SELECT SUM(points_deducted) FROM behaviour_incidents WHERE student_id = s.id), 0) as demerit_points,
                    COALESCE((SELECT SUM(points) FROM merits WHERE student_id = s.id), 0) as merit_points,
                    COALESCE((SELECT COUNT(*) FROM behaviour_incidents WHERE student_id = s.id), 0) as incident_count
             FROM students s
@@ -245,7 +245,7 @@ router.get('/class-profile/:classId', authenticateToken, async (req, res) => {
         `, [classId]);
 
         const recentIncidents = await schemaAll(req, `
-            SELECT bi.id, bi.description, bi.points as points_deducted, bi.created_at,
+            SELECT bi.id, bi.description, bi.points_deducted, bi.created_at,
                    s.first_name || ' ' || s.last_name as student_name,
                    it.name as incident_type
             FROM behaviour_incidents bi
