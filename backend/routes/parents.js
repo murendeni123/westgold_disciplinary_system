@@ -174,7 +174,7 @@ router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
                 SELECT s.*, c.class_name 
                 FROM students s 
                 LEFT JOIN classes c ON s.class_id = c.id 
-                WHERE s.parent_id = $1 AND s.is_active = true
+                WHERE s.parent_id = $1 AND s.is_active = 1
             `, [parent.id]);
             parent.children = children;
         }
@@ -205,7 +205,7 @@ router.get('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
             SELECT s.*, c.class_name 
             FROM students s 
             LEFT JOIN classes c ON s.class_id = c.id 
-            WHERE s.parent_id = $1 AND s.is_active = true
+            WHERE s.parent_id = $1 AND s.is_active = 1
         `, [req.params.id]);
 
         if (children.length === 0) {

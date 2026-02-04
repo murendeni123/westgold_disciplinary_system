@@ -120,7 +120,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
       UPDATE subjects 
       SET name = $1, code = $2, description = $3, is_active = $4, updated_at = CURRENT_TIMESTAMP
       WHERE id = $5
-    `, [name, code || null, description || null, is_active !== undefined ? is_active : true, req.params.id]);
+    `, [name, code || null, description || null, is_active !== undefined ? is_active : 1, req.params.id]);
 
     const subject = await schemaGet(req,
       'SELECT * FROM subjects WHERE id = $1',

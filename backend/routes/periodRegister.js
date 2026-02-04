@@ -667,7 +667,7 @@ router.put('/flags/:id/resolve', async (req, res) => {
         await pool.query(`
             UPDATE ${schema}.attendance_flags
             SET 
-                is_resolved = true,
+                is_resolved = 1,
                 resolved_at = CURRENT_TIMESTAMP,
                 resolved_by = $1,
                 resolution_notes = $2

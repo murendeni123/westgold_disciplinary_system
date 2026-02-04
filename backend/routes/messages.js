@@ -71,8 +71,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
         // Mark as read if receiver
         if (message.receiver_id === req.user.id && !message.is_read) {
-            await schemaRun(req, 'UPDATE messages SET is_read = true WHERE id = $1', [req.params.id]);
-            message.is_read = true;
+            await schemaRun(req, 'UPDATE messages SET is_read = 1 WHERE id = $1', [req.params.id]);
+            message.is_read = 1;
         }
 
         res.json(message);
@@ -119,7 +119,7 @@ router.put('/:id/read', authenticateToken, async (req, res) => {
         }
 
         await schemaRun(req,
-            'UPDATE messages SET is_read = true WHERE id = $1 AND receiver_id = $2',
+            'UPDATE messages SET is_read = 1 WHERE id = $1 AND receiver_id = $2',
             [req.params.id, req.user.id]
         );
         res.json({ message: 'Message marked as read' });
