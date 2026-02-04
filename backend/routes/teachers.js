@@ -52,7 +52,7 @@ router.post('/:id/photo', authenticateToken, upload.single('photo'), async (req,
         }
 
         // Upload to Supabase Storage (persistent cloud storage)
-        const publicUrl = await uploadToSupabase(req.file, 'teachers');
+        const publicUrl = await uploadToSupabase(req.file, `${schema}/teachers`);
 
         // Save public URL to database
         await schemaRun(req, 'UPDATE teachers SET photo_path = $1 WHERE id = $2', [publicUrl, req.params.id]);
