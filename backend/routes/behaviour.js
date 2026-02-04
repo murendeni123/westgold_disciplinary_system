@@ -20,8 +20,8 @@ router.get('/', authenticateToken, async (req, res) => {
 
         let query = `
             SELECT bi.*, 
-                   bi.date as incident_date,
-                   bi.points_deducted as points,
+                   COALESCE(bi.incident_date, bi.date) as incident_date,
+                   COALESCE(bi.points_deducted, bi.points, 0) as points,
                    s.first_name || ' ' || s.last_name as student_name,
                    s.student_id as student_number,
                    s.id as student_id,
@@ -72,15 +72,15 @@ router.get('/', authenticateToken, async (req, res) => {
             params.push(severity);
         }
         if (start_date) {
-            query += ` AND bi.date >= $${paramIndex++}`;
+            query += ` AND COALESCE(bi.incident_date, bi.date) >= $${paramIndex++}`;
             params.push(start_date);
         }
         if (end_date) {
-            query += ` AND bi.date <= $${paramIndex++}`;
+            query += ` AND COALESCE(bi.incident_date, bi.date) <= $${paramIndex++}`;
             params.push(end_date);
         }
 
-        query += ' ORDER BY bi.date DESC, bi.time DESC';
+        query += ' ORDER BY COALESCE(bi.incident_date, bi.date) DESC, COALESCE(bi.time, bi.incident_time) DESC';
 
         const incidents = await schemaAll(req, query, params);
         res.json(incidents);
@@ -112,7 +112,7 @@ router.get('/analytics', authenticateToken, async (req, res) => {
             FROM behaviour_incidents bi
             JOIN students s ON bi.student_id = s.id
             LEFT JOIN incident_types it ON bi.incident_type_id = it.id
-            WHERE bi.date >= $1 AND bi.date <= $2
+            WHERE COALESCE(bi.incident_date, bi.date) >= $1 AND COALESCE(bi.incident_date, bi.date) <= $2
         `;
         const analyticsParams = [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]];
         
@@ -125,7 +125,7 @@ router.get('/analytics', authenticateToken, async (req, res) => {
             analyticsParams.push(req.user.id);
         }
         
-        analyticsQuery += ' ORDER BY bi.date DESC';
+        analyticsQuery += ' ORDER BY COALESCE(bi.incident_date, bi.date) DESC';
         
         const incidents = await schemaAll(req, analyticsQuery, analyticsParams);
 

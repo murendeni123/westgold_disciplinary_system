@@ -32,14 +32,14 @@ router.get('/', authenticateToken, async (req, res) => {
              m.merit_type_id,
              m.description,
              m.points,
-             m.date,
+             COALESCE(m.merit_date, m.date) as date,
              CAST(m.created_at AS TIME) as time,
              m.created_at,
              s.first_name || ' ' || s.last_name as student_name,
              s.student_id as student_identifier,
              u.name as teacher_name,
              c.class_name,
-             COALESCE(mt.name, m.merit_type) as merit_type
+             COALESCE(mt.name, m.merit_type, 'Merit') as merit_type
       FROM merits m
       INNER JOIN students s ON m.student_id = s.id
       LEFT JOIN teachers t ON m.teacher_id = t.id
@@ -66,15 +66,15 @@ router.get('/', authenticateToken, async (req, res) => {
       params.push(teacher_id);
     }
     if (start_date) {
-      query += ` AND m.date >= $${paramIndex++}`;
+      query += ` AND COALESCE(m.merit_date, m.date) >= $${paramIndex++}`;
       params.push(start_date);
     }
     if (end_date) {
-      query += ` AND m.date <= $${paramIndex++}`;
+      query += ` AND COALESCE(m.merit_date, m.date) <= $${paramIndex++}`;
       params.push(end_date);
     }
 
-    query += ' ORDER BY m.date DESC';
+    query += ' ORDER BY COALESCE(m.merit_date, m.date) DESC';
 
     console.log('Executing merits query in schema:', schema);
     const merits = await schemaAll(req, query, params);
@@ -101,14 +101,14 @@ router.get('/:id', authenticateToken, async (req, res) => {
              m.merit_type_id,
              m.description,
              m.points,
-             m.date,
+             COALESCE(m.merit_date, m.date) as date,
              CAST(m.created_at AS TIME) as time,
              m.created_at,
              s.first_name || ' ' || s.last_name as student_name,
              s.student_id as student_identifier,
              u.name as teacher_name,
              c.class_name,
-             COALESCE(mt.name, m.merit_type) as merit_type
+             COALESCE(mt.name, m.merit_type, 'Merit') as merit_type
       FROM merits m
       INNER JOIN students s ON m.student_id = s.id
       LEFT JOIN teachers t ON m.teacher_id = t.id

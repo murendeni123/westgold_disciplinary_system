@@ -10,6 +10,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const { initDatabase } = require('./database/db');
+const { repairAllSchoolSchemas } = require('./utils/schemaRepair');
 const path = require('path');
 const billingScheduler = require('./jobs/billingScheduler');
 
@@ -178,6 +179,10 @@ initDatabase()
     .then(() => {
         console.log('Database initialized');
         
+        // Repair school schemas to ensure backward compatibility
+        return repairAllSchoolSchemas();
+    })
+    .then(() => {
         // Seed script is not needed for PostgreSQL - data should be managed through migrations
         console.log('PostgreSQL database ready - use migrations to seed data if needed');
         
