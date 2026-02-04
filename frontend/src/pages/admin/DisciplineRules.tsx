@@ -125,14 +125,35 @@ const DisciplineRules: React.FC = () => {
   const fetchRules = async () => {
     setLoading(true);
     try {
-      // Fetch types and detention rules from API
-      const [incidentTypesRes, meritTypesRes, interventionTypesRes, consequencesRes, detentionRulesRes] = await Promise.all([
-        api.getIncidentTypes(),
-        api.getMeritTypes(),
-        api.getInterventionTypes(),
-        api.getConsequenceDefinitions(),
-        api.getDetentionRules().catch(() => ({ data: [] })),
-      ]);
+      // Fetch types and detention rules from API with individual error handling
+      console.log('📋 Fetching discipline rules data...');
+      
+      const incidentTypesRes = await api.getIncidentTypes().catch(err => {
+        console.error('❌ Failed to fetch incident types:', err);
+        throw new Error('Failed to load incident types: ' + (err.response?.data?.error || err.message));
+      });
+      console.log('✅ Incident types loaded:', incidentTypesRes.data?.length);
+      
+      const meritTypesRes = await api.getMeritTypes().catch(err => {
+        console.error('❌ Failed to fetch merit types:', err);
+        throw new Error('Failed to load merit types: ' + (err.response?.data?.error || err.message));
+      });
+      console.log('✅ Merit types loaded:', meritTypesRes.data?.length);
+      
+      const interventionTypesRes = await api.getInterventionTypes().catch(err => {
+        console.error('❌ Failed to fetch intervention types:', err);
+        throw new Error('Failed to load intervention types: ' + (err.response?.data?.error || err.message));
+      });
+      console.log('✅ Intervention types loaded:', interventionTypesRes.data?.length);
+      
+      const consequencesRes = await api.getConsequenceDefinitions().catch(err => {
+        console.error('❌ Failed to fetch consequences:', err);
+        throw new Error('Failed to load consequences: ' + (err.response?.data?.error || err.message));
+      });
+      console.log('✅ Consequences loaded:', consequencesRes.data?.length);
+      
+      const detentionRulesRes = await api.getDetentionRules().catch(() => ({ data: [] }));
+      console.log('✅ Detention rules loaded:', detentionRulesRes.data?.length);
       
       setIncidentTypes(incidentTypesRes.data || []);
       setMeritTypes(meritTypesRes.data || []);
