@@ -1,8 +1,8 @@
 /**
  * Schema Repair Utility
  * 
- * Automatically repairs school schemas on startup to ensure backward compatibility
- * with older schemas that may be missing columns or tables.
+ * Ensures all school schemas have required tables for the application to function.
+ * Does NOT modify existing table structures - only creates missing tables.
  */
 
 const { pool } = require('../database/db');
@@ -11,7 +11,7 @@ const { pool } = require('../database/db');
  * Repair all school schemas
  */
 const repairAllSchoolSchemas = async () => {
-    console.log('🔧 Starting schema repair for all school schemas...');
+    console.log('🔧 Checking school schemas for missing tables...');
     
     try {
         // Get all school schemas
@@ -22,142 +22,28 @@ const repairAllSchoolSchemas = async () => {
         `);
         
         const schemas = result.rows.map(r => r.schema_name);
-        console.log(`Found ${schemas.length} school schemas to repair`);
+        console.log(`Found ${schemas.length} school schemas to check`);
         
         for (const schemaName of schemas) {
-            await repairSchemaColumns(schemaName);
+            await ensureRequiredTables(schemaName);
         }
         
-        console.log('✅ Schema repair completed successfully');
+        console.log('✅ Schema check completed successfully');
     } catch (error) {
-        console.error('❌ Schema repair failed:', error);
+        console.error('❌ Schema check failed:', error);
         // Don't crash the server - just log the error
     }
 };
 
 /**
- * Repair a single schema
+ * Ensure a schema has all required tables
  */
-const repairSchemaColumns = async (schemaName) => {
-    console.log(`  Repairing schema: ${schemaName}`);
+const ensureRequiredTables = async (schemaName) => {
+    console.log(`  Checking schema: ${schemaName}`);
     
     const client = await pool.connect();
     try {
         await client.query(`SET search_path TO ${schemaName}, public`);
-        
-        // Fix merits table - ensure all required columns exist
-        await client.query(`
-            ALTER TABLE merits 
-            ADD COLUMN IF NOT EXISTS merit_date DATE;
-        `);
-        
-        await client.query(`
-            ALTER TABLE merits 
-            ADD COLUMN IF NOT EXISTS date DATE;
-        `);
-        
-        await client.query(`
-            ALTER TABLE merits 
-            ADD COLUMN IF NOT EXISTS merit_type TEXT;
-        `);
-        
-        await client.query(`
-            ALTER TABLE merits 
-            ADD COLUMN IF NOT EXISTS merit_type_id INTEGER;
-        `);
-        
-        // Backfill merit_date from date if needed
-        await client.query(`
-            UPDATE merits 
-            SET merit_date = date 
-            WHERE merit_date IS NULL AND date IS NOT NULL;
-        `);
-        
-        // Backfill date from merit_date if needed
-        await client.query(`
-            UPDATE merits 
-            SET date = merit_date 
-            WHERE date IS NULL AND merit_date IS NOT NULL;
-        `);
-        
-        // Fix behaviour_incidents table
-        await client.query(`
-            ALTER TABLE behaviour_incidents 
-            ADD COLUMN IF NOT EXISTS incident_date DATE;
-        `);
-        
-        await client.query(`
-            ALTER TABLE behaviour_incidents 
-            ADD COLUMN IF NOT EXISTS date DATE;
-        `);
-        
-        await client.query(`
-            ALTER TABLE behaviour_incidents 
-            ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;
-        `);
-        
-        await client.query(`
-            ALTER TABLE behaviour_incidents 
-            ADD COLUMN IF NOT EXISTS points_deducted INTEGER DEFAULT 0;
-        `);
-        
-        await client.query(`
-            ALTER TABLE behaviour_incidents 
-            ADD COLUMN IF NOT EXISTS time TIME;
-        `);
-        
-        // Backfill incident_date from date if needed
-        await client.query(`
-            UPDATE behaviour_incidents 
-            SET incident_date = date 
-            WHERE incident_date IS NULL AND date IS NOT NULL;
-        `);
-        
-        // Backfill date from incident_date if needed
-        await client.query(`
-            UPDATE behaviour_incidents 
-            SET date = incident_date 
-            WHERE date IS NULL AND incident_date IS NOT NULL;
-        `);
-        
-        // Backfill points_deducted from points if needed
-        await client.query(`
-            UPDATE behaviour_incidents 
-            SET points_deducted = points 
-            WHERE points_deducted = 0 AND points > 0;
-        `);
-        
-        // Backfill points from points_deducted if needed
-        await client.query(`
-            UPDATE behaviour_incidents 
-            SET points = points_deducted 
-            WHERE points = 0 AND points_deducted > 0;
-        `);
-        
-        // Fix attendance table
-        await client.query(`
-            ALTER TABLE attendance 
-            ADD COLUMN IF NOT EXISTS attendance_date DATE;
-        `);
-        
-        await client.query(`
-            ALTER TABLE attendance 
-            ADD COLUMN IF NOT EXISTS date DATE;
-        `);
-        
-        // Backfill attendance_date from date if needed
-        await client.query(`
-            UPDATE attendance 
-            SET attendance_date = date 
-            WHERE attendance_date IS NULL AND date IS NOT NULL;
-        `);
-        
-        // Backfill date from attendance_date if needed
-        await client.query(`
-            UPDATE attendance 
-            SET date = attendance_date 
-            WHERE date IS NULL AND attendance_date IS NOT NULL;
-        `);
         
         // Create consequence_assignments table if it doesn't exist
         await client.query(`
@@ -202,9 +88,9 @@ const repairSchemaColumns = async (schemaName) => {
             WHERE NOT EXISTS (SELECT 1 FROM goldie_badge_config);
         `);
         
-        console.log(`  ✓ Schema ${schemaName} repaired`);
+        console.log(`  ✓ Schema ${schemaName} checked`);
     } catch (error) {
-        console.error(`  ✗ Error repairing schema ${schemaName}:`, error.message);
+        console.error(`  ✗ Error checking schema ${schemaName}:`, error.message);
     } finally {
         client.release();
     }

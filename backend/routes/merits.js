@@ -32,7 +32,7 @@ router.get('/', authenticateToken, async (req, res) => {
              m.merit_type_id,
              m.description,
              m.points,
-             COALESCE(m.merit_date, m.date) as date,
+             m.merit_date as date,
              CAST(m.created_at AS TIME) as time,
              m.created_at,
              s.first_name || ' ' || s.last_name as student_name,
@@ -66,15 +66,15 @@ router.get('/', authenticateToken, async (req, res) => {
       params.push(teacher_id);
     }
     if (start_date) {
-      query += ` AND COALESCE(m.merit_date, m.date) >= $${paramIndex++}`;
+      query += ` AND m.merit_date >= $${paramIndex++}`;
       params.push(start_date);
     }
     if (end_date) {
-      query += ` AND COALESCE(m.merit_date, m.date) <= $${paramIndex++}`;
+      query += ` AND m.merit_date <= $${paramIndex++}`;
       params.push(end_date);
     }
 
-    query += ' ORDER BY COALESCE(m.merit_date, m.date) DESC';
+    query += ' ORDER BY m.merit_date DESC';
 
     console.log('Executing merits query in schema:', schema);
     const merits = await schemaAll(req, query, params);
@@ -101,7 +101,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
              m.merit_type_id,
              m.description,
              m.points,
-             COALESCE(m.merit_date, m.date) as date,
+             m.merit_date as date,
              CAST(m.created_at AS TIME) as time,
              m.created_at,
              s.first_name || ' ' || s.last_name as student_name,
