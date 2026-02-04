@@ -25,7 +25,12 @@ const router = express.Router();
 router.get('/', authenticateToken, async (req, res) => {
     try {
         const schema = getSchema(req);
+        console.log('📚 Students API - Schema:', schema);
+        console.log('📚 Students API - User role:', req.user?.role);
+        console.log('📚 Students API - User ID:', req.user?.id);
+        
         if (!schema) {
+            console.error('❌ Students API - No schema context');
             return res.status(403).json({ error: 'School context required' });
         }
 
@@ -44,12 +49,14 @@ router.get('/', authenticateToken, async (req, res) => {
         if (req.user.role === 'parent') {
             conditions.push(`s.parent_id = $${paramIndex++}`);
             params.push(req.user.id);
+            console.log('📚 Students API - Filtering for parent:', req.user.id);
         }
         
         // Filter by class_id if provided
         if (req.query.class_id) {
             conditions.push(`s.class_id = $${paramIndex++}`);
             params.push(req.query.class_id);
+            console.log('📚 Students API - Filtering by class_id:', req.query.class_id);
         }
         
         // Add WHERE clause if there are conditions
@@ -59,11 +66,18 @@ router.get('/', authenticateToken, async (req, res) => {
         
         query += ` ORDER BY s.last_name, s.first_name`;
 
+        console.log('📚 Students API - Final query:', query);
+        console.log('📚 Students API - Query params:', params);
+
         const students = await schemaAll(req, query, params);
+        console.log('📚 Students API - Found students:', students.length);
+        console.log('📚 Students API - Sample student:', students[0]);
+        
         res.json(students);
     } catch (error) {
-        console.error('Error fetching students:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        console.error('❌ Error fetching students:', error);
+        console.error('❌ Error stack:', error.stack);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 });
 
