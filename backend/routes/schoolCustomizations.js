@@ -630,5 +630,125 @@ router.delete('/:schoolId/dashboard-background', requirePlatformAdmin, async (re
   }
 });
 
+// Upload parent portal logo
+router.post('/:schoolId/parent-portal-logo', requirePlatformAdmin, upload.single('logo'), async (req, res) => {
+  try {
+    const schoolId = parseInt(req.params.schoolId);
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const school = await dbGet('SELECT id FROM public.schools WHERE id = $1', [schoolId]);
+    if (!school) {
+      return res.status(404).json({ error: 'School not found' });
+    }
+
+    const logoPath = `/uploads/schools/${schoolId}/${req.file.filename}`;
+
+    const existing = await dbGet(
+      'SELECT id FROM public.school_branding WHERE school_id = $1',
+      [schoolId]
+    );
+
+    if (existing) {
+      await dbRun(
+        'UPDATE public.school_branding SET parent_portal_logo_url = $1, updated_at = CURRENT_TIMESTAMP WHERE school_id = $2',
+        [logoPath, schoolId]
+      );
+    } else {
+      await dbRun(
+        'INSERT INTO public.school_branding (school_id, parent_portal_logo_url) VALUES ($1, $2)',
+        [schoolId, logoPath]
+      );
+    }
+
+    res.json({ logo_url: logoPath, message: 'Parent portal logo uploaded successfully' });
+  } catch (error) {
+    console.error('Error uploading parent portal logo:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Upload teacher portal logo
+router.post('/:schoolId/teacher-portal-logo', requirePlatformAdmin, upload.single('logo'), async (req, res) => {
+  try {
+    const schoolId = parseInt(req.params.schoolId);
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const school = await dbGet('SELECT id FROM public.schools WHERE id = $1', [schoolId]);
+    if (!school) {
+      return res.status(404).json({ error: 'School not found' });
+    }
+
+    const logoPath = `/uploads/schools/${schoolId}/${req.file.filename}`;
+
+    const existing = await dbGet(
+      'SELECT id FROM public.school_branding WHERE school_id = $1',
+      [schoolId]
+    );
+
+    if (existing) {
+      await dbRun(
+        'UPDATE public.school_branding SET teacher_portal_logo_url = $1, updated_at = CURRENT_TIMESTAMP WHERE school_id = $2',
+        [logoPath, schoolId]
+      );
+    } else {
+      await dbRun(
+        'INSERT INTO public.school_branding (school_id, teacher_portal_logo_url) VALUES ($1, $2)',
+        [schoolId, logoPath]
+      );
+    }
+
+    res.json({ logo_url: logoPath, message: 'Teacher portal logo uploaded successfully' });
+  } catch (error) {
+    console.error('Error uploading teacher portal logo:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Upload admin portal logo
+router.post('/:schoolId/admin-portal-logo', requirePlatformAdmin, upload.single('logo'), async (req, res) => {
+  try {
+    const schoolId = parseInt(req.params.schoolId);
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    const school = await dbGet('SELECT id FROM public.schools WHERE id = $1', [schoolId]);
+    if (!school) {
+      return res.status(404).json({ error: 'School not found' });
+    }
+
+    const logoPath = `/uploads/schools/${schoolId}/${req.file.filename}`;
+
+    const existing = await dbGet(
+      'SELECT id FROM public.school_branding WHERE school_id = $1',
+      [schoolId]
+    );
+
+    if (existing) {
+      await dbRun(
+        'UPDATE public.school_branding SET admin_portal_logo_url = $1, updated_at = CURRENT_TIMESTAMP WHERE school_id = $2',
+        [logoPath, schoolId]
+      );
+    } else {
+      await dbRun(
+        'INSERT INTO public.school_branding (school_id, admin_portal_logo_url) VALUES ($1, $2)',
+        [schoolId, logoPath]
+      );
+    }
+
+    res.json({ logo_url: logoPath, message: 'Admin portal logo uploaded successfully' });
+  } catch (error) {
+    console.error('Error uploading admin portal logo:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
 

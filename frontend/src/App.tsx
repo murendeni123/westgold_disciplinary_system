@@ -55,6 +55,8 @@ import PlatformUsers from './pages/platform/PlatformUsers';
 import SchoolOnboardingWizard from './pages/platform/SchoolOnboardingWizard';
 import PlatformNotifications from './pages/platform/NotificationsPage';
 import FeatureFlagsManagement from './pages/platform/FeatureFlagsManagement';
+import PlatformInvoiceTemplates from './pages/platform/PlatformInvoiceTemplates';
+import PlatformInvoices from './pages/platform/PlatformInvoices';
 
 // Teacher pages
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
@@ -201,6 +203,8 @@ function App() {
             <Route path="logs" element={<PlatformLogs />} />
             <Route path="notifications" element={<PlatformNotifications />} />
             <Route path="feature-flags" element={<FeatureFlagsManagement />} />
+            <Route path="invoice-templates" element={<PlatformInvoiceTemplates />} />
+            <Route path="invoices" element={<PlatformInvoices />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/login" replace />} />
