@@ -249,7 +249,7 @@ router.put('/types/:id', authenticateToken, requireRole('admin'), async (req, re
       `UPDATE intervention_types 
        SET name = $1, description = $2, default_duration = $3, is_active = $4
        WHERE id = $5`,
-      [name, description || null, default_duration || null, is_active !== undefined ? is_active : true, req.params.id]
+      [name, description || null, default_duration || null, is_active !== undefined ? is_active : 1, req.params.id]
     );
 
     const type = await schemaGet(req, 'SELECT * FROM intervention_types WHERE id = $1', [req.params.id]);
