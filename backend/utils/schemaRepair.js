@@ -69,33 +69,60 @@ const repairSchema = async (schemaName) => {
         // Sync date column (attendance_date is primary, date is alias)
         await client.query(`UPDATE attendance SET date = attendance_date WHERE date IS NULL AND attendance_date IS NOT NULL;`);
         
-        // Fix notifications table - change is_read from INTEGER to BOOLEAN if needed
-        const notificationsTableExists = await client.query(`
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = '${schemaName}' 
-                AND table_name = 'notifications'
-            );
-        `);
+        // Fix all boolean columns - convert INTEGER (0/1) to BOOLEAN (true/false)
+        const booleanColumns = [
+            { table: 'notifications', column: 'is_read' },
+            { table: 'notifications', column: 'is_dismissed' },
+            { table: 'consequences', column: 'is_active' },
+            { table: 'incident_types', column: 'is_active' },
+            { table: 'merit_types', column: 'is_active' },
+            { table: 'subjects', column: 'is_active' },
+            { table: 'intervention_types', column: 'is_active' },
+            { table: 'classrooms', column: 'is_active' },
+            { table: 'classes', column: 'is_active' },
+            { table: 'students', column: 'is_active' },
+            { table: 'class_timetables', column: 'is_active' },
+            { table: 'student_dismissals', column: 'is_active' },
+            { table: 'timetable_slots', column: 'is_break' },
+            { table: 'academic_years', column: 'is_current' },
+            { table: 'terms', column: 'is_current' },
+            { table: 'student_consequences', column: 'parent_acknowledged' },
+            { table: 'student_consequences', column: 'completion_verified' }
+        ];
         
-        if (notificationsTableExists.rows[0].exists) {
-            // Check if is_read is INTEGER type
-            const isReadType = await client.query(`
-                SELECT data_type 
-                FROM information_schema.columns 
-                WHERE table_schema = '${schemaName}' 
-                AND table_name = 'notifications' 
-                AND column_name = 'is_read';
-            `);
-            
-            if (isReadType.rows[0]?.data_type === 'integer') {
-                // Convert INTEGER to BOOLEAN
-                await client.query(`
-                    ALTER TABLE notifications 
-                    ALTER COLUMN is_read TYPE BOOLEAN 
-                    USING CASE WHEN is_read = 0 THEN false ELSE true END;
+        for (const { table, column } of booleanColumns) {
+            try {
+                // Check if table exists
+                const tableExists = await client.query(`
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_schema = '${schemaName}' 
+                        AND table_name = '${table}'
+                    );
                 `);
-                console.log(`    ✓ Converted notifications.is_read from INTEGER to BOOLEAN`);
+                
+                if (!tableExists.rows[0].exists) continue;
+                
+                // Check column type
+                const columnType = await client.query(`
+                    SELECT data_type 
+                    FROM information_schema.columns 
+                    WHERE table_schema = '${schemaName}' 
+                    AND table_name = '${table}' 
+                    AND column_name = '${column}';
+                `);
+                
+                if (columnType.rows[0]?.data_type === 'integer') {
+                    // Convert INTEGER to BOOLEAN
+                    await client.query(`
+                        ALTER TABLE ${table} 
+                        ALTER COLUMN ${column} TYPE BOOLEAN 
+                        USING CASE WHEN ${column} = 0 THEN false ELSE true END;
+                    `);
+                    console.log(`    ✓ Converted ${table}.${column} from INTEGER to BOOLEAN`);
+                }
+            } catch (err) {
+                console.log(`    ⚠ Skipped ${table}.${column}: ${err.message}`);
             }
         }
         
