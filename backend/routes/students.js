@@ -42,7 +42,7 @@ router.get('/', authenticateToken, async (req, res) => {
         
         // Always filter by active students (unless explicitly requesting all)
         if (req.query.include_inactive !== 'true') {
-            conditions.push(`CAST(s.is_active AS BOOLEAN) = true`);
+            conditions.push(`s.is_active = 1`);
         }
         
         // If user is a parent, only show their own children
