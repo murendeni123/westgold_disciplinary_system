@@ -3,7 +3,22 @@ const bcrypt = require('bcryptjs');
 const { dbRun, dbGet } = require('../database/db');
 const { schemaAll, schemaGet, schemaRun, getSchema } = require('../utils/schemaHelper');
 const { authenticateToken, requireRole } = require('../middleware/auth');
-const upload = require('../middleware/upload');
+const multer = require('multer');
+const { uploadToSupabase, deleteFromSupabase } = require('../middleware/supabaseUpload');
+
+// Use memory storage for Supabase upload (no local disk storage)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'), false);
+    }
+  }
+});
 
 const router = express.Router();
 
@@ -21,7 +36,7 @@ router.post('/:id/photo', authenticateToken, upload.single('photo'), async (req,
         }
 
         // First, get the teacher record to find the user_id
-        const teacherRecord = await schemaGet(req, 'SELECT id, user_id FROM teachers WHERE id = $1', [req.params.id]);
+        const teacherRecord = await schemaGet(req, 'SELECT id, user_id, photo_path FROM teachers WHERE id = $1', [req.params.id]);
         if (!teacherRecord) {
             return res.status(404).json({ error: 'Teacher not found' });
         }
@@ -31,8 +46,16 @@ router.post('/:id/photo', authenticateToken, upload.single('photo'), async (req,
             return res.status(403).json({ error: 'You can only upload your own photo' });
         }
 
-        const photoPath = `/uploads/teachers/${req.file.filename}`;
-        await schemaRun(req, 'UPDATE teachers SET photo_path = $1 WHERE id = $2', [photoPath, req.params.id]);
+        // Delete old photo from Supabase if exists
+        if (teacherRecord.photo_path) {
+            await deleteFromSupabase(teacherRecord.photo_path);
+        }
+
+        // Upload to Supabase Storage (persistent cloud storage)
+        const publicUrl = await uploadToSupabase(req.file, 'teachers');
+
+        // Save public URL to database
+        await schemaRun(req, 'UPDATE teachers SET photo_path = $1 WHERE id = $2', [publicUrl, req.params.id]);
         
         const teacher = await schemaGet(req, `
             SELECT t.*, u.email, u.name, u.role
@@ -40,10 +63,10 @@ router.post('/:id/photo', authenticateToken, upload.single('photo'), async (req,
             INNER JOIN public.users u ON t.user_id = u.id
             WHERE t.id = $1
         `, [req.params.id]);
-        res.json({ message: 'Photo uploaded successfully', teacher });
+        res.json({ message: 'Photo uploaded successfully', teacher, photoUrl: publicUrl });
     } catch (error) {
         console.error('Error uploading photo:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: 'Internal server error', details: error.message });
     }
 });
 
