@@ -11,6 +11,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const { initDatabase } = require('./database/db');
 const path = require('path');
+const billingScheduler = require('./jobs/billingScheduler');
 
 const app = express();
 const server = http.createServer(app);
@@ -179,6 +180,9 @@ initDatabase()
         
         // Seed script is not needed for PostgreSQL - data should be managed through migrations
         console.log('PostgreSQL database ready - use migrations to seed data if needed');
+        
+        // Initialize billing scheduler
+        billingScheduler.init();
     })
     .catch((err) => {
         console.error('Database initialization error:', err);
