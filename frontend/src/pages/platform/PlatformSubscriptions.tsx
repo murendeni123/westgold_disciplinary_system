@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import Button from '../../components/Button';
 import Modal from '../../components/Modal';
+import FeatureMultiSelect from '../../components/FeatureMultiSelect';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
@@ -71,6 +72,7 @@ const PlatformSubscriptions: React.FC = () => {
     is_active: true,
     features: [''] as string[],
   });
+  const [selectedFeatureIds, setSelectedFeatureIds] = useState<number[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -659,40 +661,12 @@ const PlatformSubscriptions: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Features */}
+                {/* System Features */}
                 <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-sm font-semibold text-gray-700">Features</p>
-                    <button
-                      type="button"
-                      onClick={addFeature}
-                      className="text-sm text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
-                    >
-                      <Plus size={14} />
-                      Add Feature
-                    </button>
-                  </div>
-                  <div className="space-y-2">
-                    {formData.features.map((feature, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <Check size={16} className="text-green-500 flex-shrink-0" />
-                        <input
-                          type="text"
-                          value={feature}
-                          onChange={(e) => updateFeature(index, e.target.value)}
-                          placeholder="Enter feature..."
-                          className="flex-1 px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all text-sm"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeFeature(index)}
-                          className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                  <FeatureMultiSelect
+                    selectedFeatureIds={selectedFeatureIds}
+                    onChange={setSelectedFeatureIds}
+                  />
                 </div>
 
                 {/* Status */}
