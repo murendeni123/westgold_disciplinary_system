@@ -38,7 +38,7 @@ router.post('/definitions', authenticateToken, requireRole('admin'), async (req,
     const result = await schemaRun(req,
       `INSERT INTO consequences (name, description, severity, default_duration, is_active)
        VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-      [name, description || null, severity || null, default_duration || null, is_active !== undefined ? (is_active ? 1 : 0) : 1]
+      [name, description || null, severity || null, default_duration || null, is_active !== undefined ? (is_active ? true : false) : true]
     );
 
     const consequence = await schemaGet(req, 'SELECT * FROM consequences WHERE id = $1', [result.id]);
@@ -65,7 +65,7 @@ router.put('/definitions/:id', authenticateToken, requireRole('admin'), async (r
       `UPDATE consequences 
        SET name = $1, description = $2, severity = $3, default_duration = $4, is_active = $5
        WHERE id = $6`,
-      [name, description || null, severity || null, default_duration || null, is_active !== undefined ? (is_active ? 1 : 0) : 1, req.params.id]
+      [name, description || null, severity || null, default_duration || null, is_active !== undefined ? (is_active ? true : false) : true, req.params.id]
     );
 
     const consequence = await schemaGet(req, 'SELECT * FROM consequences WHERE id = $1', [req.params.id]);
@@ -385,7 +385,7 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
       updates.push(`completion_verified = $${paramIndex++}`);
       updates.push(`completion_verified_by = $${paramIndex++}`);
       updates.push('completion_verified_at = CURRENT_TIMESTAMP');
-      params.push(completion_verified ? 1 : 0);
+      params.push(completion_verified ? true : false);
       params.push(completion_verified ? (completion_verified_by || req.user.id) : null);
     }
 
@@ -458,7 +458,7 @@ router.put('/:id/acknowledge', authenticateToken, async (req, res) => {
 
     await schemaRun(req,
       `UPDATE student_consequences 
-       SET parent_acknowledged = 1, 
+       SET parent_acknowledged = true, 
            parent_acknowledged_at = CURRENT_TIMESTAMP,
            parent_notes = $1
        WHERE id = $2`,
