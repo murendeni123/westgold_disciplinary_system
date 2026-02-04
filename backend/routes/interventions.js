@@ -198,7 +198,7 @@ router.get('/types/list', authenticateToken, async (req, res) => {
       return res.status(403).json({ error: 'School context required' });
     }
 
-    const types = await schemaAll(req, 'SELECT * FROM intervention_types WHERE is_active = 1 ORDER BY name');
+    const types = await schemaAll(req, 'SELECT * FROM intervention_types WHERE is_active = true ORDER BY name');
     res.json(types);
   } catch (error) {
     console.error('Error fetching intervention types:', error);
@@ -249,7 +249,7 @@ router.put('/types/:id', authenticateToken, requireRole('admin'), async (req, re
       `UPDATE intervention_types 
        SET name = $1, description = $2, default_duration = $3, is_active = $4
        WHERE id = $5`,
-      [name, description || null, default_duration || null, is_active !== undefined ? is_active : 1, req.params.id]
+      [name, description || null, default_duration || null, is_active !== undefined ? is_active : true, req.params.id]
     );
 
     const type = await schemaGet(req, 'SELECT * FROM intervention_types WHERE id = $1', [req.params.id]);

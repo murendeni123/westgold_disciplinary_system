@@ -85,7 +85,7 @@ router.get('/available-consequences', authenticateToken, async (req, res) => {
         severity,
         default_duration
       FROM consequences
-      WHERE is_active = 1
+      WHERE is_active = true
       ORDER BY id
     `);
 

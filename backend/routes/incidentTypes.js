@@ -24,7 +24,7 @@ router.get('/', authenticateToken, async (req, res) => {
     let query = 'SELECT * FROM incident_types';
 
     if (active_only === 'true') {
-      query += ' WHERE is_active = 1';
+      query += ' WHERE is_active = true';
     }
 
     query += ' ORDER BY name';
@@ -75,7 +75,7 @@ router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
     const result = await schemaRun(req,
       `INSERT INTO incident_types (name, points, severity, description, category, is_active)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-      [name, points || 0, severity || 'low', description || null, category || null, 1]
+      [name, points || 0, severity || 'low', description || null, category || null, true]
     );
 
     const type = await schemaGet(req, 'SELECT * FROM incident_types WHERE id = $1', [result.id]);
@@ -103,7 +103,7 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
       `UPDATE incident_types 
        SET name = $1, points = $2, severity = $3, description = $4, category = $5, is_active = $6
        WHERE id = $7`,
-      [name, points || 0, severity || 'low', description || null, category || null, is_active !== undefined ? is_active : 1, req.params.id]
+      [name, points || 0, severity || 'low', description || null, category || null, is_active !== undefined ? is_active : true, req.params.id]
     );
 
     const type = await schemaGet(req, 'SELECT * FROM incident_types WHERE id = $1', [req.params.id]);
