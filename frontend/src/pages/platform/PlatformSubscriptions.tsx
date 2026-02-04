@@ -617,8 +617,8 @@ const PlatformSubscriptions: React.FC = () => {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">
-                        <Randsymbol size={12} className="inline mr-1" />
-                        Monthly Price
+                        <DollarSign size={12} className="inline mr-1" />
+                        Monthly Price (ZAR)
                       </label>
                       <input
                         type="number"
