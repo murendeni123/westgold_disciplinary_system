@@ -336,7 +336,7 @@ const PlatformSubscriptions: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-green-100 text-sm font-medium">Monthly Revenue</p>
-              <p className="text-3xl font-bold mt-1">${totalRevenue.toLocaleString()}</p>
+              <p className="text-3xl font-bold mt-1">R{totalRevenue.toLocaleString()}</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
               <DollarSign size={24} />
@@ -433,7 +433,7 @@ const PlatformSubscriptions: React.FC = () => {
                   
                   {/* Price */}
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-gray-900">${plan.price}</span>
+                    <span className="text-4xl font-bold text-gray-900">R{plan.price}</span>
                     <span className="text-gray-500">/month</span>
                   </div>
                 </div>
@@ -617,7 +617,7 @@ const PlatformSubscriptions: React.FC = () => {
                   <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">
-                        <DollarSign size={12} className="inline mr-1" />
+                        <Randsymbol size={12} className="inline mr-1" />
                         Monthly Price
                       </label>
                       <input
@@ -795,7 +795,7 @@ const PlatformSubscriptions: React.FC = () => {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">{deletingPlan.name}</p>
-                        <p className="text-sm text-gray-500">${deletingPlan.price}/month</p>
+                        <p className="text-sm text-gray-500">R{deletingPlan.price}/month</p>
                       </div>
                     </div>
                   </div>

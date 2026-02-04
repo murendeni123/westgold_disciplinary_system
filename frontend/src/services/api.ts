@@ -663,6 +663,52 @@ export const api = {
     axiosInstance.put('/goldie-badge/config', { points_threshold: pointsThreshold }),
   checkBadgeEligibility: (studentId: number) => 
     axiosInstance.get(`/goldie-badge/check-eligibility/${studentId}`),
+
+  // Invoice Templates
+  getInvoiceTemplates: () => axiosInstance.get('/invoices/templates'),
+  getInvoiceTemplate: (id: number) => axiosInstance.get(`/invoices/templates/${id}`),
+  uploadInvoiceTemplate: (formData: FormData) => axiosInstance.post('/invoices/templates', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  updateInvoiceTemplate: (id: number, data: any) => axiosInstance.put(`/invoices/templates/${id}`, data),
+  deleteInvoiceTemplate: (id: number) => axiosInstance.delete(`/invoices/templates/${id}`),
+  setDefaultInvoiceTemplate: (id: number) => axiosInstance.post(`/invoices/templates/${id}/set-default`),
+
+  // Invoices
+  getInvoices: (params?: any) => axiosInstance.get('/invoices', { params }),
+  getInvoice: (id: number) => axiosInstance.get(`/invoices/${id}`),
+  createInvoice: (data: any) => axiosInstance.post('/invoices', data),
+  updateInvoice: (id: number, data: any) => axiosInstance.put(`/invoices/${id}`, data),
+  deleteInvoice: (id: number) => axiosInstance.delete(`/invoices/${id}`),
+  generateInvoicePDF: (id: number) => axiosInstance.post(`/invoices/${id}/generate-pdf`),
+  sendInvoice: (id: number) => axiosInstance.post(`/invoices/${id}/send`),
+  getSchoolInvoices: (schoolId: number) => axiosInstance.get(`/invoices/schools/${schoolId}`),
+  recordInvoicePayment: (id: number, data: any) => axiosInstance.post(`/invoices/${id}/payments`, data),
+
+  // Billing Schedules
+  getBillingSchedules: () => axiosInstance.get('/billing-schedules'),
+  getSchoolBillingSchedule: (schoolId: number) => axiosInstance.get(`/billing-schedules/schools/${schoolId}`),
+  createBillingSchedule: (schoolId: number, data: any) => axiosInstance.post(`/billing-schedules/schools/${schoolId}`, data),
+  updateBillingSchedule: (schoolId: number, data: any) => axiosInstance.put(`/billing-schedules/schools/${schoolId}`, data),
+  deleteBillingSchedule: (schoolId: number) => axiosInstance.delete(`/billing-schedules/schools/${schoolId}`),
+  getDueBillingSchedules: () => axiosInstance.get('/billing-schedules/due'),
+  processBillingSchedule: (id: number) => axiosInstance.post(`/billing-schedules/${id}/process`),
+
+  // School Admins
+  getSchoolAdmins: (schoolId: number) => axiosInstance.get(`/school-admins/schools/${schoolId}/admins`),
+  getSchoolAdmin: (schoolId: number, adminId: number) => axiosInstance.get(`/school-admins/schools/${schoolId}/admins/${adminId}`),
+  createSchoolAdmin: (schoolId: number, data: any) => axiosInstance.post(`/school-admins/schools/${schoolId}/admins`, data),
+  updateSchoolAdmin: (schoolId: number, adminId: number, data: any) => axiosInstance.put(`/school-admins/schools/${schoolId}/admins/${adminId}`, data),
+  deleteSchoolAdmin: (schoolId: number, adminId: number) => axiosInstance.delete(`/school-admins/schools/${schoolId}/admins/${adminId}`),
+  resetAdminPassword: (schoolId: number, adminId: number, data?: any) => axiosInstance.post(`/school-admins/schools/${schoolId}/admins/${adminId}/reset-password`, data),
+  setPrimaryAdmin: (schoolId: number, adminId: number) => axiosInstance.post(`/school-admins/schools/${schoolId}/admins/${adminId}/set-primary`),
+
+  // System Features
+  getSystemFeatures: () => axiosInstance.get('/features'),
+  getPlanFeatures: (planId: number) => axiosInstance.get(`/features/plans/${planId}`),
+  addFeatureToPlan: (planId: number, featureId: number) => axiosInstance.post(`/features/plans/${planId}`, { feature_id: featureId }),
+  removeFeatureFromPlan: (planId: number, featureId: number) => axiosInstance.delete(`/features/plans/${planId}/features/${featureId}`),
+  bulkUpdatePlanFeatures: (planId: number, featureIds: number[]) => axiosInstance.post(`/features/plans/${planId}/bulk`, { feature_ids: featureIds }),
 };
 
 // Export the axios instance for direct use when needed

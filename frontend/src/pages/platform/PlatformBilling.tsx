@@ -116,7 +116,7 @@ const PlatformBilling: React.FC = () => {
         sub.invoice_id || `INV-${sub.id}`,
         sub.school_name,
         sub.plan_name,
-        `$${sub.price}`,
+        `R${sub.price}`,
         sub.status,
         sub.payment_status || 'paid',
         new Date(sub.created_at).toLocaleDateString(),
@@ -145,7 +145,7 @@ Date: ${new Date(sub.created_at).toLocaleDateString()}
 Bill To: ${sub.school_name}
 
 Description: ${sub.plan_name} Subscription
-Amount: $${sub.price}
+Amount: R${sub.price}
 
 Status: ${sub.payment_status || 'Paid'}
 
@@ -433,7 +433,7 @@ Thank you for your business!
           <div className="flex items-center justify-between">
             <div>
               <p className="text-emerald-100 text-sm font-medium">Total Revenue</p>
-              <p className="text-4xl font-bold mt-2">${totalRevenue.toLocaleString()}</p>
+              <p className="text-4xl font-bold mt-2">R{totalRevenue.toLocaleString()}</p>
               <div className="flex items-center gap-1 mt-2 text-emerald-100 text-sm">
                 <ArrowUpRight size={16} />
                 <span>+12.5% from last month</span>
@@ -450,7 +450,7 @@ Thank you for your business!
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-100 text-sm font-medium">Monthly Recurring Revenue</p>
-              <p className="text-4xl font-bold mt-2">${mrr.toLocaleString()}</p>
+              <p className="text-4xl font-bold mt-2">R{mrr.toLocaleString()}</p>
               <div className="flex items-center gap-1 mt-2 text-blue-100 text-sm">
                 <TrendingUp size={16} />
                 <span>From {schools.length} active schools</span>
@@ -516,7 +516,7 @@ Thank you for your business!
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-medium text-gray-800">{plan.name}</span>
-                        <span className="font-semibold text-gray-900">${plan.revenue.toLocaleString()}</span>
+                        <span className="font-semibold text-gray-900">R{plan.revenue.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -574,7 +574,7 @@ Thank you for your business!
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-gray-900">${renewal.price}</p>
+                    <p className="font-semibold text-gray-900">R{renewal.price}</p>
                     <p className="text-xs text-gray-500">
                       {new Date(renewal.next_billing_date || '').toLocaleDateString()}
                     </p>
@@ -695,7 +695,7 @@ Thank you for your business!
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="font-semibold text-gray-900">${sub.price}</span>
+                        <span className="font-semibold text-gray-900">R{sub.price}</span>
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${status.color}`}>
@@ -789,7 +789,7 @@ Thank you for your business!
                 </div>
                 <div className="p-4 bg-gray-50 rounded-xl">
                   <p className="text-xs text-gray-500 mb-1">Amount</p>
-                  <p className="font-semibold text-gray-900 text-xl">${selectedTransaction.price}</p>
+                  <p className="font-semibold text-gray-900 text-xl">R{selectedTransaction.price}</p>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-xl">
                   <p className="text-xs text-gray-500 mb-1">Status</p>

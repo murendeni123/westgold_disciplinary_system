@@ -162,6 +162,9 @@ app.use('/api/school-customizations', require('./routes/schoolCustomizations'));
 app.use('/api/users', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/users'));
 app.use('/api/feature-flags', require('./routes/featureFlags'));
 app.use('/api/goldie-badge', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/goldieBadge'));
+app.use('/api/invoices', require('./routes/invoices'));
+app.use('/api/billing-schedules', require('./routes/billingSchedules'));
+app.use('/api/school-admins', require('./routes/schoolAdmins'));
 
 // Health check
 app.get('/api/health', (req, res) => {
