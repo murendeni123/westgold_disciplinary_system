@@ -333,6 +333,24 @@ const hashPassword = async (plainPassword) => {
     return bcrypt.hash(plainPassword, salt);
 };
 
+/**
+ * Middleware: Authenticate platform admin token only
+ *
+ * Used by platform-only routes (no school schema context required).
+ */
+const authenticatePlatformToken = async (req, res, next) => {
+    try {
+        await authenticateToken(req, res, () => {
+            if (!req.user || req.user.role !== 'platform_admin') {
+                return res.status(403).json({ error: 'Platform admin access required' });
+            }
+            return next();
+        });
+    } catch (error) {
+        return res.status(403).json({ error: 'Invalid token' });
+    }
+};
+
 module.exports = {
     // Token generation
     generateToken,
@@ -342,6 +360,7 @@ module.exports = {
     
     // Middleware
     authenticateToken,
+    authenticatePlatformToken,
     optionalAuth,
     requireRole,
     requireAdmin,
