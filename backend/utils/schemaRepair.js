@@ -69,6 +69,36 @@ const repairSchema = async (schemaName) => {
         // Sync date column (attendance_date is primary, date is alias)
         await client.query(`UPDATE attendance SET date = attendance_date WHERE date IS NULL AND attendance_date IS NOT NULL;`);
         
+        // Fix notifications table - change is_read from INTEGER to BOOLEAN if needed
+        const notificationsTableExists = await client.query(`
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = '${schemaName}' 
+                AND table_name = 'notifications'
+            );
+        `);
+        
+        if (notificationsTableExists.rows[0].exists) {
+            // Check if is_read is INTEGER type
+            const isReadType = await client.query(`
+                SELECT data_type 
+                FROM information_schema.columns 
+                WHERE table_schema = '${schemaName}' 
+                AND table_name = 'notifications' 
+                AND column_name = 'is_read';
+            `);
+            
+            if (isReadType.rows[0]?.data_type === 'integer') {
+                // Convert INTEGER to BOOLEAN
+                await client.query(`
+                    ALTER TABLE notifications 
+                    ALTER COLUMN is_read TYPE BOOLEAN 
+                    USING CASE WHEN is_read = 0 THEN false ELSE true END;
+                `);
+                console.log(`    ✓ Converted notifications.is_read from INTEGER to BOOLEAN`);
+            }
+        }
+        
         // Create consequence_assignments table if it doesn't exist
         await client.query(`
             CREATE TABLE IF NOT EXISTS consequence_assignments (
