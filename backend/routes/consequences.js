@@ -385,7 +385,7 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
       updates.push(`completion_verified = $${paramIndex++}`);
       updates.push(`completion_verified_by = $${paramIndex++}`);
       updates.push('completion_verified_at = CURRENT_TIMESTAMP');
-      params.push(completion_verified ? true : false);
+      params.push(completion_verified ? 1 : 0);
       params.push(completion_verified ? (completion_verified_by || req.user.id) : null);
     }
 
@@ -458,7 +458,7 @@ router.put('/:id/acknowledge', authenticateToken, async (req, res) => {
 
     await schemaRun(req,
       `UPDATE student_consequences 
-       SET parent_acknowledged = true, 
+       SET parent_acknowledged = 1, 
            parent_acknowledged_at = CURRENT_TIMESTAMP,
            parent_notes = $1
        WHERE id = $2`,

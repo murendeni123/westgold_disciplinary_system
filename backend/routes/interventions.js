@@ -461,7 +461,7 @@ router.put('/:id/outcome', authenticateToken, requireRole('admin', 'teacher'), a
       outcome,
       outcome_notes || null,
       effectiveness_rating || null,
-      follow_up_required || false,
+      follow_up_required || 0,
       follow_up_notes || null,
       req.user.id,
       req.params.id
@@ -506,7 +506,7 @@ router.get('/stats/overview', authenticateToken, requireRole('admin'), async (re
         COUNT(CASE WHEN outcome = 'partially_successful' THEN 1 END) as partially_successful,
         COUNT(CASE WHEN outcome = 'unsuccessful' THEN 1 END) as unsuccessful_outcomes,
         ROUND(AVG(effectiveness_rating), 2) as avg_effectiveness_rating,
-        COUNT(CASE WHEN follow_up_required = true THEN 1 END) as follow_ups_needed
+        COUNT(CASE WHEN follow_up_required = 1 THEN 1 END) as follow_ups_needed
       FROM interventions
     `);
 
