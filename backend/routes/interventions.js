@@ -125,18 +125,19 @@ router.post('/', authenticateToken, requireRole('admin', 'teacher'), async (req,
 
     const intervention = await schemaGet(req, 'SELECT * FROM interventions WHERE id = $1', [result.id]);
     
-    // Create notification for parent
+    // Create notification for parent - WITH EMAIL
     try {
-      const studentWithParent = await schemaGet(req, 'SELECT parent_id FROM students WHERE id = $1', [student_id]);
+      const studentWithParent = await schemaGet(req, 'SELECT parent_id, first_name || \' \' || last_name as student_name FROM students WHERE id = $1', [student_id]);
       if (studentWithParent && studentWithParent.parent_id) {
         await createNotification(
           req,
           studentWithParent.parent_id,
           'intervention',
           'New Intervention Assigned',
-          `An intervention has been assigned to your child`,
+          `An intervention (${type}) has been assigned to ${studentWithParent.student_name}. ${description ? description.substring(0, 100) : ''}`,
           result.id,
-          'intervention'
+          'intervention',
+          { sendEmail: true } // Send email for intervention assignments
         );
       }
     } catch (notifError) {
@@ -318,6 +319,29 @@ router.post('/:id/sessions', authenticateToken, requireRole('admin'), async (req
     );
 
     const session = await schemaGet(req, 'SELECT * FROM intervention_sessions WHERE id = $1', [result.id]);
+    
+    // Notify parent about intervention follow-up - WITH EMAIL
+    try {
+      const intervention = await schemaGet(req, 'SELECT student_id FROM interventions WHERE id = $1', [req.params.id]);
+      if (intervention) {
+        const studentWithParent = await schemaGet(req, 'SELECT parent_id, first_name || \' \' || last_name as student_name FROM students WHERE id = $1', [intervention.student_id]);
+        if (studentWithParent && studentWithParent.parent_id) {
+          await createNotification(
+            req,
+            studentWithParent.parent_id,
+            'intervention_followup',
+            'Intervention Follow-Up Recorded',
+            `A follow-up session has been recorded for ${studentWithParent.student_name}'s intervention on ${new Date(session_date).toLocaleDateString()}. ${outcome ? 'Outcome: ' + outcome.substring(0, 100) : ''}`,
+            result.id,
+            'intervention_session',
+            { sendEmail: true } // Send email for intervention follow-ups
+          );
+        }
+      }
+    } catch (notifError) {
+      console.error('Error creating follow-up notification:', notifError);
+    }
+    
     res.status(201).json(session);
   } catch (error) {
     console.error('Error creating session:', error);

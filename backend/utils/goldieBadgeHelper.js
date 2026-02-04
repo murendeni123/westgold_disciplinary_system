@@ -96,7 +96,7 @@ async function checkBadgeStatusChange(req, studentId, previousEligibility, curre
 async function sendBadgeEarnedNotifications(req, student) {
   const message = `${student.student_name} has earned a Goldie Badge! 🌟`;
 
-  // Notify parent
+  // Notify parent - WITH EMAIL
   if (student.parent_id) {
     await createNotification(
       req,
@@ -105,7 +105,8 @@ async function sendBadgeEarnedNotifications(req, student) {
       'Goldie Badge Earned! 🌟',
       message,
       student.id,
-      'student'
+      'student',
+      { sendEmail: true } // Send email for Goldie Badge awards
     );
   }
 
@@ -156,7 +157,7 @@ async function sendBadgeEarnedNotifications(req, student) {
 async function sendBadgeLostNotifications(req, student) {
   const message = `${student.student_name} has lost their Goldie Badge privileges.`;
 
-  // Notify parent
+  // Notify parent - WITH EMAIL
   if (student.parent_id) {
     await createNotification(
       req,
@@ -165,7 +166,8 @@ async function sendBadgeLostNotifications(req, student) {
       'Goldie Badge Lost',
       message,
       student.id,
-      'student'
+      'student',
+      { sendEmail: true } // Send email when badge is lost
     );
   }
 

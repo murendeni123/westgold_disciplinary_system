@@ -226,7 +226,7 @@ router.post('/assign', authenticateToken, requireRole('admin', 'teacher'), async
       WHERE ca.id = $1
     `, [result.id]);
 
-    // Notify parent if exists
+    // Notify parent if exists - WITH EMAIL
     if (student.parent_id) {
       const consequenceLabel = consequence_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
       await createNotification(
@@ -236,11 +236,12 @@ router.post('/assign', authenticateToken, requireRole('admin', 'teacher'), async
         `${consequenceLabel} Assigned`,
         `${student.student_name} has been assigned a ${consequenceLabel}. Reason: ${reason}`,
         result.id,
-        'consequence'
+        'consequence',
+        { sendEmail: true } // Send email for all consequence assignments
       );
     }
 
-    // Notify admins for suspensions
+    // Notify admins for suspensions - WITH EMAIL
     if (consequence_type === 'suspension') {
       await notifySchoolAdmins(
         req,
@@ -248,7 +249,8 @@ router.post('/assign', authenticateToken, requireRole('admin', 'teacher'), async
         '⚠️ Suspension Assigned',
         `${student.student_name} has been suspended. Reason: ${reason}`,
         result.id,
-        'consequence'
+        'consequence',
+        { sendEmail: true } // Send email for suspensions
       );
     }
 
