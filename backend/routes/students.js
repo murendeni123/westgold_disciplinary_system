@@ -40,11 +40,6 @@ router.get('/', authenticateToken, async (req, res) => {
         const conditions = [];
         let paramIndex = 1;
         
-        // Always filter by active students (unless explicitly requesting all)
-        if (req.query.include_inactive !== 'true') {
-            conditions.push(`s.is_active = 1`);
-        }
-        
         // If user is a parent, only show their own children
         if (req.user.role === 'parent') {
             conditions.push(`s.parent_id = $${paramIndex++}`);
