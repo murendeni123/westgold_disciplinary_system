@@ -506,7 +506,7 @@ router.post('/', authenticateToken, async (req, res) => {
         
         const isHighSeverity = severity === 'high' || severity === 'critical';
         
-        // Notify parent
+        // Notify parent - SEND EMAIL FOR ALL SEVERITIES
         if (student && student.parent_id) {
             const parentMessage = isHighSeverity 
                 ? `Your child, ${student.student_name}, was involved in a high-severity incident on ${incident_date}. Details: ${String(description).trim().substring(0, 100)}. This incident is pending admin review.`
@@ -520,34 +520,32 @@ router.post('/', authenticateToken, async (req, res) => {
                 parentMessage,
                 result.id,
                 'incident',
-                { sendEmail: isHighSeverity } // Send email for high-severity incidents
+                { sendEmail: true } // CHANGED: Send email for ALL severities
             );
 
-            // Send detailed email to parent for high-severity incidents
-            if (isHighSeverity) {
-                console.log(`🚨 High-severity incident detected - preparing to send email to parent`);
-                try {
-                    const parent = await dbGet('SELECT email, name FROM public.users WHERE id = $1', [student.parent_id]);
-                    if (parent && parent.email) {
-                        console.log(`📧 Sending incident email to parent: ${parent.name} (${parent.email})`);
-                        await sendIncidentNotificationEmail(
-                            parent.email,
-                            parent.name,
-                            student.student_name,
-                            incidentTypeName,
-                            severity,
-                            String(description).trim(),
-                            incident_date
-                        );
-                        console.log(`✅ Incident email sent successfully to ${parent.email}`);
-                    } else if (parent && !parent.email) {
-                        console.warn(`⚠️ Parent ${parent.name} (ID: ${student.parent_id}) has no email - cannot send incident email`);
-                    } else {
-                        console.warn(`⚠️ Parent ID ${student.parent_id} not found - cannot send incident email`);
-                    }
-                } catch (emailError) {
-                    console.error(`❌ Error sending incident email to parent (ID: ${student.parent_id}):`, emailError);
+            // Send detailed email to parent for ALL incidents
+            console.log(`� Incident logged (${severity}) - preparing to send email to parent`);
+            try {
+                const parent = await dbGet('SELECT email, name FROM public.users WHERE id = $1', [student.parent_id]);
+                if (parent && parent.email) {
+                    console.log(`📧 Sending incident email to parent: ${parent.name} (${parent.email})`);
+                    await sendIncidentNotificationEmail(
+                        parent.email,
+                        parent.name,
+                        student.student_name,
+                        incidentTypeName,
+                        severity,
+                        String(description).trim(),
+                        incident_date
+                    );
+                    console.log(`✅ Incident email sent successfully to ${parent.email}`);
+                } else if (parent && !parent.email) {
+                    console.warn(`⚠️ Parent ${parent.name} (ID: ${student.parent_id}) has no email - cannot send incident email`);
+                } else {
+                    console.warn(`⚠️ Parent ID ${student.parent_id} not found - cannot send incident email`);
                 }
+            } catch (emailError) {
+                console.error(`❌ Error sending incident email to parent (ID: ${student.parent_id}):`, emailError);
             }
         }
         

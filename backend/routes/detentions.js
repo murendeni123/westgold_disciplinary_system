@@ -2,6 +2,8 @@ const express = require('express');
 const { schemaAll, schemaGet, schemaRun, getSchema } = require('../utils/schemaHelper');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { createNotification, notifySchoolAdmins } = require('./notifications');
+const { sendDetentionNotificationEmail } = require('../utils/emailService');
+const { dbGet } = require('../database/db');
 
 const router = express.Router();
 
@@ -562,7 +564,7 @@ router.post('/:id/assign', authenticateToken, requireRole('admin'), async (req, 
       [req.params.id]
     );
     
-    // Notify parent if exists
+    // Notify parent if exists - WITH EMAIL
     if (student && student.parent_id && detention) {
       const detentionDate = new Date(detention.detention_date).toLocaleDateString();
       await createNotification(
@@ -572,8 +574,30 @@ router.post('/:id/assign', authenticateToken, requireRole('admin'), async (req, 
         'Detention Assigned',
         `${student.student_name} has been assigned to detention on ${detentionDate} at ${detention.detention_time}. Reason: ${reason || 'Not specified'}`,
         result.id,
-        'detention'
+        'detention',
+        { sendEmail: true } // Send email for detention assignments
       );
+
+      // Send detailed email to parent
+      try {
+        const parent = await dbGet('SELECT email, name FROM public.users WHERE id = $1', [student.parent_id]);
+        if (parent && parent.email) {
+          console.log(`📧 Sending detention email to parent: ${parent.name} (${parent.email})`);
+          await sendDetentionNotificationEmail(
+            parent.email,
+            parent.name,
+            student.student_name,
+            detention.detention_date,
+            detention.detention_time,
+            detention.duration || 60,
+            detention.location,
+            reason || 'Not specified'
+          );
+          console.log(`✅ Detention email sent successfully to ${parent.email}`);
+        }
+      } catch (emailError) {
+        console.error(`❌ Error sending detention email:`, emailError);
+      }
     }
     
     res.status(201).json(assignment);

@@ -39,12 +39,12 @@ const sendEmail = async ({ to, subject, text, html, from }) => {
   console.log(`⏰ Timestamp: ${timestamp}`);
   console.log(`📬 To: ${to}`);
   console.log(`📝 Subject: ${subject}`);
-  console.log(`👤 From: ${from || `"${process.env.FROM_NAME || 'LearsKool DMS'}" <${process.env.FROM_EMAIL}>`}`);
+  console.log(`👤 From: ${from || `"${process.env.FROM_NAME || 'Greenstem DMS'}" <${process.env.FROM_EMAIL}>`}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
   try {
     const mailOptions = {
-      from: from || `"${process.env.FROM_NAME || 'LearsKool DMS'}" <${process.env.FROM_EMAIL}>`,
+      from: from || `"${process.env.FROM_NAME || 'Greenstem DMS'}" <${process.env.FROM_EMAIL}>`,
       to,
       subject,
       text,
@@ -118,7 +118,7 @@ const sendIncidentNotificationEmail = async (recipientEmail, recipientName, stud
           <a href="${process.env.FRONTEND_URL || 'https://westgold-disciplinary-system-hv69eeo2c.vercel.app'}" class="button">View in Dashboard</a>
           
           <div class="footer">
-            <p>This is an automated notification from LearsKool Disciplinary Management System.</p>
+            <p>This is an automated notification from Greenstem Disciplinary Management System.</p>
             <p>Please do not reply to this email.</p>
           </div>
         </div>
@@ -142,7 +142,7 @@ Description: ${description}
 Please log in to the system to view full details.
 
 ---
-This is an automated notification from LearsKool DMS.
+This is an automated notification from Greenstem DMS.
   `;
 
   return sendEmail({ to: recipientEmail, subject, text, html });
@@ -190,7 +190,7 @@ const sendDetentionNotificationEmail = async (recipientEmail, recipientName, stu
           <a href="${process.env.FRONTEND_URL || 'https://westgold-disciplinary-system-hv69eeo2c.vercel.app'}" class="button">View Details</a>
           
           <div class="footer">
-            <p>This is an automated notification from LearsKool Disciplinary Management System.</p>
+            <p>This is an automated notification from Greenstem Disciplinary Management System.</p>
             <p>Please do not reply to this email.</p>
           </div>
         </div>
@@ -215,7 +215,7 @@ ${reason ? `Reason: ${reason}` : ''}
 Please ensure the student attends the detention session.
 
 ---
-This is an automated notification from LearsKool DMS.
+This is an automated notification from Greenstem DMS.
   `;
 
   return sendEmail({ to: recipientEmail, subject, text, html });
@@ -262,7 +262,7 @@ const sendMeritNotificationEmail = async (recipientEmail, recipientName, student
           <a href="${process.env.FRONTEND_URL || 'https://westgold-disciplinary-system-hv69eeo2c.vercel.app'}" class="button">View Details</a>
           
           <div class="footer">
-            <p>This is an automated notification from LearsKool Disciplinary Management System.</p>
+            <p>This is an automated notification from Greenstem Disciplinary Management System.</p>
             <p>Please do not reply to this email.</p>
           </div>
         </div>
@@ -286,7 +286,7 @@ Description: ${description}
 Keep up the excellent work!
 
 ---
-This is an automated notification from LearsKool DMS.
+This is an automated notification from Greenstem DMS.
   `;
 
   return sendEmail({ to: recipientEmail, subject, text, html });
@@ -331,7 +331,7 @@ const sendMessageNotificationEmail = async (recipientEmail, recipientName, sende
           <a href="${process.env.FRONTEND_URL || 'https://westgold-disciplinary-system-hv69eeo2c.vercel.app'}" class="button">View Message</a>
           
           <div class="footer">
-            <p>This is an automated notification from LearsKool Disciplinary Management System.</p>
+            <p>This is an automated notification from Greenstem Disciplinary Management System.</p>
             <p>Please do not reply to this email.</p>
           </div>
         </div>
@@ -353,7 +353,7 @@ Preview: ${messagePreview}
 Please log in to view the full message.
 
 ---
-This is an automated notification from LearsKool DMS.
+This is an automated notification from Greenstem DMS.
   `;
 
   return sendEmail({ to: recipientEmail, subject: emailSubject, text, html });
@@ -395,7 +395,7 @@ const sendGenericNotificationEmail = async (recipientEmail, recipientName, title
           ${actionUrl ? `<a href="${actionUrl}" class="button">View Details</a>` : ''}
           
           <div class="footer">
-            <p>This is an automated notification from LearsKool Disciplinary Management System.</p>
+            <p>This is an automated notification from Greenstem Disciplinary Management System.</p>
             <p>Please do not reply to this email.</p>
           </div>
         </div>
@@ -414,7 +414,7 @@ ${message}
 ${actionUrl ? `View details: ${actionUrl}` : ''}
 
 ---
-This is an automated notification from LearsKool DMS.
+This is an automated notification from Greenstem DMS.
   `;
 
   return sendEmail({ to: recipientEmail, subject, text, html });

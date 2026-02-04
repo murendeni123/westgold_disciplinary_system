@@ -3,6 +3,8 @@ const { schemaAll, schemaGet, schemaRun, getSchema } = require('../utils/schemaH
 const { authenticateToken } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
 const { calculateBadgeEligibility, checkBadgeStatusChange } = require('../utils/goldieBadgeHelper');
+const { sendMeritNotificationEmail } = require('../utils/emailService');
+const { dbGet } = require('../database/db');
 
 const router = express.Router();
 
@@ -211,7 +213,7 @@ router.post('/', authenticateToken, async (req, res) => {
     );
     console.log('Student:', student ? { id: student.id, name: student.student_name, parent_id: student.parent_id } : 'not found');
     
-    // Notify parent if exists
+    // Notify parent if exists - WITH EMAIL
     if (student && student.parent_id) {
       await createNotification(
         req,
@@ -220,8 +222,29 @@ router.post('/', authenticateToken, async (req, res) => {
         'Merit Awarded! 🏆',
         `${student.student_name} earned ${points || 1} merit points for: ${String(description).trim().substring(0, 100)}`,
         result.id,
-        'merit'
+        'merit',
+        { sendEmail: true } // Send email for merit awards
       );
+
+      // Send detailed email to parent
+      try {
+        const parent = await dbGet('SELECT email, name FROM public.users WHERE id = $1', [student.parent_id]);
+        if (parent && parent.email) {
+          console.log(`📧 Sending merit email to parent: ${parent.name} (${parent.email})`);
+          await sendMeritNotificationEmail(
+            parent.email,
+            parent.name,
+            student.student_name,
+            meritTypeName,
+            points || 1,
+            String(description).trim(),
+            merit_date
+          );
+          console.log(`✅ Merit email sent successfully to ${parent.email}`);
+        }
+      } catch (emailError) {
+        console.error(`❌ Error sending merit email:`, emailError);
+      }
     }
 
     // Check if badge status changed and send notifications
