@@ -36,14 +36,14 @@ router.get('/critical-alerts', authenticateToken, async (req, res) => {
             FROM classes c
             LEFT JOIN teachers t ON c.teacher_id = t.id
             LEFT JOIN public.users u ON t.user_id = u.id
-            WHERE c.is_active = true
+            WHERE c.is_active = 1
             AND c.id NOT IN (
                 SELECT DISTINCT s.class_id 
                 FROM attendance a
                 INNER JOIN students s ON a.student_id = s.id
                 WHERE a.date = $1 AND s.class_id IS NOT NULL
             )
-            AND (SELECT COUNT(*) FROM students WHERE class_id = c.id AND is_active = true) > 0
+            AND (SELECT COUNT(*) FROM students WHERE class_id = c.id AND is_active = 1) > 0
             ORDER BY c.class_name
         `, [today]);
 
@@ -109,7 +109,7 @@ router.get('/at-risk-students', authenticateToken, async (req, res) => {
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             INNER JOIN attendance a ON s.id = a.student_id
-            WHERE s.is_active = true
+            WHERE s.is_active = 1
             AND a.status = 'absent'
             AND a.date >= CURRENT_DATE - INTERVAL '30 days'
             GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
@@ -128,7 +128,7 @@ router.get('/at-risk-students', authenticateToken, async (req, res) => {
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             INNER JOIN behaviour_incidents bi ON s.id = bi.student_id
-            WHERE s.is_active = true
+            WHERE s.is_active = 1
             AND bi.created_at >= CURRENT_DATE - INTERVAL '30 days'
             GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
             HAVING COUNT(bi.id) >= 3
@@ -240,7 +240,7 @@ router.get('/class-profile/:classId', authenticateToken, async (req, res) => {
                    COALESCE((SELECT SUM(points) FROM merits WHERE student_id = s.id), 0) as merit_points,
                    COALESCE((SELECT COUNT(*) FROM behaviour_incidents WHERE student_id = s.id), 0) as incident_count
             FROM students s
-            WHERE s.class_id = $1 AND s.is_active = true
+            WHERE s.class_id = $1 AND s.is_active = 1
             ORDER BY demerit_points DESC
         `, [classId]);
 
