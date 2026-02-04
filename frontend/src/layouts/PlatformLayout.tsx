@@ -16,6 +16,8 @@ import {
   Sparkles,
   Bell,
   ToggleLeft,
+  Receipt,
+  FileStack,
 } from 'lucide-react';
 import Button from '../components/Button';
 
@@ -38,6 +40,8 @@ const PlatformLayout: React.FC = () => {
     { path: '/platform/schools', label: 'Schools', icon: Building2, color: 'from-blue-500 to-cyan-500' },
     { path: '/platform/users', label: 'Platform Users', icon: Shield, color: 'from-indigo-500 to-purple-500' },
     { path: '/platform/subscriptions', label: 'Subscriptions', icon: CreditCard, color: 'from-green-500 to-emerald-500' },
+    { path: '/platform/invoice-templates', label: 'Invoice Templates', icon: FileStack, color: 'from-violet-500 to-fuchsia-500' },
+    { path: '/platform/invoices', label: 'Invoices', icon: Receipt, color: 'from-emerald-500 to-teal-500' },
     { path: '/platform/analytics', label: 'Analytics', icon: BarChart3, color: 'from-orange-500 to-red-500' },
     { path: '/platform/billing', label: 'Billing', icon: CreditCard, color: 'from-teal-500 to-blue-500' },
     { path: '/platform/logs', label: 'Activity Logs', icon: FileText, color: 'from-gray-500 to-slate-500' },
