@@ -19,7 +19,20 @@
     <meta name="theme-color" content="#3B82F6" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Loading indicator shown until React mounts -->
+      <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div style="text-align: center;">
+          <div style="width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+          <p style="color: white; font-family: system-ui, -apple-system, sans-serif; font-size: 18px; font-weight: 500;">Loading Discipline System...</p>
+        </div>
+      </div>
+      <style>
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      </style>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       // Register Service Worker
