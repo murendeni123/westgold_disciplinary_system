@@ -119,7 +119,7 @@ function App() {
                 <ToastProvider>
                   <NavigationSetup />
             <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<ParentSignup />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
