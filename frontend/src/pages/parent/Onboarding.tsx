@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
-import { api } from '../../services/api';
+import { api, axiosInstance } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   GraduationCap, 
@@ -72,15 +72,23 @@ const Onboarding: React.FC = () => {
     try {
       const response = await api.linkSchoolByCode(schoolCode.trim().toUpperCase());
       
-      // Store school context in localStorage for subsequent API requests
-      if (response.data?.school?.id) {
+      // Update localStorage with school context
+      if (response.data?.school) {
         localStorage.setItem('schoolId', response.data.school.id.toString());
-      }
-      if (response.data?.school?.schema_name) {
+        localStorage.setItem('schoolName', response.data.school.name);
+        localStorage.setItem('schoolCode', response.data.school.code);
         localStorage.setItem('schemaName', response.data.school.schema_name);
       }
       
+      // Refresh user data to get updated school info
       await refreshUser();
+      
+      // Force update localStorage to ensure user data is persisted
+      const updatedUserResponse = await axiosInstance.get('/auth/me');
+      if (updatedUserResponse.data.user) {
+        localStorage.setItem('user', JSON.stringify(updatedUserResponse.data.user));
+      }
+      
       setHasSchool(true);
       setLinkedSchoolName(response.data?.school?.name || 'School');
       setSchoolCode('');
@@ -93,10 +101,7 @@ const Onboarding: React.FC = () => {
     }
   };
 
-  const handleLinkChild = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setChildError('');
-    
+  const handleLinkChild = async () => {
     if (!childLinkCode.trim()) {
       setChildError('Please enter a link code');
       return;
@@ -106,7 +111,16 @@ const Onboarding: React.FC = () => {
     
     try {
       const response = await api.linkChild(childLinkCode.trim().toUpperCase());
+      
+      // Refresh user data to get updated children list
       await refreshUser();
+      
+      // Force update localStorage to ensure user data is persisted
+      const updatedUserResponse = await axiosInstance.get('/auth/me');
+      if (updatedUserResponse.data.user) {
+        localStorage.setItem('user', JSON.stringify(updatedUserResponse.data.user));
+      }
+      
       setHasChild(true);
       setLinkedChildName(response.data?.child?.name || 'Child');
       setChildLinkCode('');
