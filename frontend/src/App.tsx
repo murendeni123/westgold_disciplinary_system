@@ -47,6 +47,7 @@ import PlatformSettings from './pages/platform/PlatformSettings';
 import PlatformSchools from './pages/platform/PlatformSchools';
 import PlatformSchoolDetails from './pages/platform/PlatformSchoolDetails';
 import SchoolCustomizations from './pages/platform/SchoolCustomizations';
+import ThemeBuilder from './pages/platform/ThemeBuilder';
 import PlatformSubscriptions from './pages/platform/PlatformSubscriptions';
 import PlatformAnalytics from './pages/platform/PlatformAnalytics';
 import PlatformBilling from './pages/platform/PlatformBilling';
@@ -197,6 +198,7 @@ function App() {
             <Route path="schools/onboard" element={<SchoolOnboardingWizard />} />
             <Route path="schools/:id" element={<PlatformSchoolDetails />} />
             <Route path="schools/:schoolId/customizations" element={<SchoolCustomizations />} />
+            <Route path="schools/:schoolId/theme-builder" element={<ThemeBuilder />} />
             <Route path="users" element={<PlatformUsers />} />
             <Route path="subscriptions" element={<PlatformSubscriptions />} />
             <Route path="analytics" element={<PlatformAnalytics />} />
