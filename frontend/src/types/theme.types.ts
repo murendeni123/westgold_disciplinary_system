@@ -7,7 +7,7 @@ export type AssetType = 'logo' | 'favicon' | 'login_background' | 'dashboard_bac
 export type ThemeAction = 'created' | 'updated' | 'published' | 'archived' | 'rolled_back';
 export type PortalType = 'admin' | 'teacher' | 'parent';
 export type DeviceType = 'desktop' | 'tablet' | 'mobile';
-export type PreviewPage = 'login' | 'dashboard' | 'incident' | 'reports' | 'table';
+export type PreviewPage = 'login' | 'dashboard' | 'students' | 'incident' | 'reports' | 'table';
 
 // =====================================================
 // DESIGN TOKENS
