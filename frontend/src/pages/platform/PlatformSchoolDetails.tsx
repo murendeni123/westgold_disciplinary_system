@@ -250,11 +250,11 @@ const PlatformSchoolDetails: React.FC = () => {
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button
               variant="secondary"
-              onClick={() => navigate(`/platform/schools/${id}/customizations`)}
+              onClick={() => navigate(`/platform/schools/${id}/theme-builder`)}
               className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-0 rounded-xl shadow-lg hover:shadow-xl"
             >
               <Palette size={20} className="mr-2" />
-              Customize
+              Theme Builder
             </Button>
           </motion.div>
         </div>
