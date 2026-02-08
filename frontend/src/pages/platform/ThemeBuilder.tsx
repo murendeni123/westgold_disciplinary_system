@@ -44,6 +44,7 @@ import LayoutSection from '../../components/theme-builder/LayoutSection';
 import ContentSection from '../../components/theme-builder/ContentSection';
 import EmailTemplatesSection from '../../components/theme-builder/EmailTemplatesSection';
 import AdvancedSection from '../../components/theme-builder/AdvancedSection';
+import LivePreviewFrame from '../../components/theme-builder/LivePreviewFrame';
 
 // =====================================================
 // MAIN THEME BUILDER COMPONENT
@@ -671,7 +672,7 @@ const RightPanel: React.FC<RightPanelProps> = ({
             maxWidth: '100%',
           }}
         >
-          <PreviewFrame
+          <LivePreviewFrame
             tokens={draftTokens}
             portal={previewState.portal}
             page={previewState.page}
@@ -684,7 +685,6 @@ const RightPanel: React.FC<RightPanelProps> = ({
 };
 
 // Placeholder components - to be implemented
-const PreviewFrame: React.FC<any> = () => <div className="p-8 text-center text-gray-500">Preview Frame - Coming Soon</div>;
 const HistoryModal: React.FC<any> = () => null;
 
 const formatTimeAgo = (date: Date): string => {
