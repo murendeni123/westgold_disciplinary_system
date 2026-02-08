@@ -112,7 +112,22 @@ export const SchoolThemeProvider: React.FC<SchoolThemeProviderProps> = ({ childr
         return;
       }
 
-      // Use public endpoint for regular users (admin, teacher, parent)
+      // First try to get published theme from new Theme Builder API
+      try {
+        const themeResponse = await api.getPublishedTheme(targetSchoolId);
+        if (themeResponse.data.theme) {
+          // Apply new theme system
+          applyThemeTokens(themeResponse.data.theme);
+          setCustomizations(null); // Clear old customizations
+          setLoading(false);
+          return;
+        }
+      } catch (themeError) {
+        // If no published theme exists, fall back to old customizations
+        console.log('No published theme found, using legacy customizations');
+      }
+
+      // Fallback to old customizations API
       const response = await api.getSchoolCustomizationsPublic(targetSchoolId);
       setCustomizations(response.data || null);
       applyCustomizations(response.data);
@@ -121,6 +136,84 @@ export const SchoolThemeProvider: React.FC<SchoolThemeProviderProps> = ({ childr
       setCustomizations(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const applyThemeTokens = (theme: any) => {
+    if (!theme || !theme.tokens) return;
+
+    const { tokens, assets, advanced_overrides } = theme;
+
+    // Apply color tokens
+    if (tokens.colors) {
+      Object.entries(tokens.colors).forEach(([key, value]) => {
+        const cssVar = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+        document.documentElement.style.setProperty(`--${cssVar}`, value as string);
+      });
+    }
+
+    // Apply typography tokens
+    if (tokens.typography) {
+      document.documentElement.style.setProperty('--primary-font', tokens.typography.fontPrimary);
+      document.documentElement.style.setProperty('--secondary-font', tokens.typography.fontSecondary);
+      document.documentElement.style.setProperty('--base-font-size', tokens.typography.baseFontSize);
+      
+      if (tokens.typography.headingScale) {
+        Object.entries(tokens.typography.headingScale).forEach(([key, value]) => {
+          document.documentElement.style.setProperty(`--heading-${key}`, value as string);
+        });
+      }
+      
+      if (tokens.typography.fontWeights) {
+        Object.entries(tokens.typography.fontWeights).forEach(([key, value]) => {
+          document.documentElement.style.setProperty(`--font-weight-${key}`, String(value));
+        });
+      }
+      
+      if (tokens.typography.lineHeights) {
+        Object.entries(tokens.typography.lineHeights).forEach(([key, value]) => {
+          document.documentElement.style.setProperty(`--line-height-${key}`, String(value));
+        });
+      }
+    }
+
+    // Apply component tokens
+    if (tokens.components) {
+      document.documentElement.style.setProperty('--button-radius', tokens.components.buttonRadius);
+      document.documentElement.style.setProperty('--card-radius', tokens.components.cardRadius);
+      document.documentElement.style.setProperty('--input-radius', tokens.components.inputRadius);
+      document.documentElement.style.setProperty('--border-width', tokens.components.borderWidth);
+      
+      if (tokens.components.spacingScale) {
+        Object.entries(tokens.components.spacingScale).forEach(([key, value]) => {
+          document.documentElement.style.setProperty(`--spacing-${key}`, value as string);
+        });
+      }
+    }
+
+    // Apply layout tokens
+    if (tokens.layout) {
+      document.documentElement.style.setProperty('--sidebar-width', tokens.layout.sidebarWidth);
+      document.documentElement.style.setProperty('--header-height', tokens.layout.headerHeight);
+    }
+
+    // Apply favicon
+    if (assets?.favicon) {
+      const favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
+      if (favicon) {
+        favicon.href = assets.favicon;
+      }
+    }
+
+    // Apply custom CSS
+    if (advanced_overrides?.customCss) {
+      const existingStyle = document.getElementById('school-custom-css');
+      if (existingStyle) existingStyle.remove();
+      
+      const style = document.createElement('style');
+      style.id = 'school-custom-css';
+      style.textContent = advanced_overrides.customCss;
+      document.head.appendChild(style);
     }
   };
 
