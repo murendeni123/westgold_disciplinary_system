@@ -710,6 +710,23 @@ export const api = {
   addFeatureToPlan: (planId: number, featureId: number) => axiosInstance.post(`/features/plans/${planId}`, { feature_id: featureId }),
   removeFeatureFromPlan: (planId: number, featureId: number) => axiosInstance.delete(`/features/plans/${planId}/features/${featureId}`),
   bulkUpdatePlanFeatures: (planId: number, featureIds: number[]) => axiosInstance.post(`/features/plans/${planId}/bulk`, { feature_ids: featureIds }),
+
+  // Theme Builder
+  getPublishedTheme: (schoolId: number) => axiosInstance.get(`/theme-builder/public/${schoolId}/published`),
+  getDraftTheme: (schoolId: number) => axiosInstance.get(`/theme-builder/${schoolId}/draft`),
+  saveDraftTheme: (schoolId: number, data: any) => axiosInstance.post(`/theme-builder/${schoolId}/draft`, data),
+  publishTheme: (schoolId: number, data: any) => axiosInstance.post(`/theme-builder/${schoolId}/publish`, data),
+  rollbackTheme: (schoolId: number, data: any) => axiosInstance.post(`/theme-builder/${schoolId}/rollback`, data),
+  uploadThemeAsset: (schoolId: number, formData: FormData) => axiosInstance.post(`/theme-builder/${schoolId}/assets`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  deleteThemeAsset: (schoolId: number, assetId: number) => axiosInstance.delete(`/theme-builder/${schoolId}/assets/${assetId}`),
+  getThemeHistory: (schoolId: number, page?: number, pageSize?: number) => axiosInstance.get(`/theme-builder/${schoolId}/history`, {
+    params: { page, pageSize },
+  }),
+  getThemeChanges: (schoolId: number, page?: number, pageSize?: number) => axiosInstance.get(`/theme-builder/${schoolId}/changes`, {
+    params: { page, pageSize },
+  }),
 };
 
 // Export the axios instance for direct use when needed

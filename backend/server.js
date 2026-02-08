@@ -161,6 +161,7 @@ app.use('/api/consequence-assignments', authenticateToken, setSchemaFromToken, e
 app.use('/api/push', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/push').router);
 app.use('/api/platform', require('./routes/platform'));
 app.use('/api/school-customizations', require('./routes/schoolCustomizations'));
+app.use('/api/theme-builder', require('./routes/themeBuilder'));
 app.use('/api/users', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/users'));
 app.use('/api/feature-flags', require('./routes/featureFlags'));
 app.use('/api/goldie-badge', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/goldieBadge'));
