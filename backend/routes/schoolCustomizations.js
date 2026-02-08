@@ -65,7 +65,55 @@ const upload = multer({
   },
 });
 
-// Get school customizations
+// Public endpoint: Get school customizations for authenticated users
+// This allows regular users (admin, teacher, parent) to fetch their school's branding
+router.get('/public/:schoolId', async (req, res) => {
+  try {
+    const schoolId = parseInt(req.params.schoolId);
+
+    // Verify school exists
+    const school = await dbGet('SELECT id FROM public.schools WHERE id = $1', [schoolId]);
+    if (!school) {
+      return res.status(404).json({ error: 'School not found' });
+    }
+
+    // Get customizations
+    let customizations = await dbGet(
+      'SELECT * FROM public.school_customizations WHERE school_id = $1',
+      [schoolId]
+    );
+
+    // If no customizations exist, return defaults
+    if (!customizations) {
+      customizations = {
+        school_id: Number(schoolId),
+        primary_color: '#3b82f6',
+        secondary_color: '#8b5cf6',
+        success_color: '#10b981',
+        warning_color: '#f59e0b',
+        danger_color: '#ef4444',
+        background_color: '#f9fafb',
+        text_primary_color: '#111827',
+        text_secondary_color: '#6b7280',
+        primary_font: 'Inter',
+        secondary_font: 'Inter',
+        base_font_size: '16px',
+        button_border_radius: '8px',
+        card_border_radius: '12px',
+        sidebar_background: '#ffffff',
+        header_background: '#ffffff',
+        login_background_color: '#ffffff',
+      };
+    }
+
+    res.json(customizations);
+  } catch (error) {
+    console.error('Error fetching public customizations:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Platform admin only: Get school customizations for editing
 router.get('/:schoolId', requirePlatformAdmin, async (req, res) => {
   try {
     const schoolId = parseInt(req.params.schoolId);

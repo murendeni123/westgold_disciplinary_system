@@ -572,6 +572,7 @@ export const api = {
 
   // School Customizations
   getSchoolCustomizations: (schoolId: number) => axiosInstance.get(`/school-customizations/${schoolId}`),
+  getSchoolCustomizationsPublic: (schoolId: number) => axiosInstance.get(`/school-customizations/public/${schoolId}`),
   updateSchoolCustomizations: (schoolId: number, data: any) => axiosInstance.put(`/school-customizations/${schoolId}`, data),
   uploadSchoolLogo: (schoolId: number, file: File) => {
     const formData = new FormData();

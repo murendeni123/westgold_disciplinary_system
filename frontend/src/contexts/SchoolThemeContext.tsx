@@ -112,7 +112,8 @@ export const SchoolThemeProvider: React.FC<SchoolThemeProviderProps> = ({ childr
         return;
       }
 
-      const response = await api.getSchoolCustomizations(targetSchoolId);
+      // Use public endpoint for regular users (admin, teacher, parent)
+      const response = await api.getSchoolCustomizationsPublic(targetSchoolId);
       setCustomizations(response.data || null);
       applyCustomizations(response.data);
     } catch (error) {
