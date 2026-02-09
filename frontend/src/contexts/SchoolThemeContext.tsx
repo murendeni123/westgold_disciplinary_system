@@ -144,11 +144,26 @@ export const SchoolThemeProvider: React.FC<SchoolThemeProviderProps> = ({ childr
 
     const { tokens, assets, advanced_overrides } = theme;
 
-    // Apply color tokens
+    // Apply color tokens - match existing CSS variable naming convention
     if (tokens.colors) {
+      // Map new token names to existing CSS variable names
+      const colorMapping: Record<string, string> = {
+        primary: '--primary-color',
+        secondary: '--secondary-color',
+        background: '--background-color',
+        surface: '--surface-color',
+        textPrimary: '--text-primary-color',
+        textSecondary: '--text-secondary-color',
+        success: '--success-color',
+        warning: '--warning-color',
+        danger: '--danger-color',
+        border: '--border-color',
+        focusRing: '--focus-ring-color',
+      };
+
       Object.entries(tokens.colors).forEach(([key, value]) => {
-        const cssVar = key.replace(/([A-Z])/g, '-$1').toLowerCase();
-        document.documentElement.style.setProperty(`--${cssVar}`, value as string);
+        const cssVarName = colorMapping[key] || `--${key.replace(/([A-Z])/g, '-$1').toLowerCase()}-color`;
+        document.documentElement.style.setProperty(cssVarName, value as string);
       });
     }
 
@@ -177,11 +192,11 @@ export const SchoolThemeProvider: React.FC<SchoolThemeProviderProps> = ({ childr
       }
     }
 
-    // Apply component tokens
+    // Apply component tokens - match existing CSS variable naming
     if (tokens.components) {
-      document.documentElement.style.setProperty('--button-radius', tokens.components.buttonRadius);
-      document.documentElement.style.setProperty('--card-radius', tokens.components.cardRadius);
-      document.documentElement.style.setProperty('--input-radius', tokens.components.inputRadius);
+      document.documentElement.style.setProperty('--button-border-radius', tokens.components.buttonRadius);
+      document.documentElement.style.setProperty('--card-border-radius', tokens.components.cardRadius);
+      document.documentElement.style.setProperty('--input-border-radius', tokens.components.inputRadius);
       document.documentElement.style.setProperty('--border-width', tokens.components.borderWidth);
       
       if (tokens.components.spacingScale) {
@@ -195,14 +210,31 @@ export const SchoolThemeProvider: React.FC<SchoolThemeProviderProps> = ({ childr
     if (tokens.layout) {
       document.documentElement.style.setProperty('--sidebar-width', tokens.layout.sidebarWidth);
       document.documentElement.style.setProperty('--header-height', tokens.layout.headerHeight);
+      
+      // Also set background for sidebar and header if needed
+      if (tokens.layout.sidebarBackground) {
+        document.documentElement.style.setProperty('--sidebar-background', tokens.layout.sidebarBackground);
+      }
+      if (tokens.layout.headerBackground) {
+        document.documentElement.style.setProperty('--header-background', tokens.layout.headerBackground);
+      }
     }
 
     // Apply favicon
     if (assets?.favicon) {
-      const favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
-      if (favicon) {
-        favicon.href = assets.favicon;
+      const faviconUrl = getImageUrl(assets.favicon);
+      if (faviconUrl) {
+        const favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
+        if (favicon) {
+          favicon.href = faviconUrl;
+        }
       }
+    }
+
+    // Apply logo if available
+    if (assets?.logo) {
+      // Store logo URL in a CSS variable for components to use
+      document.documentElement.style.setProperty('--school-logo-url', `url(${getImageUrl(assets.logo)})`);
     }
 
     // Apply custom CSS
@@ -214,6 +246,14 @@ export const SchoolThemeProvider: React.FC<SchoolThemeProviderProps> = ({ childr
       style.id = 'school-custom-css';
       style.textContent = advanced_overrides.customCss;
       document.head.appendChild(style);
+    }
+
+    // Load custom fonts if specified
+    if (tokens.typography?.fontPrimary && tokens.typography.fontPrimary !== 'Inter') {
+      loadFont(tokens.typography.fontPrimary);
+    }
+    if (tokens.typography?.fontSecondary && tokens.typography.fontSecondary !== 'Inter' && tokens.typography.fontSecondary !== tokens.typography.fontPrimary) {
+      loadFont(tokens.typography.fontSecondary);
     }
   };
 
