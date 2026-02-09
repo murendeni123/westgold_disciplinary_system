@@ -84,8 +84,13 @@ export const SchoolThemeProvider: React.FC<SchoolThemeProviderProps> = ({ childr
     const getApiBaseUrl = () => {
       if (typeof window !== 'undefined') {
         const hostname = window.location.hostname;
-        if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-          return 'http://192.168.18.160:5000';
+        // Production: use Render backend
+        if (hostname.includes('vercel.app')) {
+          return 'https://westgold-disciplinary-system.onrender.com';
+        }
+        // Local development
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+          return 'http://localhost:5000';
         }
       }
       return 'http://localhost:5000';
