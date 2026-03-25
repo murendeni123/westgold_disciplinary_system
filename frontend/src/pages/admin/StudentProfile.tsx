@@ -7,8 +7,10 @@ import Select from '../../components/Select';
 import ParentProfileModal from '../../components/ParentProfileModal';
 import GoldieBadge from '../../components/GoldieBadge';
 import GoldenDotIndicator from '../../components/GoldenDotIndicator';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Copy, Camera, Upload, User, Award, AlertTriangle, Calendar, TrendingUp } from 'lucide-react';
+import StudentDetailedHistory from '../../components/StudentDetailedHistory';
+import StudentAnalytics from '../../components/StudentAnalytics';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Copy, Camera, Upload, User, Award, AlertTriangle, Calendar, TrendingUp, Clock, FileText, Shield, ChevronDown, ChevronUp, Search, Gavel } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useToast } from '../../hooks/useToast';
 import { getPhotoUrl, handlePhotoError } from '../../utils/photoUrl';
@@ -32,11 +34,22 @@ const StudentProfile: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Detailed history state ─────────────────────────────────────────────────
+  const [incidents, setIncidents] = useState<any[]>([]);
+  const [merits, setMerits] = useState<any[]>([]);
+  const [consequences, setConsequences] = useState<any[]>([]);
+  const [detentions, setDetentions] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<string | null>('incidents');
+  const [incidentSearch, setIncidentSearch] = useState('');
+  const [meritSearch, setMeritSearch] = useState('');
+
   useEffect(() => {
     if (id) {
       fetchStudent();
       fetchClasses();
       fetchStats();
+      fetchDetailedHistory();
     }
   }, [id]);
 
@@ -202,6 +215,74 @@ const StudentProfile: React.FC = () => {
       console.error('Error fetching stats:', error);
     }
   };
+
+  // ── Fetch detailed history (incidents, merits, consequences, detentions) ────
+  const fetchDetailedHistory = async () => {
+    if (!id) return;
+    setHistoryLoading(true);
+    try {
+      const [incRes, merRes, conRes, detRes] = await Promise.allSettled([
+        api.getIncidents({ student_id: id }),
+        api.getMerits({ student_id: id }),
+        api.getStudentConsequences(Number(id)),
+        api.getStudentDetentionHistory(Number(id)),
+      ]);
+      if (incRes.status === 'fulfilled') setIncidents(incRes.value.data || []);
+      if (merRes.status === 'fulfilled') setMerits(merRes.value.data || []);
+      if (conRes.status === 'fulfilled') setConsequences(conRes.value.data || []);
+      if (detRes.status === 'fulfilled') setDetentions(detRes.value.data || []);
+    } catch (err) {
+      console.error('Error fetching detailed history:', err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // ── Helpers ─────────────────────────────────────────────────────────────────
+  const formatDate = (d: string | null | undefined) => {
+    if (!d) return 'N/A';
+    try { return new Date(d).toLocaleDateString('en-ZA', { year: 'numeric', month: 'short', day: 'numeric' }); }
+    catch { return d; }
+  };
+
+  const severityColor = (s: string) => {
+    switch (s?.toLowerCase()) {
+      case 'high': case 'critical': return 'bg-red-100 text-red-700';
+      case 'medium': return 'bg-amber-100 text-amber-700';
+      case 'low': return 'bg-green-100 text-green-700';
+      default: return 'bg-gray-100 text-gray-600';
+    }
+  };
+
+  const statusColor = (s: string) => {
+    switch (s?.toLowerCase()) {
+      case 'approved': case 'completed': case 'served': return 'bg-green-100 text-green-700';
+      case 'pending': return 'bg-amber-100 text-amber-700';
+      case 'declined': case 'rejected': return 'bg-red-100 text-red-700';
+      default: return 'bg-gray-100 text-gray-600';
+    }
+  };
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(prev => prev === section ? null : section);
+  };
+
+  const filteredIncidents = incidents.filter(i => {
+    if (!incidentSearch.trim()) return true;
+    const q = incidentSearch.toLowerCase();
+    return (i.incident_type || '').toLowerCase().includes(q) ||
+           (i.description || '').toLowerCase().includes(q) ||
+           (i.teacher_name || '').toLowerCase().includes(q) ||
+           (i.severity || '').toLowerCase().includes(q);
+  });
+
+  const filteredMerits = merits.filter(m => {
+    if (!meritSearch.trim()) return true;
+    const q = meritSearch.toLowerCase();
+    return (m.merit_type || '').toLowerCase().includes(q) ||
+           (m.description || '').toLowerCase().includes(q) ||
+           (m.teacher_name || '').toLowerCase().includes(q);
+  });
 
   if (loading) {
     return (
@@ -599,6 +680,28 @@ const StudentProfile: React.FC = () => {
           </motion.div>
         )}
       </div>
+
+      {/* Analytics Overview */}
+      <StudentAnalytics
+        incidents={incidents}
+        merits={merits}
+        loading={historyLoading}
+      />
+
+      {/* Detailed History Sections */}
+      <StudentDetailedHistory
+        incidents={incidents}
+        merits={merits}
+        consequences={consequences}
+        detentions={detentions}
+        historyLoading={historyLoading}
+        expandedSection={expandedSection}
+        incidentSearch={incidentSearch}
+        meritSearch={meritSearch}
+        onToggleSection={toggleSection}
+        onIncidentSearchChange={setIncidentSearch}
+        onMeritSearchChange={setMeritSearch}
+      />
 
       <Modal
         isOpen={isClassModalOpen}

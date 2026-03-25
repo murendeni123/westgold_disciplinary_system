@@ -1050,6 +1050,18 @@ router.post('/evaluate-rules', authenticateToken, async (req, res) => {
                 'detention'
               );
             }
+
+            // Notify admins that a student qualified for detention
+            const detentionDateStr = new Date(nextDetention.detention_date).toLocaleDateString();
+            await notifySchoolAdmins(
+              req,
+              'detention_assigned',
+              '📋 Student Assigned to Detention',
+              `${student ? student.student_name : 'A student'} has been auto-assigned to detention on ${detentionDateStr} at ${nextDetention.detention_time || 'TBD'}. Rule triggered: ${rule.name}`,
+              nextDetention.id,
+              'detention',
+              { sendEmail: true }
+            );
           }
         }
       }

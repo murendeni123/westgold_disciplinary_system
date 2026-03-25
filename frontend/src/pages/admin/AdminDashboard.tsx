@@ -9,7 +9,7 @@ import {
   Copy, Check, Key
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 interface CriticalAlerts {
   thresholdStudents: any[];
@@ -50,6 +50,9 @@ const AdminDashboard: React.FC = () => {
   const [showClassModal, setShowClassModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [behaviorTrendData, setBehaviorTrendData] = useState<any[]>([]);
+  const [recentIncidents, setRecentIncidents] = useState<any[]>([]);
+  const [recentMerits, setRecentMerits] = useState<any[]>([]);
 
   const copySchoolCode = () => {
     if (schoolInfo?.school_code) {
@@ -97,7 +100,7 @@ const AdminDashboard: React.FC = () => {
       
       // Fetch school info and dashboard data in parallel
       // The x-school-id header from token is sufficient for API calls
-      const [statsRes, schoolInfoRes, alertsRes, riskRes, notifsRes, countRes] = await Promise.all([
+      const [statsRes, schoolInfoRes, alertsRes, riskRes, notifsRes, countRes, incRes, merRes] = await Promise.all([
         api.getDashboardStats().catch((err) => {
           console.error('Error fetching dashboard stats:', err);
           return { data: null };
@@ -122,6 +125,8 @@ const AdminDashboard: React.FC = () => {
           console.error('Error fetching unread count:', err);
           return { data: { count: 0 } };
         }),
+        api.getIncidents().catch(() => ({ data: [] })),
+        api.getMerits().catch(() => ({ data: [] })),
       ]);
       
       console.log('Dashboard stats response:', statsRes?.data);
@@ -133,6 +138,32 @@ const AdminDashboard: React.FC = () => {
       setAtRiskStudents(riskRes.data);
       setNotifications(notifsRes.data?.slice(0, 5) || []);
       setUnreadCount(countRes.data?.count || 0);
+
+      // Build 6-month trend from incidents + merits
+      const allInc: any[] = incRes.data || [];
+      const allMer: any[] = merRes.data || [];
+      const now = new Date();
+      const monthMap: Record<string, { month: string; incidents: number; merits: number }> = {};
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        monthMap[key] = { month: key, incidents: 0, merits: 0 };
+      }
+      allInc.forEach((inc: any) => {
+        const raw = inc.incident_date || inc.date || inc.created_at;
+        if (!raw) return;
+        const key = new Date(raw).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        if (monthMap[key]) monthMap[key].incidents++;
+      });
+      allMer.forEach((m: any) => {
+        const raw = m.merit_date || m.date || m.created_at;
+        if (!raw) return;
+        const key = new Date(raw).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+        if (monthMap[key]) monthMap[key].merits++;
+      });
+      setBehaviorTrendData(Object.values(monthMap));
+      setRecentIncidents(allInc.slice(0, 6));
+      setRecentMerits(allMer.slice(0, 6));
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -787,6 +818,125 @@ const AdminDashboard: React.FC = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Behavior Trend Chart */}
+      {behaviorTrendData.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6"
+        >
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl">
+                <TrendingDown size={20} className="text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">School-Wide Behaviour Trend (Last 6 Months)</h2>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={behaviorTrendData} barCategoryGap="30%">
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="month" stroke="#6b7280" tick={{ fontSize: 12 }} />
+              <YAxis stroke="#6b7280" tick={{ fontSize: 12 }} allowDecimals={false} />
+              <Tooltip
+                contentStyle={{ backgroundColor: 'rgba(255,255,255,0.95)', border: 'none', borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+              />
+              <Legend />
+              <defs>
+                <linearGradient id="adIncGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#EF4444" /><stop offset="100%" stopColor="#FCA5A5" />
+                </linearGradient>
+                <linearGradient id="adMerGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10B981" /><stop offset="100%" stopColor="#6EE7B7" />
+                </linearGradient>
+              </defs>
+              <Bar dataKey="incidents" fill="url(#adIncGrad)" name="Demerits" radius={[5, 5, 0, 0]} />
+              <Bar dataKey="merits" fill="url(#adMerGrad)" name="Merits" radius={[5, 5, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </motion.div>
+      )}
+
+      {/* Recent Activity Feed */}
+      {(recentIncidents.length > 0 || recentMerits.length > 0) && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.65 }}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+        >
+          {/* Recent Incidents */}
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+            <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-red-50 to-rose-50 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle className="text-red-500" size={20} />
+                <h3 className="font-bold text-gray-900">Recent Demerits</h3>
+              </div>
+              <button onClick={() => navigate('/admin/discipline-center')} className="text-xs text-red-500 hover:text-red-700 font-medium">View all →</button>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {recentIncidents.map((inc: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer flex items-center justify-between"
+                  onClick={() => navigate(`/admin/students/${inc.student_id}`)}
+                >
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-400 to-rose-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                      {inc.student_name?.charAt(0) || 'S'}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 text-sm truncate">{inc.student_name}</p>
+                      <p className="text-xs text-gray-500 truncate">{inc.incident_type_name || inc.incident_type}</p>
+                    </div>
+                  </div>
+                  <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 ${
+                    inc.severity === 'high' || inc.severity === 'critical'
+                      ? 'bg-red-100 text-red-700'
+                      : inc.severity === 'medium' ? 'bg-amber-100 text-amber-700'
+                      : 'bg-green-100 text-green-700'
+                  }`}>{inc.severity}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Merits */}
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+            <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Award className="text-green-500" size={20} />
+                <h3 className="font-bold text-gray-900">Recent Merits</h3>
+              </div>
+              <button onClick={() => navigate('/admin/discipline-center')} className="text-xs text-green-500 hover:text-green-700 font-medium">View all →</button>
+            </div>
+            <div className="divide-y divide-gray-100">
+              {recentMerits.map((m: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer flex items-center justify-between"
+                  onClick={() => navigate(`/admin/students/${m.student_id}`)}
+                >
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                      {m.student_name?.charAt(0) || 'S'}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 text-sm truncate">{m.student_name}</p>
+                      <p className="text-xs text-gray-500 truncate">{m.merit_type || m.merit_type_name || 'Merit'}</p>
+                    </div>
+                  </div>
+                  <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 flex-shrink-0">
+                    +{m.points || 1} pts
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Teacher Activity Modal */}
       <AnimatePresence>

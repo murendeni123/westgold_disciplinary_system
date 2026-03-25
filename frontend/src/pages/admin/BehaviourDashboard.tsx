@@ -118,16 +118,27 @@ const BehaviourDashboard: React.FC = () => {
       }, {});
       setTypeData(Object.entries(typeCounts).map(([name, value]) => ({ name, value })));
 
-      // Prepare trend data (by date)
-      const dateCounts = response.data.reduce((acc: any, inc: any) => {
-        const date = new Date(inc.incident_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        acc[date] = (acc[date] || 0) + 1;
-        return acc;
-      }, {});
-      const trendArray = Object.entries(dateCounts)
-        .map(([date, count]) => ({ date, count }))
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .slice(-14);
+      // Prepare trend data (by date) - must use {date, high, medium, low, total} to match the LineChart
+      const dateMap: Record<string, { date: string; _raw: number; high: number; medium: number; low: number; total: number }> = {};
+      response.data.forEach((inc: any) => {
+        const rawDate = inc.incident_date || inc.date || inc.created_at;
+        if (!rawDate) return;
+        const parsed = new Date(rawDate);
+        if (isNaN(parsed.getTime())) return;
+        const dateKey = parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        if (!dateMap[dateKey]) {
+          dateMap[dateKey] = { date: dateKey, _raw: parsed.getTime(), high: 0, medium: 0, low: 0, total: 0 };
+        }
+        dateMap[dateKey].total++;
+        const sev = (inc.severity || '').toLowerCase();
+        if (sev === 'high' || sev === 'critical') dateMap[dateKey].high++;
+        else if (sev === 'medium' || sev === 'moderate') dateMap[dateKey].medium++;
+        else dateMap[dateKey].low++;
+      });
+      const trendArray = Object.values(dateMap)
+        .sort((a, b) => a._raw - b._raw)
+        .slice(-14)
+        .map(({ _raw: _unused, ...rest }) => rest);
       setTrendData(trendArray);
     } catch (error) {
       console.error('Error fetching incidents:', error);

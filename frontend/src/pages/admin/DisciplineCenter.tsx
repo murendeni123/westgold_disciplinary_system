@@ -124,20 +124,52 @@ const DisciplineCenter: React.FC = () => {
   const [detailType, setDetailType] = useState<TabType>('behaviour');
 
   useEffect(() => {
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
     fetchData();
   }, [activeTab]);
+
+  const fetchStats = async () => {
+    try {
+      const [incRes, detRes, intRes, conRes, merRes] = await Promise.allSettled([
+        api.getIncidents(),
+        api.getDetentions(),
+        api.getInterventions(),
+        api.getConsequences(),
+        api.getMerits(),
+      ]);
+
+      const incData = incRes.status === 'fulfilled' ? (incRes.value.data || []) : [];
+      const detData = detRes.status === 'fulfilled' ? (detRes.value.data || []) : [];
+      const intData = intRes.status === 'fulfilled' ? (intRes.value.data || []) : [];
+      const conData = conRes.status === 'fulfilled' ? (conRes.value.data || []) : [];
+      const merData = merRes.status === 'fulfilled' ? (merRes.value.data || []) : [];
+
+      setStats({
+        totalIncidents: incData.length,
+        pendingDetentions: detData.filter((d: any) => d.status === 'pending' || d.status === 'scheduled').length,
+        activeInterventions: intData.filter((i: any) => i.status === 'active' || i.status === 'in_progress').length,
+        pendingConsequences: conData.filter((c: any) => !c.completed && c.status !== 'completed').length,
+        totalMerits: merData.length,
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
     try {
       switch (activeTab) {
-        case 'behaviour':
+        case 'behaviour': {
           const incidentsRes = await api.getIncidents();
           setIncidents(incidentsRes.data || []);
           break;
-        case 'detentions':
+        }
+        case 'detentions': {
           const detentionsRes = await api.getDetentions();
-          // Transform detention sessions to include student assignments
           const sessionsWithAssignments: Detention[] = [];
           for (const session of (detentionsRes.data || [])) {
             try {
@@ -156,44 +188,30 @@ const DisciplineCenter: React.FC = () => {
                 });
               });
             } catch (err) {
-              // If session has no assignments, show the session itself
               if (session.student_count > 0) continue;
             }
           }
           setDetentions(sessionsWithAssignments);
           break;
-        case 'interventions':
+        }
+        case 'interventions': {
           const interventionsRes = await api.getInterventions();
           setInterventions(interventionsRes.data || []);
           break;
-        case 'consequences':
+        }
+        case 'consequences': {
           const consequencesRes = await api.getConsequences();
           setConsequences(consequencesRes.data || []);
           break;
-        case 'merits':
+        }
+        case 'merits': {
           const meritsRes = await api.getMerits();
           setMerits(meritsRes.data || []);
           break;
+        }
       }
-      
-      // Fetch stats
-      const [incRes, detRes, intRes, conRes, merRes] = await Promise.all([
-        api.getIncidents(),
-        api.getDetentions(),
-        api.getInterventions(),
-        api.getConsequences(),
-        api.getMerits(),
-      ]);
-      
-      setStats({
-        totalIncidents: incRes.data?.length || 0,
-        pendingDetentions: detRes.data?.filter((d: any) => d.status === 'pending' || d.status === 'scheduled').length || 0,
-        activeInterventions: intRes.data?.filter((i: any) => i.status === 'active' || i.status === 'in_progress').length || 0,
-        pendingConsequences: conRes.data?.filter((c: any) => !c.completed && c.status !== 'completed').length || 0,
-        totalMerits: merRes.data?.length || 0,
-      });
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching tab data:', error);
     } finally {
       setLoading(false);
     }
@@ -206,7 +224,8 @@ const DisciplineCenter: React.FC = () => {
     try {
       await api.approveIncident(incidentId);
       alert('Incident approved successfully');
-      fetchData(); // Refresh data
+      fetchData();
+      fetchStats();
     } catch (error) {
       console.error('Error approving incident:', error);
       alert('Failed to approve incident');
@@ -231,7 +250,8 @@ const DisciplineCenter: React.FC = () => {
       setShowDeclineModal(false);
       setSelectedIncidentId(null);
       setDeclineReason('');
-      fetchData(); // Refresh data
+      fetchData();
+      fetchStats();
     } catch (error) {
       console.error('Error declining incident:', error);
       alert('Failed to decline incident');

@@ -153,12 +153,12 @@ router.get('/', authenticateToken, requireRole('admin'), async (req, res) => {
         }
 
         // Get parents who have children in this school's schema with detailed info
+        // Note: emergency_contact_2 columns may not exist in all school schemas
         const parents = await schemaAll(req, `
             SELECT DISTINCT u.id, u.email, u.name, u.role, u.created_at,
                    p.phone, p.work_phone, p.preferred_contact_method,
                    p.relationship_to_child,
                    p.emergency_contact_1_name, p.emergency_contact_1_phone,
-                   p.emergency_contact_2_name, p.emergency_contact_2_phone,
                    p.home_address, p.city, p.postal_code,
                    (SELECT COUNT(*) FROM students WHERE parent_id = u.id) as children_count
             FROM public.users u

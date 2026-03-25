@@ -161,10 +161,18 @@ const createNotification = async (req, userId, type, title, message, relatedId =
 // Helper function to get all school admins
 const getSchoolAdmins = async (schoolId) => {
   try {
+    if (!schoolId) {
+      console.warn('⚠️ getSchoolAdmins called with no schoolId');
+      return [];
+    }
+    // Check both primary_school_id (main column) and user_schools linking table
     const admins = await dbAll(
-      'SELECT id FROM public.users WHERE role = $1 AND school_id = $2',
+      `SELECT DISTINCT u.id FROM public.users u
+       LEFT JOIN public.user_schools us ON u.id = us.user_id AND us.school_id = $2
+       WHERE u.role = $1 AND (u.primary_school_id = $2 OR us.school_id = $2)`,
       ['admin', schoolId]
     );
+    console.log(`📢 Found ${admins.length} admin(s) for school ${schoolId}`);
     return admins || [];
   } catch (error) {
     console.error('Error getting school admins:', error);

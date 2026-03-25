@@ -443,16 +443,19 @@ router.post('/', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'Incident type is required' });
         }
 
+        // Auto-approve low/medium severity; only high severity needs admin approval
+        const incidentStatus = (severity === 'high' || severity === 'critical') ? 'pending' : 'approved';
+        
         console.log('Inserting incident into database...');
         console.log('Insert params:', [student_id, teacherId, incident_date, incident_time || null, incident_type_id || null, 
-             incidentTypeName, String(description).trim(), severity || 'minor', points || 0]);
+             incidentTypeName, String(description).trim(), severity || 'minor', points || 0, incidentStatus]);
         
         const result = await schemaRun(req,
             `INSERT INTO behaviour_incidents 
-             (student_id, teacher_id, date, time, incident_type_id, incident_type, description, severity, points_deducted)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+             (student_id, teacher_id, date, time, incident_type_id, incident_type, description, severity, points_deducted, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
             [student_id, teacherId, incident_date, incident_time || null, incident_type_id || null, 
-             incidentTypeName, String(description).trim(), severity || 'minor', points || 0]
+             incidentTypeName, String(description).trim(), severity || 'minor', points || 0, incidentStatus]
         );
         console.log('Incident inserted, ID:', result.id);
 

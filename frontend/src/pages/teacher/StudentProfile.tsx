@@ -4,8 +4,10 @@ import { api } from '../../services/api';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
 import ParentProfileModal from '../../components/ParentProfileModal';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Camera, Upload, User, TrendingUp, Copy, RefreshCw } from 'lucide-react';
+import StudentDetailedHistory from '../../components/StudentDetailedHistory';
+import StudentAnalytics from '../../components/StudentAnalytics';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Camera, Upload, User, TrendingUp, Copy, RefreshCw, Clock, FileText, Shield, ChevronDown, ChevronUp, Search, Gavel } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useToast } from '../../hooks/useToast';
 import { getPhotoUrl, handlePhotoError } from '../../utils/photoUrl';
@@ -25,11 +27,22 @@ const StudentProfile: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Detailed history state ─────────────────────────────────────────────────
+  const [incidents, setIncidents] = useState<any[]>([]);
+  const [merits, setMerits] = useState<any[]>([]);
+  const [consequences, setConsequences] = useState<any[]>([]);
+  const [detentions, setDetentions] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<string | null>('incidents');
+  const [incidentSearch, setIncidentSearch] = useState('');
+  const [meritSearch, setMeritSearch] = useState('');
+
   useEffect(() => {
     if (id) {
       fetchStudent();
       fetchStats();
       fetchTimeline();
+      fetchDetailedHistory();
     }
   }, [id]);
 
@@ -133,6 +146,32 @@ const StudentProfile: React.FC = () => {
     } finally {
       setTimelineLoading(false);
     }
+  };
+
+  // ── Fetch detailed history (incidents, merits, consequences, detentions) ────
+  const fetchDetailedHistory = async () => {
+    if (!id) return;
+    setHistoryLoading(true);
+    try {
+      const [incRes, merRes, conRes, detRes] = await Promise.allSettled([
+        api.getIncidents({ student_id: id }),
+        api.getMerits({ student_id: id }),
+        api.getStudentConsequences(Number(id)),
+        api.getStudentDetentionHistory(Number(id)),
+      ]);
+      if (incRes.status === 'fulfilled') setIncidents(incRes.value.data || []);
+      if (merRes.status === 'fulfilled') setMerits(merRes.value.data || []);
+      if (conRes.status === 'fulfilled') setConsequences(conRes.value.data || []);
+      if (detRes.status === 'fulfilled') setDetentions(detRes.value.data || []);
+    } catch (err) {
+      console.error('Error fetching detailed history:', err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const toggleSection = (section: string) => {
+    setExpandedSection(prev => prev === section ? null : section);
   };
 
   const handlePhotoUpload = async (file: File) => {
@@ -555,6 +594,28 @@ const StudentProfile: React.FC = () => {
           </div>
         </Card>
       </div>
+
+      {/* Analytics Overview */}
+      <StudentAnalytics
+        incidents={incidents}
+        merits={merits}
+        loading={historyLoading}
+      />
+
+      {/* Detailed History Sections */}
+      <StudentDetailedHistory
+        incidents={incidents}
+        merits={merits}
+        consequences={consequences}
+        detentions={detentions}
+        historyLoading={historyLoading}
+        expandedSection={expandedSection}
+        incidentSearch={incidentSearch}
+        meritSearch={meritSearch}
+        onToggleSection={toggleSection}
+        onIncidentSearchChange={setIncidentSearch}
+        onMeritSearchChange={setMeritSearch}
+      />
 
       <ParentProfileModal
         isOpen={isParentModalOpen}
