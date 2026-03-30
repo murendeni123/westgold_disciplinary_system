@@ -16,6 +16,10 @@ interface User {
   children?: any[];
   supabase_user_id?: string;
   auth_provider?: string;
+  isGradeHead?: boolean;
+  gradeHeadFor?: string;
+  hasClass?: boolean;
+  permissions?: string[];
 }
 
 interface AuthContextType {

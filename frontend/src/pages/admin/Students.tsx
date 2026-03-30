@@ -10,9 +10,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Edit, Trash2, Copy, Users, Search, Filter, UserCircle2, GraduationCap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
+import { usePortalPrefix } from '../../hooks/usePortalPrefix';
 
 const Students: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
+  const portal = usePortalPrefix();
   const [students, setStudents] = useState<any[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
@@ -378,7 +380,7 @@ const Students: React.FC = () => {
                 <Table
                   columns={columns}
                   data={filteredStudents}
-                  onRowClick={(row) => navigate(`/admin/students/${row.id}`)}
+                  onRowClick={(row) => navigate(`${portal}/students/${row.id}`)}
                 />
               </motion.div>
             ) : (

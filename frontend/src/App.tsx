@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { DarkModeProvider } from './contexts/DarkModeContext';
 import { useEffect } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -12,6 +13,7 @@ import ParentSignup from './pages/ParentSignup';
 import AuthCallback from './pages/AuthCallback';
 import AdminLayout from './layouts/AdminLayout';
 import TeacherLayout from './layouts/TeacherLayout';
+import GradeHeadLayout from './layouts/GradeHeadLayout';
 import ModernParentLayout from './layouts/ModernParentLayout';
 import PlatformLayout from './layouts/PlatformLayout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -111,6 +113,7 @@ function NavigationSetup() {
 
 function App() {
   return (
+    <DarkModeProvider>
     <Router>
       <AuthProvider>
         <SchoolThemeProvider>
@@ -171,6 +174,28 @@ function App() {
             <Route path="reports" element={<TeacherReports />} />
           </Route>
 
+          <Route path="/grade-head" element={<ProtectedRoute allowedRoles={['teacher', 'admin']}><GradeHeadLayout /></ProtectedRoute>}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="students" element={<Students />} />
+            <Route path="students/:id" element={<StudentProfile />} />
+            <Route path="classes" element={<Classes />} />
+            <Route path="classes/:id" element={<ClassDetail />} />
+            <Route path="behaviour" element={<BehaviourDashboard />} />
+            <Route path="behaviour-dashboard" element={<BehaviourDashboard />} />
+            <Route path="behaviour/log" element={<LogIncident />} />
+            <Route path="merits/award" element={<AwardMerit />} />
+            <Route path="discipline" element={<DisciplineCenter />} />
+            <Route path="discipline-rules" element={<DisciplineRules />} />
+            <Route path="detention-sessions" element={<DetentionSessions />} />
+            <Route path="consequences" element={<AdminConsequences />} />
+            <Route path="consequence-management" element={<ConsequenceManagement />} />
+            <Route path="merits" element={<MeritsDemerits />} />
+            <Route path="reports" element={<ReportsAnalytics />} />
+            <Route path="bulk-import" element={<BulkImport />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="notifications" element={<AdminNotifications />} />
+          </Route>
+
           <Route path="/parent" element={<ProtectedRoute allowedRoles={['parent']}><OnboardingGuard><ModernParentLayout /></OnboardingGuard></ProtectedRoute>}>
             <Route index element={<ModernParentDashboard />} />
             <Route path="onboarding" element={<ParentOnboarding />} />
@@ -219,6 +244,7 @@ function App() {
         </SchoolThemeProvider>
       </AuthProvider>
     </Router>
+    </DarkModeProvider>
   );
 }
 

@@ -104,8 +104,16 @@ router.get('/', authenticateToken, async (req, res) => {
     const params = [];
     let paramIndex = 1;
 
-    // If user is a teacher, only show their assigned detentions
-    if (req.user.role === 'teacher') {
+    // Grade head: see all detention sessions that have students from their grade
+    if (req.user.isGradeHead && req.user.gradeHeadFor) {
+      query += ` AND d.id IN (
+        SELECT DISTINCT da.detention_id FROM detention_assignments da
+        INNER JOIN students s ON da.student_id = s.id
+        LEFT JOIN classes c ON s.class_id = c.id
+        WHERE c.grade_level = $${paramIndex++}
+      )`;
+      params.push(req.user.gradeHeadFor);
+    } else if (req.user.role === 'teacher') {
       const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
       if (teacher) {
         query += ` AND d.teacher_on_duty_id = $${paramIndex++}`;

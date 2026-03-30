@@ -1,4 +1,36 @@
 const nodemailer = require('nodemailer');
+const { Pool } = require('pg');
+
+const prefPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL?.includes('supabase') || process.env.DATABASE_URL?.includes('amazonaws.com')
+        ? { rejectUnauthorized: false }
+        : false
+});
+
+/**
+ * Check whether a recipient (by email) has enabled a specific email preference.
+ * @param {string} recipientEmail
+ * @param {string} prefKey - column name in user_preferences (e.g. 'email_on_behaviour')
+ * @returns {Promise<boolean>} true = send email, false = skip
+ */
+const checkEmailPreference = async (recipientEmail, prefKey) => {
+    try {
+        const result = await prefPool.query(
+            `SELECT up.email_notifications_enabled, up.${prefKey}
+             FROM public.user_preferences up
+             INNER JOIN public.users u ON up.user_id = u.id
+             WHERE u.email = $1`,
+            [recipientEmail]
+        );
+        if (result.rows.length === 0) return false; // no record = default off
+        const row = result.rows[0];
+        return row.email_notifications_enabled === true && row[prefKey] === true;
+    } catch (err) {
+        console.warn('⚠️  Could not check email preferences for', recipientEmail, ':', err.message);
+        return false;
+    }
+};
 
 // Create reusable transporter using Brevo SMTP
 const transporter = nodemailer.createTransport({
@@ -78,6 +110,11 @@ const sendEmail = async ({ to, subject, text, html, from }) => {
  * Send notification email for behaviour incident
  */
 const sendIncidentNotificationEmail = async (recipientEmail, recipientName, studentName, incidentType, severity, description, date) => {
+  const allowed = await checkEmailPreference(recipientEmail, 'email_on_behaviour');
+  if (!allowed) {
+    console.log(`📵 Incident email skipped for ${recipientEmail} (email_on_behaviour=false)`);
+    return null;
+  }
   const subject = `Behaviour Incident Alert - ${studentName}`;
   
   const html = `
@@ -152,6 +189,11 @@ This is an automated notification from Greenstem DMS.
  * Send detention notification email
  */
 const sendDetentionNotificationEmail = async (recipientEmail, recipientName, studentName, detentionDate, detentionTime, duration, location, reason) => {
+  const allowed = await checkEmailPreference(recipientEmail, 'email_on_detention');
+  if (!allowed) {
+    console.log(`📵 Detention email skipped for ${recipientEmail} (email_on_detention=false)`);
+    return null;
+  }
   const subject = `Detention Scheduled - ${studentName}`;
   
   const html = `
@@ -225,6 +267,11 @@ This is an automated notification from Greenstem DMS.
  * Send merit award notification email
  */
 const sendMeritNotificationEmail = async (recipientEmail, recipientName, studentName, meritType, points, description, date) => {
+  const allowed = await checkEmailPreference(recipientEmail, 'email_on_merits');
+  if (!allowed) {
+    console.log(`📵 Merit email skipped for ${recipientEmail} (email_on_merits=false)`);
+    return null;
+  }
   const subject = `Merit Awarded - ${studentName}`;
   
   const html = `
@@ -363,6 +410,11 @@ This is an automated notification from Greenstem DMS.
  * Send generic notification email
  */
 const sendGenericNotificationEmail = async (recipientEmail, recipientName, title, message, actionUrl) => {
+  const allowed = await checkEmailPreference(recipientEmail, 'email_notifications_enabled');
+  if (!allowed) {
+    console.log(`📵 Generic email skipped for ${recipientEmail} (email_notifications_enabled=false)`);
+    return null;
+  }
   const subject = title;
   
   const html = `

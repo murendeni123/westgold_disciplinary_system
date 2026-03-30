@@ -45,6 +45,11 @@ const repairSchema = async (schemaName) => {
     try {
         await client.query(`SET search_path TO ${schemaName}, public`);
         
+        // Add Grade Head columns to teachers table
+        await client.query(`ALTER TABLE teachers ADD COLUMN IF NOT EXISTS is_grade_head BOOLEAN DEFAULT FALSE;`);
+        await client.query(`ALTER TABLE teachers ADD COLUMN IF NOT EXISTS grade_head_for VARCHAR(10);`);
+        await client.query(`ALTER TABLE teachers ADD COLUMN IF NOT EXISTS has_class BOOLEAN DEFAULT TRUE;`);
+
         // Add missing columns to behaviour_incidents
         await client.query(`ALTER TABLE behaviour_incidents ADD COLUMN IF NOT EXISTS incident_time TIME;`);
         await client.query(`ALTER TABLE behaviour_incidents ADD COLUMN IF NOT EXISTS time TIME;`);

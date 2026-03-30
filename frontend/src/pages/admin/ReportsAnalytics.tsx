@@ -97,13 +97,28 @@ const ReportsAnalytics: React.FC = () => {
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [allClasses, setAllClasses] = useState<any[]>([]);
 
-  // ── Derived: unique grades from classes ────────────────────────────────────
+  // ── Derived: class_id → grade_level lookup map ────────────────────────────
+  const classGradeMap = useMemo(() => {
+    const m = new Map<number, string>();
+    allClasses.forEach((c: any) => { if (c.grade_level != null) m.set(c.id, String(c.grade_level)); });
+    return m;
+  }, [allClasses]);
+
+  // ── Derived: unique grades from classes + students ──────────────────────────
   const grades = useMemo(() => {
     const g = new Set<string>();
-    allClasses.forEach((c: any) => { if (c.grade_level) g.add(String(c.grade_level)); });
-    allStudents.forEach((s: any) => { if (s.grade_level) g.add(String(s.grade_level)); });
-    return Array.from(g).sort();
-  }, [allClasses, allStudents]);
+    allClasses.forEach((c: any) => { if (c.grade_level != null && c.grade_level !== '') g.add(String(c.grade_level)); });
+    allStudents.forEach((s: any) => {
+      // Prefer class grade_level over student's own (more reliable)
+      const gradeFromClass = s.class_id ? classGradeMap.get(s.class_id) : undefined;
+      const grade = gradeFromClass ?? (s.grade_level != null && s.grade_level !== '' ? String(s.grade_level) : null);
+      if (grade) g.add(grade);
+    });
+    return Array.from(g).sort((a, b) => {
+      const na = Number(a), nb = Number(b);
+      return !isNaN(na) && !isNaN(nb) ? na - nb : a.localeCompare(b);
+    });
+  }, [allClasses, allStudents, classGradeMap]);
 
   // ── Derived: classes filtered by selected grade ───────────────────────────
   const filteredClasses = useMemo(() => {
@@ -115,15 +130,20 @@ const ReportsAnalytics: React.FC = () => {
   const scopedStudents = useMemo(() => {
     let list = allStudents;
     if (reportScope === 'grade' && selectedGrade) {
-      const classIds = new Set(filteredClasses.map((c: any) => c.id));
-      list = list.filter((s: any) => classIds.has(s.class_id) || String(s.grade_level) === selectedGrade);
+      list = list.filter((s: any) => {
+        // 1. Match by the student's class grade_level (most reliable)
+        if (s.class_id && classGradeMap.get(s.class_id) === selectedGrade) return true;
+        // 2. Fallback: match by student's own grade_level field
+        if (s.grade_level != null && String(s.grade_level) === selectedGrade) return true;
+        return false;
+      });
     } else if (reportScope === 'class' && selectedClassId) {
       list = list.filter((s: any) => String(s.class_id) === selectedClassId);
     } else if (reportScope === 'student' && selectedStudentId) {
       list = list.filter((s: any) => String(s.id) === selectedStudentId);
     }
     return list;
-  }, [allStudents, reportScope, selectedGrade, selectedClassId, selectedStudentId, filteredClasses]);
+  }, [allStudents, reportScope, selectedGrade, selectedClassId, selectedStudentId, classGradeMap]);
 
   const studentSearchResults = useMemo(() => {
     if (!studentSearchTerm.trim()) return allStudents.slice(0, 20);

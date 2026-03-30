@@ -191,7 +191,7 @@ axiosInstance.interceptors.response.use(
 
 export const api = {
   // Students
-  getStudents: (params?: any) => axiosInstance.get('/students', { params }),
+  getStudents: (params?: { search?: string; q?: string; class_id?: number; bypass_grade_filter?: boolean; [key: string]: any }) => axiosInstance.get('/students', { params }),
   getStudent: (id: number) => axiosInstance.get(`/students/${id}`),
   createStudent: (data: any) => axiosInstance.post('/students', data),
   updateStudent: (id: number, data: any) => axiosInstance.put(`/students/${id}`, data),
@@ -727,6 +727,26 @@ export const api = {
   getThemeChanges: (schoolId: number, page?: number, pageSize?: number) => axiosInstance.get(`/theme-builder/${schoolId}/changes`, {
     params: { page, pageSize },
   }),
+
+  // Grade Heads
+  assignGradeHead: (data: { teacherId: number; roleType: 'both' | 'gradehead'; grade: string }) =>
+    axiosInstance.post('/grade-heads/assign', data),
+  removeGradeHead: (teacherId: number) =>
+    axiosInstance.post('/grade-heads/remove', { teacherId }),
+  getGradeHeads: () => axiosInstance.get('/grade-heads'),
+  checkGradeHeadForGrade: (grade: string) => axiosInstance.get(`/grade-heads/check-grade/${grade}`),
+
+  // User Preferences
+  getPreferences: () => axiosInstance.get('/preferences'),
+  updatePreferences: (data: {
+    email_notifications_enabled?: boolean;
+    email_on_behaviour?: boolean;
+    email_on_merits?: boolean;
+    email_on_detention?: boolean;
+    email_on_absence?: boolean;
+    dark_mode?: boolean;
+    compact_view?: boolean;
+  }) => axiosInstance.put('/preferences', data),
 };
 
 // Export the axios instance for direct use when needed

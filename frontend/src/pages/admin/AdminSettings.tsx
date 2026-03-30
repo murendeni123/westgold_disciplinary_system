@@ -5,7 +5,8 @@ import Input from '../../components/Input';
 import Button from '../../components/Button';
 import PasswordChangeForm from '../../components/PasswordChangeForm';
 import { motion } from 'framer-motion';
-import { Save, Lock, User, Settings, Sparkles, Building2, Copy, Check } from 'lucide-react';
+import { Save, Lock, User, Settings, Building2, Copy, Check, Bell } from 'lucide-react';
+import UserPreferencesPanel from '../../components/UserPreferencesPanel';
 import { useToast } from '../../hooks/useToast';
 
 const AdminSettings: React.FC = () => {
@@ -111,7 +112,7 @@ const AdminSettings: React.FC = () => {
               { id: 'profile', label: 'Profile', icon: User },
               { id: 'password', label: 'Password', icon: Lock },
               { id: 'school', label: 'School Info', icon: Building2 },
-              { id: 'preferences', label: 'Preferences', icon: Settings },
+              { id: 'preferences', label: 'Preferences', icon: Bell },
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -287,18 +288,9 @@ const AdminSettings: React.FC = () => {
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Preferences</h2>
-              <Settings className="text-amber-600" size={24} />
+              <Bell className="text-amber-600" size={24} />
             </div>
-            <div className="space-y-6">
-              <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
-                <p className="text-sm font-medium text-gray-700 mb-2">Notification Preferences</p>
-                <p className="text-gray-500">Notification settings coming soon...</p>
-              </div>
-              <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
-                <p className="text-sm font-medium text-gray-700 mb-2">Display Preferences</p>
-                <p className="text-gray-500">Display settings coming soon...</p>
-              </div>
-            </div>
+            <UserPreferencesPanel onSaved={() => success('Preferences saved!')} />
           </motion.div>
         )}
       </motion.div>

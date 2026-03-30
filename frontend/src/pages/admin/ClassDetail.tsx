@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { usePortalPrefix } from '../../hooks/usePortalPrefix';
 import { api } from '../../services/api';
 import { motion } from 'framer-motion';
 import { 
@@ -52,6 +53,7 @@ interface ClassStats {
 const ClassDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const portal = usePortalPrefix();
   const { success, error, ToastContainer } = useToast();
 
   const [classData, setClassData] = useState<ClassData | null>(null);
@@ -208,7 +210,7 @@ const ClassDetail: React.FC = () => {
     try {
       await api.updateClass(Number(id), { is_archived: true });
       success('Class archived successfully');
-      navigate('/admin/classes');
+      navigate(`${portal}/classes`);
     } catch (err) {
       console.error('Error archiving class:', err);
       error('Failed to archive class');
@@ -441,7 +443,7 @@ const ClassDetail: React.FC = () => {
                 <motion.div
                   key={student.id}
                   whileHover={{ scale: 1.02 }}
-                  onClick={() => navigate(`/admin/students/${student.id}`)}
+                  onClick={() => navigate(`${portal}/students/${student.id}`)}
                   className="p-4 border border-gray-200 rounded-xl hover:shadow-md transition-all cursor-pointer"
                 >
                   <div className="flex items-center justify-between">

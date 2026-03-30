@@ -12,6 +12,9 @@ router.get('/critical-alerts', authenticateToken, async (req, res) => {
             return res.status(403).json({ error: 'School context required' });
         }
 
+        const ghGrade = (req.user.isGradeHead && req.user.gradeHeadFor) ? req.user.gradeHeadFor : null;
+        const ghGradeClause = ghGrade ? `AND c.grade_level = '${ghGrade}'` : '';
+
         // Students exceeding discipline thresholds (e.g., 50+ demerit points)
         const thresholdStudents = await schemaAll(req, `
             SELECT s.id, s.student_id, s.first_name || ' ' || s.last_name as name,
@@ -21,7 +24,7 @@ router.get('/critical-alerts', authenticateToken, async (req, res) => {
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id
-            WHERE s.is_active = true
+            WHERE s.is_active = true ${ghGradeClause}
             GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
             HAVING COALESCE(SUM(bi.points_deducted), 0) >= 50
             ORDER BY total_demerits DESC
@@ -54,9 +57,10 @@ router.get('/critical-alerts', authenticateToken, async (req, res) => {
                    u.name as teacher_name
             FROM behaviour_incidents bi
             INNER JOIN students s ON bi.student_id = s.id
+            LEFT JOIN classes c ON s.class_id = c.id
             INNER JOIN teachers t ON bi.teacher_id = t.id
             LEFT JOIN public.users u ON t.user_id = u.id
-            WHERE bi.follow_up_required = true
+            WHERE bi.follow_up_required = true ${ghGradeClause}
             ORDER BY bi.created_at DESC
             LIMIT 5
         `);
@@ -70,7 +74,7 @@ router.get('/critical-alerts', authenticateToken, async (req, res) => {
             INNER JOIN students s ON da.student_id = s.id
             LEFT JOIN classes c ON s.class_id = c.id
             WHERE da.scheduled_date = $1
-            AND da.status = 'pending'
+            AND da.status = 'pending' ${ghGradeClause}
             ORDER BY da.scheduled_time
         `, [today]);
 
@@ -100,6 +104,9 @@ router.get('/at-risk-students', authenticateToken, async (req, res) => {
             return res.status(403).json({ error: 'School context required' });
         }
 
+        const gradeFilter = (req.user.isGradeHead && req.user.gradeHeadFor) ? req.user.gradeHeadFor : null;
+        const gradeClause = gradeFilter ? `AND c.grade_level = '${gradeFilter}'` : '';
+
         // Students with repeated absences (3+ in last 30 days)
         const repeatedAbsences = await schemaAll(req, `
             SELECT s.id, s.student_id, s.first_name || ' ' || s.last_name as name,
@@ -109,9 +116,10 @@ router.get('/at-risk-students', authenticateToken, async (req, res) => {
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             INNER JOIN attendance a ON s.id = a.student_id
-            WHERE s.is_active = 1
+            WHERE s.is_active = true
             AND a.status = 'absent'
             AND a.date >= CURRENT_DATE - INTERVAL '30 days'
+            ${gradeClause}
             GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
             HAVING COUNT(a.id) >= 3
             ORDER BY absence_count DESC
@@ -128,8 +136,9 @@ router.get('/at-risk-students', authenticateToken, async (req, res) => {
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             INNER JOIN behaviour_incidents bi ON s.id = bi.student_id
-            WHERE s.is_active = 1
+            WHERE s.is_active = true
             AND bi.created_at >= CURRENT_DATE - INTERVAL '30 days'
+            ${gradeClause}
             GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
             HAVING COUNT(bi.id) >= 3
             ORDER BY incident_count DESC, total_points DESC
@@ -305,7 +314,98 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
 
         let stats = {};
 
-        if (role === 'admin') {
+        const isGradeHead = req.user.isGradeHead && req.user.gradeHeadFor;
+
+        if (isGradeHead) {
+            const grade = req.user.gradeHeadFor;
+
+            const totalStudents = await schemaGet(req, `
+                SELECT COUNT(*) as count FROM students s
+                LEFT JOIN classes c ON s.class_id = c.id
+                WHERE s.is_active = true AND c.grade_level = $1
+            `, [grade]);
+
+            const totalIncidents = await schemaGet(req, `
+                SELECT COUNT(*) as count FROM behaviour_incidents bi
+                INNER JOIN students s ON bi.student_id = s.id
+                LEFT JOIN classes c ON s.class_id = c.id
+                WHERE c.grade_level = $1
+            `, [grade]);
+
+            const totalMerits = await schemaGet(req, `
+                SELECT COUNT(*) as count FROM merits m
+                INNER JOIN students s ON m.student_id = s.id
+                LEFT JOIN classes c ON s.class_id = c.id
+                WHERE c.grade_level = $1
+            `, [grade]);
+
+            const pendingApprovals = await schemaGet(req, `
+                SELECT COUNT(*) as count FROM behaviour_incidents bi
+                INNER JOIN students s ON bi.student_id = s.id
+                LEFT JOIN classes c ON s.class_id = c.id
+                WHERE bi.follow_up_required = true AND c.grade_level = $1
+            `, [grade]);
+
+            const scheduledDetentions = await schemaGet(req, `
+                SELECT COUNT(*) as count FROM detention_assignments da
+                INNER JOIN students s ON da.student_id = s.id
+                LEFT JOIN classes c ON s.class_id = c.id
+                WHERE da.status = 'pending' AND c.grade_level = $1
+            `, [grade]);
+
+            const todayAttendance = await schemaGet(req, `
+                SELECT
+                    COUNT(*) as total,
+                    SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as present,
+                    SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as absent,
+                    SUM(CASE WHEN a.status = 'late' THEN 1 ELSE 0 END) as late
+                FROM attendance a
+                INNER JOIN students s ON a.student_id = s.id
+                LEFT JOIN classes c ON s.class_id = c.id
+                WHERE a.date = CURRENT_DATE AND c.grade_level = $1
+            `, [grade]);
+
+            const worstStudents = await schemaAll(req, `
+                SELECT s.id, s.student_id, s.first_name || ' ' || s.last_name as name,
+                       c.class_name,
+                       COALESCE(SUM(bi.points_deducted), 0) as demerit_points,
+                       COUNT(bi.id) as incident_count
+                FROM students s
+                LEFT JOIN classes c ON s.class_id = c.id
+                LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id
+                WHERE s.is_active = true AND c.grade_level = $1
+                GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
+                ORDER BY demerit_points DESC, incident_count DESC
+                LIMIT 10
+            `, [grade]);
+
+            const worstClasses = await schemaAll(req, `
+                SELECT c.id, c.class_name,
+                       COALESCE(SUM(bi.points_deducted), 0) as total_demerit_points,
+                       COUNT(DISTINCT bi.student_id) as students_with_incidents
+                FROM classes c
+                LEFT JOIN students s ON c.id = s.class_id
+                LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id
+                WHERE c.is_active = true AND c.grade_level = $1
+                GROUP BY c.id, c.class_name
+                ORDER BY total_demerit_points DESC
+                LIMIT 10
+            `, [grade]);
+
+            stats = {
+                totalStudents: parseInt(totalStudents?.count) || 0,
+                totalIncidents: parseInt(totalIncidents?.count) || 0,
+                totalMerits: parseInt(totalMerits?.count) || 0,
+                pendingApprovals: parseInt(pendingApprovals?.count) || 0,
+                scheduledDetentions: parseInt(scheduledDetentions?.count) || 0,
+                todayAttendance: todayAttendance || { total: 0, present: 0, absent: 0, late: 0 },
+                worstStudents,
+                worstClasses,
+                topTeachers: [],
+                isGradeHead: true,
+                gradeHeadFor: grade
+            };
+        } else if (role === 'admin') {
             const totalStudents = await schemaGet(req, 'SELECT COUNT(*) as count FROM students WHERE is_active = true');
             const totalIncidents = await schemaGet(req, 'SELECT COUNT(*) as count FROM behaviour_incidents');
             const totalMerits = await schemaGet(req, 'SELECT COUNT(*) as count FROM merits');
@@ -374,7 +474,6 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 topTeachers
             };
         } else if (role === 'teacher') {
-            // Get teacher ID
             const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
             const teacherId = teacher?.id;
 

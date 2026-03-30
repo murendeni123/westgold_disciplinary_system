@@ -9,6 +9,7 @@ import {
   Copy, Check, Key
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { usePortalPrefix } from '../../hooks/usePortalPrefix';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 interface CriticalAlerts {
@@ -37,6 +38,7 @@ interface AtRiskStudents {
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const portal = usePortalPrefix();
   const [stats, setStats] = useState<any>(null);
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [criticalAlerts, setCriticalAlerts] = useState<CriticalAlerts | null>(null);
@@ -459,7 +461,7 @@ const AdminDashboard: React.FC = () => {
                   <div 
                     key={idx} 
                     className="p-4 hover:bg-red-50 transition-colors cursor-pointer flex items-center justify-between"
-                    onClick={() => navigate(`/admin/students/${student.id}`)}
+                    onClick={() => navigate(`${portal}/students/${student.id}`)}
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
@@ -518,7 +520,7 @@ const AdminDashboard: React.FC = () => {
                   <div 
                     key={`abs-${idx}`} 
                     className="p-4 hover:bg-amber-50 transition-colors cursor-pointer flex items-center justify-between"
-                    onClick={() => navigate(`/admin/students/${student.id}`)}
+                    onClick={() => navigate(`${portal}/students/${student.id}`)}
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
@@ -538,7 +540,7 @@ const AdminDashboard: React.FC = () => {
                   <div 
                     key={`dem-${idx}`} 
                     className="p-4 hover:bg-orange-50 transition-colors cursor-pointer flex items-center justify-between"
-                    onClick={() => navigate(`/admin/students/${student.id}`)}
+                    onClick={() => navigate(`${portal}/students/${student.id}`)}
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
@@ -725,7 +727,7 @@ const AdminDashboard: React.FC = () => {
                   <div 
                     key={idx} 
                     className="p-3 hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => navigate('/admin/behaviour')}
+                    onClick={() => navigate(`${portal}/behaviour`)}
                   >
                     <p className="font-medium text-gray-900 text-sm truncate">{incident.student_name}</p>
                     <p className="text-xs text-gray-500 truncate">{incident.description}</p>
@@ -735,7 +737,7 @@ const AdminDashboard: React.FC = () => {
               </div>
               <div className="p-3 border-t border-gray-100">
                 <button 
-                  onClick={() => navigate('/admin/behaviour')}
+                  onClick={() => navigate(`${portal}/behaviour`)}
                   className="w-full py-2 text-sm font-medium text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors"
                 >
                   View All Pending →
@@ -874,14 +876,14 @@ const AdminDashboard: React.FC = () => {
                 <AlertTriangle className="text-red-500" size={20} />
                 <h3 className="font-bold text-gray-900">Recent Demerits</h3>
               </div>
-              <button onClick={() => navigate('/admin/discipline-center')} className="text-xs text-red-500 hover:text-red-700 font-medium">View all →</button>
+              <button onClick={() => navigate(`${portal}/discipline`)} className="text-xs text-red-500 hover:text-red-700 font-medium">View all →</button>
             </div>
             <div className="divide-y divide-gray-100">
               {recentIncidents.map((inc: any, idx: number) => (
                 <div
                   key={idx}
                   className="px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer flex items-center justify-between"
-                  onClick={() => navigate(`/admin/students/${inc.student_id}`)}
+                  onClick={() => navigate(`${portal}/students/${inc.student_id}`)}
                 >
                   <div className="flex items-center space-x-3 min-w-0">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-400 to-rose-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
@@ -910,14 +912,14 @@ const AdminDashboard: React.FC = () => {
                 <Award className="text-green-500" size={20} />
                 <h3 className="font-bold text-gray-900">Recent Merits</h3>
               </div>
-              <button onClick={() => navigate('/admin/discipline-center')} className="text-xs text-green-500 hover:text-green-700 font-medium">View all →</button>
+              <button onClick={() => navigate(`${portal}/discipline`)} className="text-xs text-green-500 hover:text-green-700 font-medium">View all →</button>
             </div>
             <div className="divide-y divide-gray-100">
               {recentMerits.map((m: any, idx: number) => (
                 <div
                   key={idx}
                   className="px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer flex items-center justify-between"
-                  onClick={() => navigate(`/admin/students/${m.student_id}`)}
+                  onClick={() => navigate(`${portal}/students/${m.student_id}`)}
                 >
                   <div className="flex items-center space-x-3 min-w-0">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">

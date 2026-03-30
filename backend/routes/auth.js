@@ -268,6 +268,11 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
                     selectedSchool.schema_name
                 );
                 userInfo.teacher = teacher;
+                if (teacher) {
+                    userInfo.isGradeHead = teacher.is_grade_head || false;
+                    userInfo.gradeHeadFor = teacher.grade_head_for || null;
+                    userInfo.hasClass = teacher.has_class !== false;
+                }
             }
         } catch (error) {
             console.log('Could not fetch teacher data:', error.message);
@@ -497,6 +502,11 @@ router.get('/me', async (req, res) => {
                 schemaName
             );
             userInfo.teacher = teacher;
+            if (teacher) {
+                userInfo.isGradeHead = teacher.is_grade_head || false;
+                userInfo.gradeHeadFor = teacher.grade_head_for || null;
+                userInfo.hasClass = teacher.has_class !== false;
+            }
         }
 
         if (user.role === 'parent' && schemaName) {

@@ -58,6 +58,14 @@ router.get('/', authenticateToken, async (req, res) => {
             params.push(req.query.class_id);
             console.log('📚 Students API - Filtering by class_id:', req.query.class_id);
         }
+
+        // Grade head filtering: default to assigned grade unless bypass or search provided
+        const hasSearch = req.query.search || req.query.q || req.query.bypass_grade_filter;
+        if (req.user.isGradeHead && req.user.gradeHeadFor && !hasSearch && req.user.role !== 'admin') {
+            conditions.push(`c.grade_level = $${paramIndex++}`);
+            params.push(req.user.gradeHeadFor);
+            console.log('📚 Students API - Grade head filter applied: grade', req.user.gradeHeadFor);
+        }
         
         // Add WHERE clause if there are conditions
         if (conditions.length > 0) {

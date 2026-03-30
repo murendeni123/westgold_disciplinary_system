@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import Button from '../../components/Button';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Camera, Upload, User, Mail, Phone, GraduationCap, Sparkles } from 'lucide-react';
+import { ArrowLeft, Camera, Upload, User, Mail, Phone, GraduationCap, Sparkles, Shield, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import { getPhotoUrl, handlePhotoError } from '../../utils/photoUrl';
+import AssignGradeHeadModal from '../../components/AssignGradeHeadModal';
 
 const TeacherProfile: React.FC = () => {
   const { id } = useParams();
@@ -14,6 +15,7 @@ const TeacherProfile: React.FC = () => {
   const [teacher, setTeacher] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [showGradeHeadModal, setShowGradeHeadModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -99,11 +101,49 @@ const TeacherProfile: React.FC = () => {
             Back
           </Button>
         </motion.div>
-        <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            {teacher.name}
-          </h1>
+        <div className="flex-1">
+          <div className="flex items-center space-x-3">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+              {teacher.name}
+            </h1>
+            {teacher.is_grade_head && (
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="inline-flex items-center px-3 py-1.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-semibold rounded-full shadow-lg"
+              >
+                <Shield size={14} className="mr-1.5" />
+                Grade Head – Grade {teacher.grade_head_for}
+              </motion.div>
+            )}
+          </div>
           <p className="text-gray-600 mt-2 text-lg">Teacher Profile</p>
+        </div>
+        <div className="flex items-center space-x-3">
+          {teacher.is_grade_head ? (
+            <>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowGradeHeadModal(true)}
+                  className="rounded-xl"
+                >
+                  <Edit size={18} className="mr-2" />
+                  Edit Grade Head
+                </Button>
+              </motion.div>
+            </>
+          ) : (
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                onClick={() => setShowGradeHeadModal(true)}
+                className="rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+              >
+                <Shield size={18} className="mr-2" />
+                Assign Grade Head
+              </Button>
+            </motion.div>
+          )}
         </div>
       </motion.div>
 
@@ -227,6 +267,21 @@ const TeacherProfile: React.FC = () => {
           </motion.div>
         )}
       </div>
+
+      {/* Grade Head Assignment Modal */}
+      <AssignGradeHeadModal
+        isOpen={showGradeHeadModal}
+        onClose={() => setShowGradeHeadModal(false)}
+        teacher={teacher}
+        onSuccess={() => {
+          fetchTeacher();
+          success(
+            teacher.is_grade_head
+              ? 'Grade Head assignment updated successfully!'
+              : 'Grade Head assigned successfully!'
+          );
+        }}
+      />
     </div>
   );
 };

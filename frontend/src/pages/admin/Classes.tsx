@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usePortalPrefix } from '../../hooks/usePortalPrefix';
 import { api } from '../../services/api';
 import Button from '../../components/Button';
 import Modal from '../../components/Modal';
@@ -11,6 +12,7 @@ import { useToast } from '../../hooks/useToast';
 
 const Classes: React.FC = () => {
   const navigate = useNavigate();
+  const portal = usePortalPrefix();
   const { success, error, ToastContainer } = useToast();
   const [classes, setClasses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
@@ -109,7 +111,7 @@ const Classes: React.FC = () => {
   };
 
   const handleRowClick = (classItem: any) => {
-    navigate(`/admin/classes/${classItem.id}`);
+    navigate(`${portal}/classes/${classItem.id}`);
   };
 
   const handleOpenAssignModal = async (classItem: any) => {

@@ -45,8 +45,12 @@ router.get('/', authenticateToken, async (req, res) => {
             params.push(req.user.id);
         }
 
-        // If user is a teacher, only show incidents they logged or for students in their classes
-        if (req.user.role === 'teacher') {
+        // Grade head: see all incidents for their assigned grade (bypasses teacher filter)
+        if (req.user.isGradeHead && req.user.gradeHeadFor) {
+            query += ` AND c.grade_level = $${paramIndex++}`;
+            params.push(req.user.gradeHeadFor);
+        } else if (req.user.role === 'teacher') {
+            // Regular teachers only see incidents they logged or for students in their classes
             query += ` AND (bi.teacher_id IN (SELECT id FROM teachers WHERE user_id = $${paramIndex}) 
                        OR s.class_id IN (SELECT c.id FROM classes c 
                                         JOIN teachers t ON c.teacher_id = t.id 

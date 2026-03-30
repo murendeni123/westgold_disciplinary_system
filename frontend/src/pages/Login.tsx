@@ -98,7 +98,19 @@ const Login: React.FC = () => {
         }
       }
       
-      navigate(`/${role}`);
+      // Handle Grade Head redirection
+      if (user.isGradeHead) {
+        // Teaching grade heads (have a class) go to teacher portal
+        if (user.hasClass) {
+          navigate('/teacher');
+        } else {
+          // Non-teaching grade heads go to grade head portal
+          navigate('/grade-head');
+        }
+      } else {
+        // Regular users go to their role-based portal
+        navigate(`/${role}`);
+      }
     } catch (err: any) {
       setError(err.message || 'Login failed');
     } finally {

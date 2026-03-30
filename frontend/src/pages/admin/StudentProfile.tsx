@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { usePortalPrefix } from '../../hooks/usePortalPrefix';
 import { api } from '../../services/api';
 import Button from '../../components/Button';
 import Modal from '../../components/Modal';
@@ -18,6 +19,7 @@ import { getPhotoUrl, handlePhotoError } from '../../utils/photoUrl';
 const StudentProfile: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const portal = usePortalPrefix();
   const { success, error, ToastContainer } = useToast();
   const [student, setStudent] = useState<any>(null);
   const [classes, setClasses] = useState<any[]>([]);
@@ -320,7 +322,7 @@ const StudentProfile: React.FC = () => {
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button
             variant="secondary"
-            onClick={() => navigate('/admin/students')}
+            onClick={() => navigate(`${portal}/students`)}
             className="rounded-xl"
           >
             <ArrowLeft size={20} className="mr-2" />

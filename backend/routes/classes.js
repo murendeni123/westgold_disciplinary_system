@@ -24,12 +24,18 @@ router.get('/', authenticateToken, async (req, res) => {
         let paramIndex = 1;
 
         // Teachers only see classes assigned to them
-        if (req.user?.role === 'teacher') {
+        if (req.user?.role === 'teacher' && !req.user?.isGradeHead) {
             const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
             if (teacher) {
                 query += ` AND c.teacher_id = $${paramIndex++}`;
                 params.push(teacher.id);
             }
+        }
+
+        // Grade head filtering: show only their assigned grade's classes by default
+        if (req.user?.isGradeHead && req.user?.gradeHeadFor && !req.query.bypass_grade_filter) {
+            query += ` AND c.grade_level = $${paramIndex++}`;
+            params.push(req.user.gradeHeadFor);
         }
 
         query += ' ORDER BY c.class_name';

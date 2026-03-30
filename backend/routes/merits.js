@@ -57,6 +57,12 @@ router.get('/', authenticateToken, async (req, res) => {
       params.push(req.user.id);
     }
 
+    // Grade head: see all merits for their assigned grade
+    if (req.user.isGradeHead && req.user.gradeHeadFor) {
+      query += ` AND c.grade_level = $${paramIndex++}`;
+      params.push(req.user.gradeHeadFor);
+    }
+
     if (student_id) {
       query += ` AND m.student_id = $${paramIndex++}`;
       params.push(student_id);

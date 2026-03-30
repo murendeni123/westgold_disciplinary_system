@@ -4,14 +4,16 @@ import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import ModernCard from '../../components/ModernCard';
 import { motion } from 'framer-motion';
-import { Save, Lock, User, Settings as SettingsIcon, CheckCircle, AlertCircle, Building2, Users, Plus } from 'lucide-react';
+import { Save, Lock, User, Settings as SettingsIcon, CheckCircle, AlertCircle, Building2, Users, Plus, Bell } from 'lucide-react';
+import UserPreferencesPanel from '../../components/UserPreferencesPanel';
 import Input from '../../components/Input';
 import PasswordChangeForm from '../../components/PasswordChangeForm';
 
 const ModernSettings: React.FC = () => {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'school'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'school' | 'preferences'>('profile');
+  const [prefSaved, setPrefSaved] = useState(false);
   
   const [profileData, setProfileData] = useState({
     name: '',
@@ -217,6 +219,19 @@ const ModernSettings: React.FC = () => {
               >
                 <Building2 size={18} />
                 <span>School & Children</span>
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setActiveTab('preferences')}
+                className={`py-4 px-1 border-b-2 font-semibold text-sm transition-colors flex items-center space-x-2 ${
+                  activeTab === 'preferences'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Bell size={18} />
+                <span>Preferences</span>
               </motion.button>
             </nav>
           </div>
@@ -527,6 +542,25 @@ const ModernSettings: React.FC = () => {
                   </div>
                 </>
               )}
+            </motion.div>
+          )}
+          {/* Preferences Tab */}
+          {activeTab === 'preferences' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Preferences</h2>
+                <Bell className="text-indigo-600" size={24} />
+              </div>
+              {prefSaved && (
+                <div className="mb-4 p-3 rounded-xl bg-green-50 border border-green-200 flex items-center space-x-2">
+                  <CheckCircle size={18} className="text-green-600" />
+                  <span className="text-sm text-green-700 font-medium">Preferences saved!</span>
+                </div>
+              )}
+              <UserPreferencesPanel onSaved={() => { setPrefSaved(true); setTimeout(() => setPrefSaved(false), 2500); }} />
             </motion.div>
           )}
         </ModernCard>

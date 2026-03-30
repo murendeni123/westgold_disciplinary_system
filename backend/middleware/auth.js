@@ -169,6 +169,38 @@ const authenticateToken = async (req, res, next) => {
         req.schemaName = schemaName;
         req.schoolId = schoolId;
         
+        // Fetch grade head information for teachers
+        if (user.role === 'teacher' && schemaName) {
+            try {
+                const { schemaGet } = require('../utils/schemaHelper');
+                const teacher = await schemaGet(
+                    { schemaName },
+                    'SELECT id, is_grade_head, grade_head_for, has_class FROM teachers WHERE user_id = $1',
+                    [user.id]
+                );
+                
+                if (teacher) {
+                    req.user.teacherId = teacher.id;
+                    req.user.isGradeHead = teacher.is_grade_head || false;
+                    req.user.gradeHeadFor = teacher.grade_head_for;
+                    req.user.hasClass = teacher.has_class !== false;
+                    
+                    // Add permissions based on role
+                    const { getUserPermissions } = require('./permissions');
+                    req.user.permissions = getUserPermissions(req.user);
+                    
+                    console.log(`👤 Teacher info loaded: Grade Head=${teacher.is_grade_head}, Grade=${teacher.grade_head_for}, Has Class=${teacher.has_class}`);
+                }
+            } catch (error) {
+                console.error('⚠️  Error fetching teacher info:', error.message);
+                // Don't fail auth if teacher lookup fails
+            }
+        } else if (user.role === 'admin') {
+            // Add permissions for admin
+            const { getUserPermissions } = require('./permissions');
+            req.user.permissions = getUserPermissions(req.user);
+        }
+        
         // ALWAYS log schema context for debugging
         console.log(`🔐 Auth: User ${user.id} (${user.email}) authenticated with schema context:`, {
             userId: user.id,
@@ -176,6 +208,8 @@ const authenticateToken = async (req, res, next) => {
             role: user.role,
             schoolId: schoolId,
             schemaName: schemaName,
+            isGradeHead: req.user.isGradeHead || false,
+            gradeHeadFor: req.user.gradeHeadFor,
             'req.schemaName': req.schemaName,
             'req.schoolId': req.schoolId,
             tokenHadSchema: !!decoded.schemaName

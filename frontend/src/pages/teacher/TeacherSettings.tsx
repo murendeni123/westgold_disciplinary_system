@@ -5,7 +5,8 @@ import Input from '../../components/Input';
 import Button from '../../components/Button';
 import PasswordChangeForm from '../../components/PasswordChangeForm';
 import { motion } from 'framer-motion';
-import { Save, Lock, User, Settings, Building2 } from 'lucide-react';
+import { Save, Lock, User, Settings, Building2, Bell } from 'lucide-react';
+import UserPreferencesPanel from '../../components/UserPreferencesPanel';
 import { useToast } from '../../hooks/useToast';
 
 const TeacherSettings: React.FC = () => {
@@ -235,18 +236,9 @@ const TeacherSettings: React.FC = () => {
           >
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Preferences</h2>
-              <Settings className="text-emerald-600" size={24} />
+              <Bell className="text-emerald-600" size={24} />
             </div>
-            <div className="space-y-6">
-              <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
-                <p className="text-sm font-medium text-gray-700 mb-2">Notification Preferences</p>
-                <p className="text-gray-500">Notification settings coming soon...</p>
-              </div>
-              <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
-                <p className="text-sm font-medium text-gray-700 mb-2">Display Preferences</p>
-                <p className="text-gray-500">Display settings coming soon...</p>
-              </div>
-            </div>
+            <UserPreferencesPanel onSaved={() => success('Preferences saved!')} />
           </motion.div>
         )}
       </motion.div>
