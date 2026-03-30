@@ -1,7 +1,12 @@
 import React, { HTMLAttributes } from 'react';
 import { motion } from 'framer-motion';
 
-interface PremiumCardProps extends HTMLAttributes<HTMLDivElement> {
+type SafeDivProps = Omit<
+  HTMLAttributes<HTMLDivElement>,
+  'onDrag' | 'onDragEnd' | 'onDragEnter' | 'onDragExit' | 'onDragLeave' | 'onDragOver' | 'onDragStart'
+>;
+
+interface PremiumCardProps extends SafeDivProps {
   hover?: boolean;
   glass?: boolean;
   children: React.ReactNode;

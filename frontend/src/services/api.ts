@@ -736,6 +736,27 @@ export const api = {
   getGradeHeads: () => axiosInstance.get('/grade-heads'),
   checkGradeHeadForGrade: (grade: string) => axiosInstance.get(`/grade-heads/check-grade/${grade}`),
 
+  // Public school lookup (unauthenticated)
+  getPublicSchoolsList: () => axiosInstance.get('/schools/public'),
+  getSchoolBySlug: (slug: string) => axiosInstance.get(`/schools/slug/${slug}`),
+
+  // Theme Studio
+  getSchoolTheme: (schoolSlug: string) => axiosInstance.get(`/theme-studio/${schoolSlug}`),
+  saveDraftTheme: (schoolSlug: string, theme: any) => axiosInstance.put(`/theme-studio/${schoolSlug}/draft`, { theme }),
+  publishTheme: (schoolSlug: string) => axiosInstance.post(`/theme-studio/${schoolSlug}/publish`),
+  discardDraftTheme: (schoolSlug: string) => axiosInstance.delete(`/theme-studio/${schoolSlug}/draft`),
+  revertTheme: (schoolSlug: string) => axiosInstance.post(`/theme-studio/${schoolSlug}/revert`),
+  uploadThemeFile: (schoolSlug: string, type: 'logo' | 'banner', file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+    return axiosInstance.post(`/theme-studio/${schoolSlug}/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  deleteThemeFile: (schoolSlug: string, type: 'logo' | 'banner') =>
+    axiosInstance.delete(`/theme-studio/${schoolSlug}/file/${type}`),
+
   // User Preferences
   getPreferences: () => axiosInstance.get('/preferences'),
   updatePreferences: (data: {

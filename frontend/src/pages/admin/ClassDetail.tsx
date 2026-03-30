@@ -86,7 +86,7 @@ const ClassDetail: React.FC = () => {
       setLoading(true);
       const [classResponse, studentsResponse] = await Promise.all([
         api.getClass(Number(id)),
-        api.getStudents({ class_id: id })
+        api.getStudents({ class_id: id ? Number(id) : undefined })
       ]);
 
       const classInfo = classResponse.data;
