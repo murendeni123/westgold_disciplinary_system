@@ -47,8 +47,22 @@ const GradeHeadLayout: React.FC = () => {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  // All admin nav items except teachers, parents, smart import
-  const navigationItems: NavItem[] = [
+  // Personal section — only shown when teacher has an assigned class
+  const personalNavItems: NavItem[] = [
+    {
+      name: 'My Dashboard',
+      path: '/grade-head/my-dashboard',
+      icon: LayoutDashboard
+    },
+    {
+      name: 'My Class',
+      path: '/grade-head/my-class',
+      icon: BookOpen
+    }
+  ];
+
+  // Grade management section — always visible
+  const gradeNavItems: NavItem[] = [
     {
       name: 'Dashboard',
       path: '/grade-head',
@@ -63,11 +77,6 @@ const GradeHeadLayout: React.FC = () => {
         { name: 'Award Merit', path: '/grade-head/merits/award' }
       ]
     },
-    ...(user?.hasClass ? [{
-      name: 'My Class',
-      path: '/grade-head/my-class',
-      icon: BookOpen
-    }] : []),
     {
       name: 'Students',
       path: '/grade-head/students',
@@ -202,71 +211,109 @@ const GradeHeadLayout: React.FC = () => {
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-2 px-2 space-y-0.5">
-          {navigationItems.map((item) => {
-            if (item.subItems) {
-              const isOpen = openSubMenus.includes(item.name);
-              const hasActiveChild = item.subItems.some(sub => location.pathname === sub.path);
-              return (
-                <div key={item.name}>
-                  <button
-                    onClick={() => sidebarOpen && toggleSubMenu(item.name)}
-                    className={`w-full flex items-center px-2 py-2 rounded-lg transition-all text-left ${
-                      hasActiveChild ? 'bg-white/15 text-white' : 'text-indigo-200 hover:bg-white/10 hover:text-white'
-                    } ${!sidebarOpen ? 'justify-center' : ''}`}
+        <nav className="flex-1 overflow-y-auto py-2 px-2">
+          {/* ── Personal section (only if teacher has a class) ── */}
+          {user?.hasClass && (
+            <div className="mb-1">
+              {sidebarOpen && (
+                <p className="px-2 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-indigo-400 select-none">
+                  My Teaching
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {personalNavItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path!}
+                    className={({ isActive }) =>
+                      `flex items-center px-2 py-2 rounded-lg transition-all ${
+                        isActive
+                          ? 'bg-amber-500/30 text-amber-200 shadow-sm'
+                          : 'text-indigo-200 hover:bg-white/10 hover:text-white'
+                      } ${!sidebarOpen ? 'justify-center' : ''}`
+                    }
                   >
                     <item.icon size={18} className="flex-shrink-0" />
-                    {sidebarOpen && (
-                      <>
-                        <span className="ml-2.5 text-sm font-medium flex-1">{item.name}</span>
-                        <ChevronDown
-                          size={14}
-                          className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                        />
-                      </>
+                    {sidebarOpen && <span className="ml-2.5 text-sm font-medium">{item.name}</span>}
+                  </NavLink>
+                ))}
+              </div>
+              {sidebarOpen && <div className="mt-2 border-t border-white/10" />}
+            </div>
+          )}
+
+          {/* ── Grade Management section ── */}
+          <div className="space-y-0.5 mt-1">
+            {sidebarOpen && (
+              <p className="px-2 pt-1 pb-1 text-[10px] font-bold uppercase tracking-widest text-indigo-400 select-none">
+                Grade Management
+              </p>
+            )}
+            {gradeNavItems.map((item) => {
+              if (item.subItems) {
+                const isOpen = openSubMenus.includes(item.name);
+                const hasActiveChild = item.subItems.some(sub => location.pathname === sub.path);
+                return (
+                  <div key={item.name}>
+                    <button
+                      onClick={() => sidebarOpen && toggleSubMenu(item.name)}
+                      className={`w-full flex items-center px-2 py-2 rounded-lg transition-all text-left ${
+                        hasActiveChild ? 'bg-white/15 text-white' : 'text-indigo-200 hover:bg-white/10 hover:text-white'
+                      } ${!sidebarOpen ? 'justify-center' : ''}`}
+                    >
+                      <item.icon size={18} className="flex-shrink-0" />
+                      {sidebarOpen && (
+                        <>
+                          <span className="ml-2.5 text-sm font-medium flex-1">{item.name}</span>
+                          <ChevronDown
+                            size={14}
+                            className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                          />
+                        </>
+                      )}
+                    </button>
+                    {sidebarOpen && isOpen && (
+                      <div className="ml-4 mt-0.5 space-y-0.5">
+                        {item.subItems.map((sub) => (
+                          <NavLink
+                            key={sub.path}
+                            to={sub.path}
+                            className={({ isActive }) =>
+                              `flex items-center space-x-2 px-2 py-1.5 rounded-lg transition-all text-sm ${
+                                isActive
+                                  ? 'bg-white/20 text-white font-medium'
+                                  : 'text-indigo-300 hover:bg-white/10 hover:text-white'
+                              }`
+                            }
+                          >
+                            <ChevronRight size={12} className="flex-shrink-0" />
+                            <span>{sub.name}</span>
+                          </NavLink>
+                        ))}
+                      </div>
                     )}
-                  </button>
-                  {sidebarOpen && isOpen && (
-                    <div className="ml-4 mt-0.5 space-y-0.5">
-                      {item.subItems.map((sub) => (
-                        <NavLink
-                          key={sub.path}
-                          to={sub.path}
-                          className={({ isActive }) =>
-                            `flex items-center space-x-2 px-2 py-1.5 rounded-lg transition-all text-sm ${
-                              isActive
-                                ? 'bg-white/20 text-white font-medium'
-                                : 'text-indigo-300 hover:bg-white/10 hover:text-white'
-                            }`
-                          }
-                        >
-                          <ChevronRight size={12} className="flex-shrink-0" />
-                          <span>{sub.name}</span>
-                        </NavLink>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                  </div>
+                );
+              }
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path!}
+                  end={item.path === '/grade-head'}
+                  className={({ isActive }) =>
+                    `flex items-center px-2 py-2 rounded-lg transition-all ${
+                      isActive
+                        ? 'bg-white/20 text-white shadow-sm'
+                        : 'text-indigo-200 hover:bg-white/10 hover:text-white'
+                    } ${!sidebarOpen ? 'justify-center' : ''}`
+                  }
+                >
+                  <item.icon size={18} className="flex-shrink-0" />
+                  {sidebarOpen && <span className="ml-2.5 text-sm font-medium">{item.name}</span>}
+                </NavLink>
               );
-            }
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path!}
-                end={item.path === '/grade-head'}
-                className={({ isActive }) =>
-                  `flex items-center px-2 py-2 rounded-lg transition-all ${
-                    isActive
-                      ? 'bg-white/20 text-white shadow-sm'
-                      : 'text-indigo-200 hover:bg-white/10 hover:text-white'
-                  } ${!sidebarOpen ? 'justify-center' : ''}`
-                }
-              >
-                <item.icon size={18} className="flex-shrink-0" />
-                {sidebarOpen && <span className="ml-2.5 text-sm font-medium">{item.name}</span>}
-              </NavLink>
-            );
-          })}
+            })}
+          </div>
         </nav>
 
         {/* Logout */}

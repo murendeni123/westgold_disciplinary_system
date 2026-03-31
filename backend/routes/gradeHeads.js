@@ -8,19 +8,13 @@ const router = express.Router();
 // Assign Grade Head
 router.post('/assign', requireAdminOnly, async (req, res) => {
   try {
-    const { teacherId, roleType, grade } = req.body;
+    const { teacherId, grade } = req.body;
 
     // Validation
-    if (!teacherId || !roleType || !grade) {
+    if (!teacherId || !grade) {
       return res.status(400).json({ 
         error: 'Missing required fields',
-        required: ['teacherId', 'roleType', 'grade']
-      });
-    }
-
-    if (!['both', 'gradehead'].includes(roleType)) {
-      return res.status(400).json({ 
-        error: 'Invalid roleType. Must be "both" or "gradehead"'
+        required: ['teacherId', 'grade']
       });
     }
 
@@ -30,7 +24,7 @@ router.post('/assign', requireAdminOnly, async (req, res) => {
       return res.status(400).json({ error: 'Grade cannot be empty' });
     }
 
-    console.log(`📋 Assigning Grade Head: Teacher ${teacherId}, Role: ${roleType}, Grade: ${gradeStr}`);
+    console.log(`📋 Assigning Grade Head: Teacher ${teacherId}, Grade: ${gradeStr}`);
 
     // Check if teacher exists
     const teacher = await schemaGet(req, 
@@ -63,14 +57,6 @@ router.post('/assign', requireAdminOnly, async (req, res) => {
 
     const hasClass = !!teacherClass;
 
-    // Validate roleType against actual class assignment
-    if (roleType === 'both' && !hasClass) {
-      return res.status(400).json({ 
-        error: 'Cannot assign "Teacher + Grade Head" role to a teacher without an assigned class',
-        suggestion: 'Use "gradehead" roleType or assign a class first'
-      });
-    }
-
     // Update teacher record
     await schemaRun(req,
       `UPDATE teachers 
@@ -98,7 +84,6 @@ router.post('/assign', requireAdminOnly, async (req, res) => {
       teacher: updatedTeacher,
       assignment: {
         grade: gradeStr,
-        roleType,
         hasClass
       }
     });

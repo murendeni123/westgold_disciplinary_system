@@ -23,7 +23,6 @@ const AssignGradeHeadModal: React.FC<AssignGradeHeadModalProps> = ({
   teacher,
   onSuccess
 }) => {
-  const [roleType, setRoleType] = useState<'both' | 'gradehead'>('both');
   const [selectedGrade, setSelectedGrade] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -34,7 +33,7 @@ const AssignGradeHeadModal: React.FC<AssignGradeHeadModalProps> = ({
   useEffect(() => {
     const fetchGradesAndCheckClass = async () => {
       try {
-        const response = await api.getClasses();
+        const response = await api.getClasses({ bypass_grade_filter: true });
         const classes = response.data;
         
         // Extract unique grades from classes
@@ -57,16 +56,11 @@ const AssignGradeHeadModal: React.FC<AssignGradeHeadModalProps> = ({
         
         setAvailableGrades(sortedGrades);
         
-        // Check if teacher has a class
+        // Check if teacher has a class (informational only)
         const teacherClass = classes.find((c: any) => c.teacher_id === teacher.id);
         setHasClass(!!teacherClass);
-        
-        // If teacher has no class, default to gradehead only
-        if (!teacherClass) {
-          setRoleType('gradehead');
-        }
       } catch (err) {
-        console.error('Error fetching grades and checking teacher class:', err);
+        console.error('Error fetching grades:', err);
         setError('Failed to load available grades');
       }
     };
@@ -76,17 +70,15 @@ const AssignGradeHeadModal: React.FC<AssignGradeHeadModalProps> = ({
     }
   }, [isOpen, teacher.id]);
 
-  // Pre-fill form if editing existing grade head
+  // Pre-fill grade if editing existing grade head
   useEffect(() => {
     if (isOpen && teacher.is_grade_head) {
       setSelectedGrade(teacher.grade_head_for || '');
-      setRoleType(teacher.has_class ? 'both' : 'gradehead');
     } else if (isOpen) {
       setSelectedGrade('');
-      setRoleType(hasClass ? 'both' : 'gradehead');
     }
     setError('');
-  }, [isOpen, teacher, hasClass]);
+  }, [isOpen, teacher]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,17 +90,11 @@ const AssignGradeHeadModal: React.FC<AssignGradeHeadModalProps> = ({
       return;
     }
 
-    if (roleType === 'both' && !hasClass) {
-      setError('Cannot assign "Teacher + Grade Head" role to a teacher without an assigned class');
-      return;
-    }
-
     setLoading(true);
 
     try {
       const response = await api.assignGradeHead({
         teacherId: teacher.id,
-        roleType,
         grade: selectedGrade
       });
 
@@ -195,72 +181,33 @@ const AssignGradeHeadModal: React.FC<AssignGradeHeadModalProps> = ({
               </motion.div>
             )}
 
-            {/* Role Type Selection */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
-                Role Type <span className="text-red-500">*</span>
-              </label>
-              <div className="space-y-2">
-                {/* Option 1: Both */}
-                <label
-                  className={`flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                    roleType === 'both'
-                      ? 'border-indigo-500 bg-indigo-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  } ${!hasClass ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  <input
-                    type="radio"
-                    name="roleType"
-                    value="both"
-                    checked={roleType === 'both'}
-                    onChange={(e) => setRoleType(e.target.value as 'both')}
-                    disabled={!hasClass || loading}
-                    className="mt-1 mr-3"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <Users size={16} className="text-indigo-600" />
-                      <span className="font-semibold text-gray-900">Teacher + Grade Head</span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Manages their assigned class AND oversees the entire grade
+            {/* Class info notice */}
+            <div className={`flex items-start space-x-3 p-4 rounded-xl border ${
+              hasClass
+                ? 'bg-indigo-50 border-indigo-200'
+                : 'bg-gray-50 border-gray-200'
+            }`}>
+              <div className="flex-shrink-0 mt-0.5">
+                {hasClass
+                  ? <Users size={18} className="text-indigo-600" />
+                  : <Shield size={18} className="text-gray-400" />}
+              </div>
+              <div className="text-sm">
+                {hasClass ? (
+                  <>
+                    <p className="font-semibold text-indigo-900">Teacher with assigned class</p>
+                    <p className="text-indigo-700 mt-0.5">
+                      This teacher will manage their own class <strong>and</strong> oversee the selected grade.
                     </p>
-                    {!hasClass && (
-                      <p className="text-xs text-amber-600 mt-1 font-medium">
-                        ⚠️ Teacher has no assigned class
-                      </p>
-                    )}
-                  </div>
-                </label>
-
-                {/* Option 2: Grade Head Only */}
-                <label
-                  className={`flex items-start p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                    roleType === 'gradehead'
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="roleType"
-                    value="gradehead"
-                    checked={roleType === 'gradehead'}
-                    onChange={(e) => setRoleType(e.target.value as 'gradehead')}
-                    disabled={loading}
-                    className="mt-1 mr-3"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <Shield size={16} className="text-purple-600" />
-                      <span className="font-semibold text-gray-900">Grade Head Only</span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Dedicated administrative role without a specific class
+                  </>
+                ) : (
+                  <>
+                    <p className="font-semibold text-gray-700">No class assigned</p>
+                    <p className="text-gray-500 mt-0.5">
+                      This teacher will only oversee the selected grade. Assign them a class first to enable class-level management.
                     </p>
-                  </div>
-                </label>
+                  </>
+                )}
               </div>
             </div>
 
@@ -305,9 +252,7 @@ const AssignGradeHeadModal: React.FC<AssignGradeHeadModalProps> = ({
                     <p className="font-semibold text-gray-900">Assignment Summary:</p>
                     <p className="text-gray-700 mt-1">
                       {teacher.name} will be assigned as{' '}
-                      <span className="font-semibold">
-                        {roleType === 'both' ? 'Teacher + Grade Head' : 'Grade Head'}
-                      </span>{' '}
+                      <span className="font-semibold">Grade Head</span>{' '}
                       for <span className="font-semibold">Grade {selectedGrade}</span>
                     </p>
                   </div>

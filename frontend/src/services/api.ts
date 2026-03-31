@@ -729,7 +729,7 @@ export const api = {
   }),
 
   // Grade Heads
-  assignGradeHead: (data: { teacherId: number; roleType: 'both' | 'gradehead'; grade: string }) =>
+  assignGradeHead: (data: { teacherId: number; grade: string }) =>
     axiosInstance.post('/grade-heads/assign', data),
   removeGradeHead: (teacherId: number) =>
     axiosInstance.post('/grade-heads/remove', { teacherId }),
