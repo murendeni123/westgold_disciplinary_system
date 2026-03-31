@@ -201,7 +201,7 @@ export const api = {
     axiosInstance.put(`/students/${id}`, data),
 
   // Classes
-  getClasses: () => axiosInstance.get('/classes'),
+  getClasses: (params?: { my_class_only?: boolean; bypass_grade_filter?: boolean }) => axiosInstance.get('/classes', { params }),
   getClass: (id: number) => axiosInstance.get(`/classes/${id}`),
   createClass: (data: any) => axiosInstance.post('/classes', data),
   updateClass: (id: number, data: any) => axiosInstance.put(`/classes/${id}`, data),

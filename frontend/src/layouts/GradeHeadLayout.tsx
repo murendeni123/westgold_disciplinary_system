@@ -63,6 +63,11 @@ const GradeHeadLayout: React.FC = () => {
         { name: 'Award Merit', path: '/grade-head/merits/award' }
       ]
     },
+    ...(user?.hasClass ? [{
+      name: 'My Class',
+      path: '/grade-head/my-class',
+      icon: BookOpen
+    }] : []),
     {
       name: 'Students',
       path: '/grade-head/students',

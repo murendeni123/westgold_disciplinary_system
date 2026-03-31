@@ -30,12 +30,20 @@ router.get('/', authenticateToken, async (req, res) => {
                 query += ` AND c.teacher_id = $${paramIndex++}`;
                 params.push(teacher.id);
             }
-        }
-
-        // Grade head filtering: show only their assigned grade's classes by default
-        if (req.user?.isGradeHead && req.user?.gradeHeadFor && !req.query.bypass_grade_filter) {
-            query += ` AND c.grade_level = $${paramIndex++}`;
-            params.push(req.user.gradeHeadFor);
+        } else if (req.user?.isGradeHead) {
+            if (req.query.my_class_only === 'true') {
+                // Grade head requesting ONLY their personally assigned class (as a teacher)
+                const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
+                if (!teacher) {
+                    return res.json([]);
+                }
+                query += ` AND c.teacher_id = $${paramIndex++}`;
+                params.push(teacher.id);
+            } else if (req.user?.gradeHeadFor && !req.query.bypass_grade_filter) {
+                // Default grade head view: show all classes in managed grade
+                query += ` AND c.grade_level = $${paramIndex++}`;
+                params.push(req.user.gradeHeadFor);
+            }
         }
 
         query += ' ORDER BY c.class_name';

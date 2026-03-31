@@ -79,6 +79,7 @@ import AssignConsequence from './pages/teacher/AssignConsequence';
 import TeacherNotifications from './pages/teacher/NotificationsPage';
 import TeacherReports from './pages/teacher/TeacherReports';
 import GradeHeadSettings from './pages/grade-head/GradeHeadSettings';
+import GradeHeadMyClass from './pages/grade-head/GradeHeadMyClass';
 
 // Parent pages
 import ModernParentDashboard from './pages/parent/ModernParentDashboard';
@@ -193,6 +194,7 @@ function App() {
             <Route path="merits" element={<MeritsDemerits />} />
             <Route path="reports" element={<ReportsAnalytics />} />
             <Route path="bulk-import" element={<BulkImport />} />
+            <Route path="my-class" element={<GradeHeadMyClass />} />
             <Route path="settings" element={<GradeHeadSettings />} />
             <Route path="notifications" element={<AdminNotifications />} />
           </Route>
