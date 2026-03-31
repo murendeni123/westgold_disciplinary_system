@@ -140,7 +140,7 @@ const ThemeStudio: React.FC = () => {
     
     try {
       setSaving(true);
-      await api.saveDraftTheme(schoolSlug!, draftTheme);
+      await api.saveThemeStudioDraft(schoolSlug!, draftTheme);
       success('Draft theme saved successfully');
       await fetchTheme();
     } catch (err: any) {
@@ -157,7 +157,7 @@ const ThemeStudio: React.FC = () => {
     
     try {
       setSaving(true);
-      await api.publishTheme(schoolSlug!);
+      await api.publishThemeStudio(schoolSlug!);
       success('Theme published successfully!');
       await fetchTheme();
     } catch (err: any) {

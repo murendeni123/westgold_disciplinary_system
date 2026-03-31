@@ -742,8 +742,8 @@ export const api = {
 
   // Theme Studio
   getSchoolTheme: (schoolSlug: string) => axiosInstance.get(`/theme-studio/${schoolSlug}`),
-  saveDraftTheme: (schoolSlug: string, theme: any) => axiosInstance.put(`/theme-studio/${schoolSlug}/draft`, { theme }),
-  publishTheme: (schoolSlug: string) => axiosInstance.post(`/theme-studio/${schoolSlug}/publish`),
+  saveThemeStudioDraft: (schoolSlug: string, theme: any) => axiosInstance.put(`/theme-studio/${schoolSlug}/draft`, { theme }),
+  publishThemeStudio: (schoolSlug: string) => axiosInstance.post(`/theme-studio/${schoolSlug}/publish`),
   discardDraftTheme: (schoolSlug: string) => axiosInstance.delete(`/theme-studio/${schoolSlug}/draft`),
   revertTheme: (schoolSlug: string) => axiosInstance.post(`/theme-studio/${schoolSlug}/revert`),
   uploadThemeFile: (schoolSlug: string, type: 'logo' | 'banner', file: File) => {
