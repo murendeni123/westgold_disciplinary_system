@@ -98,15 +98,9 @@ const Login: React.FC = () => {
         }
       }
       
-      // Handle Grade Head redirection
+      // Handle Grade Head redirection — always go to grade-head portal
       if (user.isGradeHead) {
-        // Teaching grade heads (have a class) go to teacher portal
-        if (user.hasClass) {
-          navigate('/teacher');
-        } else {
-          // Non-teaching grade heads go to grade head portal
-          navigate('/grade-head');
-        }
+        navigate('/grade-head');
       } else {
         // Regular users go to their role-based portal
         navigate(`/${role}`);
