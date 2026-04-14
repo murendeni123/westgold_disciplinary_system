@@ -177,32 +177,57 @@ const MyDetentions: React.FC = () => {
     if (!selectedDetention) return;
 
     setSaving(true);
+
+    // Track which students saved and which failed so we can give the
+    // teacher accurate feedback instead of a generic "success" that may be wrong.
+    let savedCount  = 0;
+    const failedNames: string[] = [];
+
     try {
       for (const [studentId, status] of Object.entries(attendance)) {
+        // String comparison handles the node-postgres column-name conflict:
+        // da.student_id (integer FK) is overwritten by s.student_id (varchar)
+        // in the SELECT *, making the key always a string in practice.
+        const assignment = selectedDetention.assignments?.find(
+          (a: any) => String(a.student_id) === String(studentId)
+        );
+        if (!assignment) continue;
+
         try {
-          // String comparison handles the node-postgres column-name conflict:
-          // da.student_id (integer FK) is overwritten by s.student_id (varchar)
-          // in the SELECT *, making the key always a string in practice.
-          const assignment = selectedDetention.assignments.find(
-            (a: any) => String(a.student_id) === String(studentId)
-          );
-          if (assignment) {
-            await api.markDetentionAttendance(assignment.id, status as string);
-          }
+          await api.markDetentionAttendance(assignment.id, status as string);
+          savedCount++;
         } catch (err: any) {
-          console.error(`Error updating attendance for student ${studentId}:`, err);
+          // Capture the actual backend error message so the teacher can see what
+          // went wrong (e.g. "session is locked", "not authorised") instead of
+          // seeing a silent reset back to Pending.
+          const msg = err?.response?.data?.error || err?.message || 'unknown error';
+          console.error(`Failed to save attendance for ${studentId}: ${msg}`);
+          failedNames.push(assignment.student_name || String(studentId));
         }
       }
 
-      success('Attendance saved successfully!');
-      fetchDetentions();
-      // Keep modal open and reload with confirmed DB values so the teacher can
-      // verify the saves took effect — this also prevents the "resets on re-open"
-      // bug caused by stale attendance state.
+      // Always reload from the DB regardless of success/failure.
+      // This ensures the teacher sees the ACTUAL persisted state — if a save
+      // failed the DB value is still shown correctly (not the local selection).
       await refreshModalData(selectedDetention.id);
-    } catch (err) {
-      console.error('Error saving attendance:', err);
-      error('Error saving attendance');
+
+      // Update the session list in the background AFTER the modal is refreshed
+      // to remove any race condition where setDetentions() could re-render the
+      // component before setAttendance() has applied the fresh DB values.
+      fetchDetentions();
+
+      if (failedNames.length === 0) {
+        success(`Attendance saved — ${savedCount} student${savedCount !== 1 ? 's' : ''} updated.`);
+      } else if (savedCount > 0) {
+        error(`Saved ${savedCount} students. Could not save: ${failedNames.join(', ')}. Please retry those.`);
+      } else {
+        error('Attendance could not be saved. The session may be locked or you may not have permission. Please refresh and try again.');
+      }
+    } catch (err: any) {
+      console.error('Unexpected error saving attendance:', err);
+      error('Unexpected error saving attendance. Please try again.');
+      // Still reload so the modal shows the actual DB state.
+      try { await refreshModalData(selectedDetention.id); } catch { /* ignore */ }
     } finally {
       setSaving(false);
     }
