@@ -9,6 +9,17 @@ import { AlertTriangle, CheckCircle, Users, Calendar, TrendingUp, Lock } from 'l
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from '../../hooks/useToast';
 
+// DB attendance status → UI display value — defined outside the component
+// so it is not recreated on every render or async callback.
+const DB_TO_FRONTEND_STATUS: Record<string, string> = {
+  attended: 'present',
+  assigned: 'pending',
+  absent:   'absent',
+  late:     'late',
+  excused:  'excused',
+  rescheduled: 'pending',
+};
+
 const MyDetentions: React.FC = () => {
   const { user } = useAuth();
   const { success, error, ToastContainer } = useToast();
@@ -19,6 +30,7 @@ const MyDetentions: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [loadingModal, setLoadingModal] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
@@ -87,32 +99,51 @@ const MyDetentions: React.FC = () => {
   };
 
   const handleViewDetention = async (detention: any) => {
+    // Always wipe stale state BEFORE opening so no old attendance flashes.
+    // setIsModalOpen(false) in handleMarkAttendance does NOT call onClose, so
+    // attendance + selectedDetention can linger — we reset them explicitly here.
+    setAttendance({});
+    setSelectedDetention(null);
+    setLoadingModal(true);
     setIsModalOpen(true);
-    
-    // Fetch attendance for this detention
+
     try {
       const response = await api.getDetention(detention.id);
       const assignments = response.data.assignments || [];
-      const att: Record<number, string> = {};
-      // Map database status to frontend status
-      const statusMapping: Record<string, string> = {
-        'attended': 'present',
-        'assigned': 'pending',
-        'absent': 'absent',
-        'late': 'late',
-        'excused': 'excused',
-        'rescheduled': 'pending'
-      };
+      // Use String() on the key to avoid type-coercion issues: node-postgres may
+      // return da.student_id (integer FK) or s.student_id (varchar student no.)
+      // depending on column ordering in the SELECT *.
+      const att: Record<string, string> = {};
       assignments.forEach((a: any) => {
-        const dbStatus = a.attendance_status || a.status || 'assigned';
-        att[a.student_id] = statusMapping[dbStatus] || dbStatus;
+        att[String(a.student_id)] = DB_TO_FRONTEND_STATUS[a.status as string] ?? 'pending';
       });
       setAttendance(att);
-      // Store assignments in selectedDetention for later use
-      setSelectedDetention({ ...detention, assignments });
-    } catch (error) {
-      console.error('Error fetching detention details:', error);
+      setSelectedDetention({ ...detention, ...response.data, assignments });
+    } catch (err) {
+      console.error('Error fetching detention details:', err);
       setSelectedDetention(detention);
+    } finally {
+      setLoadingModal(false);
+    }
+  };
+
+  // Re-fetches fresh attendance from the DB and updates the open modal.
+  // Called after saving so the teacher sees confirmed DB statuses — not stale UI state.
+  const refreshModalData = async (detentionId: number) => {
+    setLoadingModal(true);
+    try {
+      const response = await api.getDetention(detentionId);
+      const assignments = response.data.assignments || [];
+      const att: Record<string, string> = {};
+      assignments.forEach((a: any) => {
+        att[String(a.student_id)] = DB_TO_FRONTEND_STATUS[a.status as string] ?? 'pending';
+      });
+      setAttendance(att);
+      setSelectedDetention((prev: any) => ({ ...prev, ...response.data, assignments }));
+    } catch (err) {
+      console.error('Error refreshing modal data:', err);
+    } finally {
+      setLoadingModal(false);
     }
   };
 
@@ -128,33 +159,31 @@ const MyDetentions: React.FC = () => {
 
   const handleMarkAttendance = async () => {
     if (!selectedDetention) return;
-    
+
     setSaving(true);
     try {
-      // Update attendance for each student using the new attendance endpoint
       for (const [studentId, status] of Object.entries(attendance)) {
         try {
-          // Find the assignment ID first.
-          // FIX: The SQL query does `SELECT da.*, s.student_id`, which causes
-          // node-postgres to overwrite the integer da.student_id (FK) with the
-          // varchar s.student_id (student number) in the result object.
-          // Using Number() on an alphanumeric student ID returns NaN, so strict
-          // equality always fails and attendance was silently never saved.
-          // Use String() on both sides so the comparison works regardless of type.
+          // String comparison handles the node-postgres column-name conflict:
+          // da.student_id (integer FK) is overwritten by s.student_id (varchar)
+          // in the SELECT *, making the key always a string in practice.
           const assignment = selectedDetention.assignments.find(
             (a: any) => String(a.student_id) === String(studentId)
           );
           if (assignment) {
             await api.markDetentionAttendance(assignment.id, status as string);
           }
-        } catch (error) {
-          console.error(`Error updating attendance for student ${studentId}:`, error);
+        } catch (err: any) {
+          console.error(`Error updating attendance for student ${studentId}:`, err);
         }
       }
-      
+
       success('Attendance saved successfully!');
       fetchDetentions();
-      setIsModalOpen(false);
+      // Keep modal open and reload with confirmed DB values so the teacher can
+      // verify the saves took effect — this also prevents the "resets on re-open"
+      // bug caused by stale attendance state.
+      await refreshModalData(selectedDetention.id);
     } catch (err) {
       console.error('Error saving attendance:', err);
       error('Error saving attendance');
@@ -241,7 +270,7 @@ const MyDetentions: React.FC = () => {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => handleViewDetention(row)}
+            onClick={(e: React.MouseEvent) => { e.stopPropagation(); handleViewDetention(row); }}
           >
             View
           </Button>
@@ -441,9 +470,17 @@ const MyDetentions: React.FC = () => {
           setIsModalOpen(false);
           setSelectedDetention(null);
           setAttendance({});
+          setLoadingModal(false);
         }}
         title="Detention Session Details"
       >
+        {/* Loading spinner shown while fetching fresh session data */}
+        {loadingModal && !selectedDetention && (
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mb-4" />
+            <p className="text-gray-500 text-sm font-medium">Loading session details…</p>
+          </div>
+        )}
         {selectedDetention && (
           <div className="space-y-6">
             {/* Locked Banner — shown for completed sessions */}
@@ -549,35 +586,40 @@ const MyDetentions: React.FC = () => {
                             <p className="text-sm text-gray-600">{assignment.student_id}</p>
                           </td>
                           <td className="px-4 py-3">
-                            <div className="flex justify-center">
-                              <select
-                                value={attendance[assignment.student_id] || assignment.attendance_status || 'pending'}
-                                onChange={(e) =>
-                                  setAttendance({
-                                    ...attendance,
-                                    [assignment.student_id]: e.target.value,
-                                  })
-                                }
-                                disabled={selectedDetention.status === 'completed'}
-                                className={`px-3 py-2 border-2 rounded-lg font-medium text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
-                                  selectedDetention.status === 'completed' ? 'opacity-80 cursor-not-allowed ' : ''} ${
-                                  (attendance[assignment.student_id] || assignment.attendance_status) === 'present'
-                                    ? 'border-green-300 bg-green-50 text-green-700'
-                                    : (attendance[assignment.student_id] || assignment.attendance_status) === 'absent'
-                                    ? 'border-red-300 bg-red-50 text-red-700'
-                                    : (attendance[assignment.student_id] || assignment.attendance_status) === 'late'
-                                    ? 'border-yellow-300 bg-yellow-50 text-yellow-700'
-                                    : (attendance[assignment.student_id] || assignment.attendance_status) === 'excused'
-                                    ? 'border-blue-300 bg-blue-50 text-blue-700'
-                                    : 'border-gray-300 bg-white text-gray-700'
-                                }`}
-                              >
-                                <option value="pending">⏳ Pending</option>
-                                <option value="present">✓ Present</option>
-                                <option value="absent">✗ Absent</option>
-                                <option value="late">⚠ Late</option>
-                                <option value="excused">ℹ Excused</option>
-                              </select>
+                            <div className="flex flex-wrap gap-1 justify-center">
+                              {[
+                                { value: 'pending', label: 'Pending', active: 'bg-gray-500 text-white'   },
+                                { value: 'present', label: 'Present', active: 'bg-green-500 text-white'  },
+                                { value: 'absent',  label: 'Absent',  active: 'bg-red-500 text-white'    },
+                                { value: 'late',    label: 'Late',    active: 'bg-amber-500 text-white'  },
+                                { value: 'excused', label: 'Excused', active: 'bg-blue-500 text-white'   },
+                              ].map(opt => {
+                                const current = attendance[String(assignment.student_id)] || 'pending';
+                                const isSelected = current === opt.value;
+                                const isLocked  = selectedDetention.status === 'completed';
+                                return (
+                                  <button
+                                    key={opt.value}
+                                    type="button"
+                                    disabled={isLocked}
+                                    onClick={() => !isLocked && setAttendance({
+                                      ...attendance,
+                                      [String(assignment.student_id)]: opt.value,
+                                    })}
+                                    className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
+                                      isLocked
+                                        ? isSelected
+                                          ? `${opt.active} opacity-75 cursor-not-allowed`
+                                          : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                        : isSelected
+                                          ? `${opt.active} shadow-sm ring-2 ring-offset-1 ring-current`
+                                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 cursor-pointer'
+                                    }`}
+                                  >
+                                    {opt.label}
+                                  </button>
+                                );
+                              })}
                             </div>
                           </td>
                         </tr>
@@ -597,7 +639,7 @@ const MyDetentions: React.FC = () => {
             <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
               <Button 
                 variant="secondary" 
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => { setIsModalOpen(false); setSelectedDetention(null); setAttendance({}); setLoadingModal(false); }}
                 className="px-6"
               >
                 Close
