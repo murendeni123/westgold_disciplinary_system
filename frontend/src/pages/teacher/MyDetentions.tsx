@@ -5,7 +5,7 @@ import Table from '../../components/Table';
 import Button from '../../components/Button';
 import Modal from '../../components/Modal';
 import { motion } from 'framer-motion';
-import { AlertTriangle, CheckCircle, Users, Calendar, TrendingUp, Lock } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Users, Calendar, TrendingUp, Lock, FileDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from '../../hooks/useToast';
 
@@ -25,7 +25,7 @@ const MyDetentions: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
   const [detentions, setDetentions] = useState<any[]>([]);
   const [selectedDetention, setSelectedDetention] = useState<any>(null);
-  const [attendance, setAttendance] = useState<Record<number, string>>({});
+  const [attendance, setAttendance] = useState<Record<string, string>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -124,6 +124,22 @@ const MyDetentions: React.FC = () => {
       setSelectedDetention(detention);
     } finally {
       setLoadingModal(false);
+    }
+  };
+
+  const handleDownloadReport = async (sessionId: number) => {
+    try {
+      const response = await api.downloadDetentionReport(sessionId);
+      const url  = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `detention_register_${sessionId}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      error('Could not download report. Please try again.');
     }
   };
 
@@ -637,6 +653,14 @@ const MyDetentions: React.FC = () => {
 
             {/* Action Buttons */}
             <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+              <Button
+                variant="secondary"
+                onClick={() => handleDownloadReport(selectedDetention.id)}
+                className="px-4 border border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              >
+                <FileDown size={16} className="mr-1.5" />
+                Export
+              </Button>
               <Button 
                 variant="secondary" 
                 onClick={() => { setIsModalOpen(false); setSelectedDetention(null); setAttendance({}); setLoadingModal(false); }}

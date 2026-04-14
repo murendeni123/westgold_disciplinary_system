@@ -312,6 +312,13 @@ export const api = {
   markDetentionAttendance: (assignmentId: number, attendance_status: string, notes?: string) => 
     axiosInstance.put(`/detentions/assignments/${assignmentId}/attendance`, { attendance_status, notes }),
   deleteDetention: (id: number) => axiosInstance.delete(`/detentions/${id}`),
+  downloadDetentionReport: (id: number) =>
+    axiosInstance.get(`/detentions/${id}/report/excel`, { responseType: 'blob' }),
+  getSessionTeachers: (id: number) => axiosInstance.get(`/detentions/${id}/teachers`),
+  addTeacherToSession: (id: number, teacher_id: number) =>
+    axiosInstance.post(`/detentions/${id}/teachers`, { teacher_id }),
+  removeTeacherFromSession: (id: number, teacherId: number) =>
+    axiosInstance.delete(`/detentions/${id}/teachers/${teacherId}`),
   getDetentionQueue: () => axiosInstance.get('/detentions/queue'),
   processDetentionQueue: (detentionId: number) => axiosInstance.post(`/detentions/${detentionId}/process-queue`),
   getQualifyingStudents: () => axiosInstance.get('/detentions/qualifying-students'),

@@ -170,11 +170,21 @@ router.put('/sessions/:id/status', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Detention session not found' });
     }
 
-    // Check authorization (admin or assigned teacher)
+    // Check authorization (admin, primary teacher, or any co-teacher)
     if (req.user.role !== 'admin') {
       const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
-      if (!teacher || teacher.id !== session.teacher_on_duty_id) {
-        return res.status(403).json({ error: 'Only the assigned teacher or admin can update session status' });
+      let authorized = teacher && Number(teacher.id) === Number(session.teacher_on_duty_id);
+      if (!authorized && teacher) {
+        try {
+          const coTeacher = await schemaGet(req, `
+            SELECT id FROM detention_session_teachers
+            WHERE session_id = $1 AND teacher_id = $2
+          `, [req.params.id, teacher.id]);
+          authorized = !!coTeacher;
+        } catch { /* table may not exist yet */ }
+      }
+      if (!authorized) {
+        return res.status(403).json({ error: 'Only assigned teachers or admin can update session status' });
       }
     }
 
@@ -236,6 +246,50 @@ router.put('/sessions/:id/status', authenticateToken, async (req, res) => {
         id: req.params.id,
         status
       });
+    }
+
+    // ── Completion notifications ───────────────────────────────────────────────
+    // Notify primary teacher + all co-teachers when session is completed.
+    if (status === 'completed') {
+      try {
+        const sessionDate = session.detention_date
+          ? new Date(session.detention_date).toLocaleDateString()
+          : 'N/A';
+        const notifyMsg = `The detention session on ${sessionDate} has been completed and the register is now locked.`;
+        const notifyTitle = 'Detention Session Completed & Locked';
+
+        // Primary teacher
+        if (session.teacher_on_duty_id) {
+          const primaryUser = await schemaGet(req, `
+            SELECT t.user_id FROM teachers t WHERE t.id = $1
+          `, [session.teacher_on_duty_id]);
+          if (primaryUser) {
+            await createNotification(req, primaryUser.user_id, 'session_completed',
+              notifyTitle, notifyMsg, req.params.id, 'detention');
+          }
+        }
+
+        // Co-teachers from junction table
+        try {
+          const coTeachers = await schemaAll(req, `
+            SELECT t.user_id
+            FROM detention_session_teachers dst
+            JOIN teachers t ON dst.teacher_id = t.id
+            WHERE dst.session_id = $1
+              AND t.id != $2
+          `, [req.params.id, session.teacher_on_duty_id || 0]);
+          for (const ct of coTeachers) {
+            await createNotification(req, ct.user_id, 'session_completed',
+              notifyTitle, notifyMsg, req.params.id, 'detention');
+          }
+        } catch { /* junction table not yet created */ }
+
+        // Notify admins
+        await notifySchoolAdmins(req, 'session_completed', notifyTitle, notifyMsg,
+          req.params.id, 'detention');
+      } catch (notifyErr) {
+        console.error('Error sending completion notifications:', notifyErr);
+      }
     }
 
     const updatedSession = await schemaGet(req, 'SELECT * FROM detention_sessions WHERE id = $1', [req.params.id]);
@@ -301,11 +355,21 @@ router.put('/assignments/:id/attendance', authenticateToken, async (req, res) =>
       });
     }
 
-    // Check authorization
+    // Check authorization: admin, primary teacher, or any co-teacher on this session
     if (req.user.role !== 'admin') {
       const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
-      if (!teacher || teacher.id !== assignment.teacher_on_duty_id) {
-        return res.status(403).json({ error: 'Only the assigned teacher or admin can mark attendance' });
+      let authorized = teacher && Number(teacher.id) === Number(assignment.teacher_on_duty_id);
+      if (!authorized && teacher) {
+        try {
+          const coTeacher = await schemaGet(req, `
+            SELECT id FROM detention_session_teachers
+            WHERE session_id = $1 AND teacher_id = $2
+          `, [assignment.detention_id, teacher.id]);
+          authorized = !!coTeacher;
+        } catch { /* junction table not yet created */ }
+      }
+      if (!authorized) {
+        return res.status(403).json({ error: 'Only assigned teachers or admin can mark attendance' });
       }
     }
 
@@ -486,6 +550,205 @@ router.get('/queue', authenticateToken, requireRole('admin'), async (req, res) =
     console.error('Error fetching detention queue:', error);
     // Return empty array instead of error to prevent frontend crash
     res.json([]);
+  }
+});
+
+// ── Multi-teacher endpoints ────────────────────────────────────────────────────
+// These live before /:id to avoid any routing ambiguity.
+
+// List all co-teachers assigned to a session
+router.get('/:id/teachers', authenticateToken, async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    if (!schema) return res.status(403).json({ error: 'School context required' });
+    try {
+      const teachers = await schemaAll(req, `
+        SELECT dst.teacher_id as id, u.name, u.email,
+               t.subject_taught
+        FROM detention_session_teachers dst
+        JOIN teachers t  ON dst.teacher_id  = t.id
+        JOIN public.users u ON t.user_id = u.id
+        WHERE dst.session_id = $1
+        ORDER BY u.name
+      `, [req.params.id]);
+      res.json(teachers);
+    } catch { res.json([]); }  // table not yet created
+  } catch (err) {
+    console.error('Error fetching session teachers:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Assign an additional teacher / invigilator to a session
+router.post('/:id/teachers', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    if (!schema) return res.status(403).json({ error: 'School context required' });
+    const { teacher_id } = req.body;
+    if (!teacher_id) return res.status(400).json({ error: 'teacher_id is required' });
+
+    // Ensure the junction table exists (safe to call multiple times)
+    await schemaRun(req, `
+      CREATE TABLE IF NOT EXISTS detention_session_teachers (
+        id         SERIAL PRIMARY KEY,
+        session_id INTEGER NOT NULL REFERENCES detention_sessions(id) ON DELETE CASCADE,
+        teacher_id INTEGER NOT NULL REFERENCES teachers(id)           ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (session_id, teacher_id)
+      )
+    `);
+
+    await schemaRun(req, `
+      INSERT INTO detention_session_teachers (session_id, teacher_id)
+      VALUES ($1, $2)
+      ON CONFLICT DO NOTHING
+    `, [req.params.id, teacher_id]);
+
+    const teachers = await schemaAll(req, `
+      SELECT dst.teacher_id as id, u.name, u.email
+      FROM detention_session_teachers dst
+      JOIN teachers t ON dst.teacher_id = t.id
+      JOIN public.users u ON t.user_id = u.id
+      WHERE dst.session_id = $1
+      ORDER BY u.name
+    `, [req.params.id]);
+    res.json({ success: true, teachers });
+  } catch (err) {
+    console.error('Error assigning teacher to session:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Remove a co-teacher from a session
+router.delete('/:id/teachers/:teacherId', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    if (!schema) return res.status(403).json({ error: 'School context required' });
+    try {
+      await schemaRun(req, `
+        DELETE FROM detention_session_teachers
+        WHERE session_id = $1 AND teacher_id = $2
+      `, [req.params.id, req.params.teacherId]);
+    } catch { /* table not yet created — nothing to delete */ }
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error removing teacher from session:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── Session attendance Excel report ───────────────────────────────────────────
+// Accessible to admins, the session's primary teacher, and any co-teacher.
+router.get('/:id/report/excel', authenticateToken, async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    if (!schema) return res.status(403).json({ error: 'School context required' });
+
+    const session = await schemaGet(req, `
+      SELECT ds.*, u.name as teacher_name
+      FROM detention_sessions ds
+      LEFT JOIN teachers t ON ds.teacher_on_duty_id = t.id
+      LEFT JOIN public.users u ON t.user_id = u.id
+      WHERE ds.id = $1
+    `, [req.params.id]);
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+
+    // Authorization: admin, primary teacher, or co-teacher
+    if (req.user.role !== 'admin') {
+      const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
+      let authorized = teacher && Number(teacher.id) === Number(session.teacher_on_duty_id);
+      if (!authorized && teacher) {
+        try {
+          const co = await schemaGet(req, `
+            SELECT id FROM detention_session_teachers
+            WHERE session_id = $1 AND teacher_id = $2
+          `, [req.params.id, teacher.id]);
+          authorized = !!co;
+        } catch {}
+      }
+      if (!authorized) return res.status(403).json({ error: 'Not authorized to download this report' });
+    }
+
+    const assignments = await schemaAll(req, `
+      SELECT da.status, da.notes,
+             s.first_name || ' ' || s.last_name as student_name,
+             s.student_id   as student_number,
+             c.class_name,
+             c.grade_level
+      FROM detention_assignments da
+      INNER JOIN students s ON da.student_id = s.id
+      LEFT JOIN  classes  c ON s.class_id    = c.id
+      WHERE da.detention_id = $1
+      ORDER BY s.last_name, s.first_name
+    `, [req.params.id]);
+
+    const ExcelJS = require('exceljs');
+    const workbook  = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Detention Register');
+
+    // ── Header section ────────────────────────────────────────────────────────
+    const sessionDate = session.detention_date
+      ? new Date(session.detention_date).toLocaleDateString('en-ZA')
+      : 'N/A';
+
+    worksheet.addRow(['DETENTION REGISTER']);
+    worksheet.addRow([`Date: ${sessionDate}`]);
+    worksheet.addRow([`Time: ${session.detention_time || 'N/A'}`]);
+    worksheet.addRow([`Location: ${session.location || 'N/A'}`]);
+    worksheet.addRow([`Teacher on Duty: ${session.teacher_name || 'N/A'}`]);
+    worksheet.addRow([`Status: ${session.status.toUpperCase()}`]);
+    worksheet.addRow([]);
+
+    // ── Attendance table ──────────────────────────────────────────────────────
+    const headerRow = worksheet.addRow([
+      'Student Name', 'Student ID', 'Grade', 'Class', 'Attendance Status', 'Served', 'Notes',
+    ]);
+    headerRow.font = { bold: true };
+    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF143D59' } };
+    headerRow.font  = { bold: true, color: { argb: 'FFFFFFFF' } };
+
+    const statusLabel = {
+      attended: 'Present', present: 'Present',
+      absent:   'Absent',  late:    'Late',
+      excused:  'Excused', assigned: 'Pending',
+    };
+
+    let presentCount = 0;
+    for (const a of assignments) {
+      const served = (a.status === 'attended' || a.status === 'present') ? 'Yes' : 'No';
+      if (served === 'Yes') presentCount++;
+      worksheet.addRow([
+        a.student_name,
+        a.student_number || '',
+        a.grade_level    || '',
+        a.class_name     || '',
+        statusLabel[a.status] || a.status || 'Pending',
+        served,
+        a.notes || '',
+      ]);
+    }
+
+    worksheet.addRow([]);
+    worksheet.addRow([`Total Students: ${assignments.length}  |  Served: ${presentCount}  |  Absent: ${assignments.length - presentCount}`]);
+
+    // Auto-size columns
+    worksheet.columns.forEach(col => {
+      let max = 10;
+      col.eachCell?.({ includeEmpty: true }, cell => {
+        const len = cell.value ? String(cell.value).length : 0;
+        if (len > max) max = len;
+      });
+      col.width = Math.min(max + 4, 40);
+    });
+
+    const fileName = `detention_register_${req.params.id}_${sessionDate.replace(/\//g, '-')}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Error generating detention Excel report:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

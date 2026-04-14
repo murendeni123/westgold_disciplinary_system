@@ -23,6 +23,9 @@ import {
   Zap,
   Loader2,
   Lock,
+  FileDown,
+  Trash2 as RemoveIcon,
+  UserPlus,
 } from 'lucide-react';
 
 interface DetentionSession {
@@ -622,17 +625,15 @@ const DetentionSessions: React.FC = () => {
         {showDetailsModal && selectedSession && (
           <SessionDetailsModal
             session={selectedSession}
+            teachers={teachers}
             onClose={() => {
               setShowDetailsModal(false);
               setSelectedSession(null);
             }}
             onAutoAssign={async (sessionId) => {
               await handleAutoAssign(sessionId);
-              // Refresh the modal by closing and reopening
               setShowDetailsModal(false);
-              setTimeout(() => {
-                setShowDetailsModal(true);
-              }, 100);
+              setTimeout(() => setShowDetailsModal(true), 100);
             }}
             autoAssignLoading={autoAssignLoading === selectedSession.id}
           />
@@ -910,25 +911,68 @@ const AssignTeacherModal: React.FC<{
 // Session Details Modal
 const SessionDetailsModal: React.FC<{
   session: DetentionSession;
+  teachers: Teacher[];
   onClose: () => void;
   onAutoAssign?: (sessionId: number) => Promise<void>;
   autoAssignLoading?: boolean;
-}> = ({ session, onClose, onAutoAssign, autoAssignLoading }) => {
+}> = ({ session, teachers, onClose, onAutoAssign, autoAssignLoading }) => {
   const [assignedStudents, setAssignedStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [coTeachers, setCoTeachers] = useState<any[]>([]);
+  const [addingTeacher, setAddingTeacher] = useState(false);
+  const [newCoTeacherId, setNewCoTeacherId] = useState<string>('');
+  const [coTeacherSaving, setCoTeacherSaving] = useState(false);
 
   useEffect(() => {
     fetchAssignedStudents();
+    fetchCoTeachers();
   }, []);
+
+  const fetchCoTeachers = async () => {
+    try {
+      const res = await api.getSessionTeachers(session.id);
+      setCoTeachers(res.data || []);
+    } catch { setCoTeachers([]); }
+  };
+
+  const handleAddCoTeacher = async () => {
+    if (!newCoTeacherId) return;
+    setCoTeacherSaving(true);
+    try {
+      const res = await api.addTeacherToSession(session.id, Number(newCoTeacherId));
+      setCoTeachers(res.data.teachers || []);
+      setNewCoTeacherId('');
+      setAddingTeacher(false);
+    } catch { /* handled silently */ }
+    finally { setCoTeacherSaving(false); }
+  };
+
+  const handleRemoveCoTeacher = async (teacherId: number) => {
+    try {
+      await api.removeTeacherFromSession(session.id, teacherId);
+      setCoTeachers(prev => prev.filter(t => t.id !== teacherId));
+    } catch { /* handled silently */ }
+  };
+
+  const handleDownloadReport = async () => {
+    try {
+      const response = await api.downloadDetentionReport(session.id);
+      const url  = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `detention_register_${session.id}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch { /* handled silently */ }
+  };
 
   const fetchAssignedStudents = async () => {
     try {
       setLoading(true);
-      // Fetch real detention data with assignments from API
       const response = await api.getDetention(session.id);
       const detention = response.data;
-      
-      // Map assignments to student list format
       const students = (detention.assignments || []).map((assignment: any) => ({
         id: assignment.student_id,
         name: assignment.student_name,
@@ -938,7 +982,6 @@ const SessionDetailsModal: React.FC<{
         status: assignment.status || 'assigned',
         attendance_time: assignment.attendance_time
       }));
-      
       setAssignedStudents(students);
     } catch (error) {
       console.error('Error fetching assigned students:', error);
@@ -1078,6 +1121,88 @@ const SessionDetailsModal: React.FC<{
           </div>
         )}
 
+        {/* ── Assigned Teachers Panel ─────────────────────────────────────── */}
+        <div className="px-6 pb-2 border-t border-gray-100">
+          <div className="flex items-center justify-between mt-4 mb-3">
+            <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+              <UserCheck className="text-green-600" size={18} />
+              Assigned Teachers
+            </h3>
+            {session.status !== 'completed' && (
+              <button
+                onClick={() => setAddingTeacher(v => !v)}
+                className="flex items-center gap-1 text-xs font-semibold text-purple-600 hover:text-purple-800 transition-colors"
+              >
+                <UserPlus size={14} />
+                Add Invigilator
+              </button>
+            )}
+          </div>
+
+          {/* Primary teacher */}
+          <div className="flex flex-wrap gap-2 mb-2">
+            {session.teacher_name ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                <UserCheck size={13} />
+                {session.teacher_name}
+                <span className="ml-1 text-green-600 text-xs">(Primary)</span>
+              </span>
+            ) : (
+              <span className="text-sm text-gray-400 italic">No primary teacher assigned</span>
+            )}
+
+            {/* Co-teachers */}
+            {coTeachers.map(ct => (
+              <span key={ct.id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
+                <UserCheck size={13} />
+                {ct.name}
+                {session.status !== 'completed' && (
+                  <button
+                    onClick={() => handleRemoveCoTeacher(ct.id)}
+                    className="ml-1 text-blue-500 hover:text-red-600 transition-colors"
+                  >
+                    <RemoveIcon size={12} />
+                  </button>
+                )}
+              </span>
+            ))}
+          </div>
+
+          {/* Add invigilator inline panel */}
+          {addingTeacher && session.status !== 'completed' && (
+            <div className="flex items-center gap-2 mt-2">
+              <select
+                value={newCoTeacherId}
+                onChange={e => setNewCoTeacherId(e.target.value)}
+                className="flex-1 text-sm px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+              >
+                <option value="">Select teacher…</option>
+                {teachers
+                  .filter(t =>
+                    t.id !== session.teacher_id &&
+                    !coTeachers.some(ct => ct.id === t.id)
+                  )
+                  .map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+              </select>
+              <button
+                onClick={handleAddCoTeacher}
+                disabled={!newCoTeacherId || coTeacherSaving}
+                className="px-4 py-2 bg-purple-600 text-white text-sm font-semibold rounded-lg disabled:opacity-50 hover:bg-purple-700 transition-colors"
+              >
+                {coTeacherSaving ? 'Saving…' : 'Add'}
+              </button>
+              <button
+                onClick={() => { setAddingTeacher(false); setNewCoTeacherId(''); }}
+                className="px-3 py-2 text-gray-500 hover:text-gray-700 text-sm rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Assigned Students */}
         <div className="p-6 border-t border-gray-100">
           <div className="flex items-center justify-between mb-4">
@@ -1177,7 +1302,18 @@ const SessionDetailsModal: React.FC<{
 
         {/* Footer */}
         <div className="p-6 border-t border-gray-100 bg-gray-50">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 flex-wrap gap-y-2">
+            {/* Download Report — available to admin for all sessions */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleDownloadReport}
+              className="flex items-center space-x-2 px-5 py-3 bg-white border-2 border-emerald-400 text-emerald-700 rounded-xl font-medium hover:bg-emerald-50 transition-all"
+            >
+              <FileDown size={18} />
+              <span>Download Register</span>
+            </motion.button>
+
             {onAutoAssign && session.status === 'scheduled' && (
               <motion.button
                 whileHover={{ scale: 1.02 }}
