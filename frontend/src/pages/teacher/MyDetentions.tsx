@@ -5,7 +5,7 @@ import Table from '../../components/Table';
 import Button from '../../components/Button';
 import Modal from '../../components/Modal';
 import { motion } from 'framer-motion';
-import { AlertTriangle, CheckCircle, Users, Calendar, TrendingUp } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Users, Calendar, TrendingUp, Lock } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from '../../hooks/useToast';
 
@@ -18,6 +18,7 @@ const MyDetentions: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<string>('all');
 
   useEffect(() => {
     if (user?.id) {
@@ -133,8 +134,16 @@ const MyDetentions: React.FC = () => {
       // Update attendance for each student using the new attendance endpoint
       for (const [studentId, status] of Object.entries(attendance)) {
         try {
-          // Find the assignment ID first
-          const assignment = selectedDetention.assignments.find((a: any) => a.student_id === Number(studentId));
+          // Find the assignment ID first.
+          // FIX: The SQL query does `SELECT da.*, s.student_id`, which causes
+          // node-postgres to overwrite the integer da.student_id (FK) with the
+          // varchar s.student_id (student number) in the result object.
+          // Using Number() on an alphanumeric student ID returns NaN, so strict
+          // equality always fails and attendance was silently never saved.
+          // Use String() on both sides so the comparison works regardless of type.
+          const assignment = selectedDetention.assignments.find(
+            (a: any) => String(a.student_id) === String(studentId)
+          );
           if (assignment) {
             await api.markDetentionAttendance(assignment.id, status as string);
           }
@@ -154,6 +163,12 @@ const MyDetentions: React.FC = () => {
     }
   };
 
+  const filteredDetentions = activeFilter === 'all'
+    ? detentions
+    : detentions.filter((d: any) =>
+        activeFilter === 'completed' ? d.status === 'completed' : d.status !== 'completed'
+      );
+
   const columns = [
     {
       key: 'detention_date',
@@ -170,15 +185,18 @@ const MyDetentions: React.FC = () => {
       label: 'Status',
       render: (value: string) => (
         <span
-          className={`px-2 py-1 rounded text-xs font-semibold ${
+          className={`px-2 py-1 rounded text-xs font-semibold inline-flex items-center gap-1 ${
             value === 'completed'
               ? 'bg-green-100 text-green-800'
               : value === 'scheduled'
               ? 'bg-blue-100 text-blue-800'
+              : value === 'in_progress'
+              ? 'bg-yellow-100 text-yellow-800'
               : 'bg-gray-100 text-gray-800'
           }`}
         >
-          {value.toUpperCase()}
+          {value === 'completed' && <Lock size={10} />}
+          {value.replace('_', ' ').toUpperCase()}
         </span>
       ),
     },
@@ -374,13 +392,43 @@ const MyDetentions: React.FC = () => {
           transition={{ delay: 0.5 }}
           className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Detention Sessions ({detentions.length})</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-gray-900">Detention Sessions ({filteredDetentions.length})</h2>
             <AlertTriangle className="text-emerald-600" size={24} />
           </div>
+
+          {/* Filter tabs */}
+          <div className="flex gap-2 mb-4">
+            {[
+              { key: 'all', label: 'All' },
+              { key: 'active', label: 'Active' },
+              { key: 'completed', label: 'Completed' },
+            ].map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveFilter(tab.key)}
+                className={`flex items-center gap-1 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
+                  activeFilter === tab.key
+                    ? 'bg-emerald-600 text-white shadow'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {tab.key === 'completed' && <Lock size={12} />}
+                {tab.label}
+                <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs ${
+                  activeFilter === tab.key ? 'bg-white/20' : 'bg-gray-200'
+                }`}>
+                  {tab.key === 'all' ? detentions.length
+                    : tab.key === 'completed' ? detentions.filter((d: any) => d.status === 'completed').length
+                    : detentions.filter((d: any) => d.status !== 'completed').length}
+                </span>
+              </button>
+            ))}
+          </div>
+
           <Table
             columns={columns}
-            data={detentions}
+            data={filteredDetentions}
             onRowClick={handleViewDetention}
           />
         </motion.div>
@@ -398,6 +446,19 @@ const MyDetentions: React.FC = () => {
       >
         {selectedDetention && (
           <div className="space-y-6">
+            {/* Locked Banner — shown for completed sessions */}
+            {selectedDetention.status === 'completed' && (
+              <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <Lock className="text-amber-600 mt-0.5 shrink-0" size={20} />
+                <div>
+                  <p className="font-semibold text-amber-800">Session Completed &amp; Locked</p>
+                  <p className="text-sm text-amber-700 mt-0.5">
+                    This session is closed. All attendance records are permanently preserved and cannot be modified.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Header Card with Gradient */}
             <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl p-6 text-white">
               <div className="flex items-center justify-between mb-4">
@@ -409,12 +470,13 @@ const MyDetentions: React.FC = () => {
                     day: 'numeric' 
                   })}
                 </h3>
-                <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                <span className={`px-4 py-2 rounded-full text-sm font-semibold inline-flex items-center gap-1 ${
                   selectedDetention.status === 'completed' 
                     ? 'bg-green-400 text-green-900' 
                     : 'bg-yellow-400 text-yellow-900'
                 }`}>
-                  {selectedDetention.status.toUpperCase()}
+                  {selectedDetention.status === 'completed' && <Lock size={14} />}
+                  {selectedDetention.status.replace('_', ' ').toUpperCase()}
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-4 text-center">
@@ -440,10 +502,33 @@ const MyDetentions: React.FC = () => {
                   <h3 className="text-lg font-bold text-gray-900 flex items-center">
                     <Users size={20} className="mr-2 text-emerald-600" />
                     Student Attendance
+                    {selectedDetention.status === 'completed' && (
+                      <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                        <Lock size={10} /> Read-only
+                      </span>
+                    )}
                   </h3>
                   <span className="text-sm text-gray-500">
                     {Object.values(attendance).filter(s => s === 'present').length} / {selectedDetention.assignments.length} Present
                   </span>
+                </div>
+
+                {/* Attendance Summary — counts per status */}
+                <div className="grid grid-cols-5 gap-2 mb-4">
+                  {[
+                    { label: 'Present', color: 'bg-green-100 text-green-700', key: 'present' },
+                    { label: 'Absent',  color: 'bg-red-100 text-red-700',   key: 'absent'  },
+                    { label: 'Late',    color: 'bg-yellow-100 text-yellow-700', key: 'late' },
+                    { label: 'Excused', color: 'bg-blue-100 text-blue-700', key: 'excused' },
+                    { label: 'Pending', color: 'bg-gray-100 text-gray-600', key: 'pending' },
+                  ].map(({ label, color, key }) => (
+                    <div key={key} className={`rounded-lg p-2 text-center ${color}`}>
+                      <p className="text-lg font-bold">
+                        {Object.values(attendance).filter(s => s === key).length}
+                      </p>
+                      <p className="text-xs font-medium">{label}</p>
+                    </div>
+                  ))}
                 </div>
                 <div className="border border-gray-200 rounded-xl overflow-hidden">
                   <table className="w-full">
@@ -473,7 +558,9 @@ const MyDetentions: React.FC = () => {
                                     [assignment.student_id]: e.target.value,
                                   })
                                 }
+                                disabled={selectedDetention.status === 'completed'}
                                 className={`px-3 py-2 border-2 rounded-lg font-medium text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 ${
+                                  selectedDetention.status === 'completed' ? 'opacity-80 cursor-not-allowed ' : ''} ${
                                   (attendance[assignment.student_id] || assignment.attendance_status) === 'present'
                                     ? 'border-green-300 bg-green-50 text-green-700'
                                     : (attendance[assignment.student_id] || assignment.attendance_status) === 'absent'
@@ -515,7 +602,10 @@ const MyDetentions: React.FC = () => {
               >
                 Close
               </Button>
-              {selectedDetention.status === 'scheduled' && selectedDetention.assignments?.length > 0 && (
+              {/* FIX: Show Save Attendance for both 'scheduled' and 'in_progress' sessions.
+                 Previously hidden when status was 'in_progress', which meant a teacher
+                 could start a session but had no way to save attendance from the modal. */}
+              {(selectedDetention.status === 'scheduled' || selectedDetention.status === 'in_progress') && selectedDetention.assignments?.length > 0 && (
                 <Button 
                   onClick={handleMarkAttendance} 
                   disabled={saving}

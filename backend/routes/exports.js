@@ -47,6 +47,16 @@ router.get('/students/:id', authenticateToken, requireRole('admin'), async (req,
       ORDER BY m.created_at DESC
     `, [studentId]);
 
+    const detentions = await schemaAll(req, `
+      SELECT da.status, da.notes,
+             ds.detention_date, ds.detention_time, ds.duration, ds.location,
+             ds.status as session_status
+      FROM detention_assignments da
+      INNER JOIN detention_sessions ds ON da.detention_id = ds.id
+      WHERE da.student_id = $1
+      ORDER BY ds.detention_date DESC
+    `, [studentId]).catch(() => []);
+
     if (format === 'excel') {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Student Record');
@@ -72,6 +82,25 @@ router.get('/students/:id', authenticateToken, requireRole('admin'), async (req,
       worksheet.addRow(['Date', 'Type', 'Points', 'Description', 'Teacher']);
       merits.forEach(merit => {
         worksheet.addRow([merit.created_at, merit.merit_type, merit.points, merit.description, merit.teacher_name]);
+      });
+      worksheet.addRow([]);
+
+      // Detentions
+      worksheet.addRow(['Detention History']);
+      worksheet.addRow(['Date', 'Time', 'Location', 'Duration (min)', 'Attendance', 'Served', 'Notes']);
+      detentions.forEach(det => {
+        const served = (det.status === 'attended' || det.status === 'present') ? 'Yes' : 'No';
+        const attendanceLabel = {
+          attended: 'Present', present: 'Present', absent: 'Absent',
+          late: 'Late', excused: 'Excused', assigned: 'Pending', rescheduled: 'Rescheduled',
+        };
+        worksheet.addRow([
+          det.detention_date, det.detention_time, det.location || 'N/A',
+          det.duration || 60,
+          attendanceLabel[det.status] || det.status || 'Pending',
+          served,
+          det.notes || '',
+        ]);
       });
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -107,6 +136,18 @@ router.get('/students/:id', authenticateToken, requireRole('admin'), async (req,
         doc.fontSize(10).text(merit.description || 'No description');
         doc.moveDown(0.5);
       });
+
+      if (detentions.length > 0) {
+        doc.addPage();
+        doc.fontSize(16).text('Detention History');
+        doc.moveDown(0.5);
+        detentions.forEach(det => {
+          const served = (det.status === 'attended' || det.status === 'present') ? 'Yes' : 'No';
+          doc.fontSize(12).text(`${det.detention_date} ${det.detention_time || ''} — ${det.location || 'N/A'} (${det.duration || 60} min)`);
+          doc.fontSize(10).text(`Attendance: ${det.status || 'Pending'} | Served: ${served}${det.notes ? ' | ' + det.notes : ''}`);
+          doc.moveDown(0.5);
+        });
+      }
 
       doc.end();
     }

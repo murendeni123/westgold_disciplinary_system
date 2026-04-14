@@ -22,6 +22,7 @@ import {
   Users,
   Zap,
   Loader2,
+  Lock,
 } from 'lucide-react';
 
 interface DetentionSession {
@@ -969,11 +970,18 @@ const SessionDetailsModal: React.FC<{
         className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* Session Header */}
         <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-pink-50">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Detention Session Details</h2>
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                Detention Session Details
+                {session.status === 'completed' && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-200 text-gray-700 rounded-full text-sm font-medium">
+                    <Lock size={13} /> Locked
+                  </span>
+                )}
+              </h2>
               <p className="text-sm text-gray-600 mt-1">
                 {new Date(session.date).toLocaleDateString('en-US', { 
                   weekday: 'long', 
@@ -1057,6 +1065,19 @@ const SessionDetailsModal: React.FC<{
           )}
         </div>
 
+        {/* Completed/Locked Banner */}
+        {session.status === 'completed' && (
+          <div className="mx-6 mt-4 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <Lock className="text-amber-600 mt-0.5 shrink-0" size={18} />
+            <div>
+              <p className="font-semibold text-amber-800">This session is completed and locked</p>
+              <p className="text-sm text-amber-700 mt-0.5">
+                All attendance records are permanently preserved. No further changes can be made.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Assigned Students */}
         <div className="p-6 border-t border-gray-100">
           <div className="flex items-center justify-between mb-4">
@@ -1103,31 +1124,53 @@ const SessionDetailsModal: React.FC<{
             </div>
           ) : (
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {assignedStudents.map((student, index) => (
-                <motion.div
-                  key={student.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-xl hover:shadow-md transition-all"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white font-bold">
-                      {student.name.charAt(0)}
+              {(() => {
+                const attendanceColors: Record<string, string> = {
+                  attended: 'bg-green-100 text-green-800',
+                  present:  'bg-green-100 text-green-800',
+                  absent:   'bg-red-100 text-red-800',
+                  late:     'bg-yellow-100 text-yellow-800',
+                  excused:  'bg-blue-100 text-blue-800',
+                  assigned: 'bg-gray-100 text-gray-600',
+                };
+                const attendanceLabel: Record<string, string> = {
+                  attended: 'Present', present: 'Present',
+                  absent: 'Absent', late: 'Late',
+                  excused: 'Excused', assigned: 'Pending',
+                };
+                return assignedStudents.map((student, index) => (
+                  <motion.div
+                    key={student.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-xl hover:shadow-md transition-all"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white font-bold">
+                        {student.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900">{student.name}</p>
+                        <p className="text-sm text-gray-600">{student.grade}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-gray-900">{student.name}</p>
-                      <p className="text-sm text-gray-600">{student.grade}</p>
+                    <div className="text-right flex flex-col items-end gap-1">
+                      <p className="text-sm text-gray-600">{student.reason}</p>
+                      <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">
+                        {student.points} pts
+                      </span>
+                      {session.status === 'completed' && (
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          attendanceColors[student.status] || 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {attendanceLabel[student.status] || student.status}
+                        </span>
+                      )}
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600 mb-1">{student.reason}</p>
-                    <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">
-                      {student.points} points
-                    </span>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                ));
+              })()}
             </div>
           )}
         </div>

@@ -377,7 +377,7 @@ const ReportsAnalytics: React.FC = () => {
           d.reason || d.description || 'N/A',
           d.status || 'N/A',
           d.duration || 'N/A',
-          d.served ? 'Yes' : 'No',
+          (d.status === 'attended' || d.status === 'present') ? 'Yes' : 'No',
         ]),
       });
     }
@@ -596,7 +596,7 @@ const ReportsAnalytics: React.FC = () => {
           d.reason || d.description || 'N/A',
           d.status || 'N/A',
           d.duration || 'N/A',
-          d.served ? 'Yes' : 'No',
+          (d.status === 'attended' || d.status === 'present') ? 'Yes' : 'No',
         ]),
       });
     }

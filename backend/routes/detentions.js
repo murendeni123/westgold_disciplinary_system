@@ -7,6 +7,14 @@ const { dbGet } = require('../database/db');
 
 const router = express.Router();
 
+// ── Session Freeze Helper ─────────────────────────────────────────────────────
+// Returns true when a session is locked (completed or explicitly frozen).
+// Pass a direct detention_sessions row. Attendance-update endpoints use an
+// explicit `session_status` field check instead (see guards below).
+function isSessionFrozen(session) {
+  return session.status === 'completed' || session.is_frozen === true;
+}
+
 // Get detention rules
 router.get('/rules', authenticateToken, requireRole('admin'), async (req, res) => {
   try {
@@ -170,10 +178,39 @@ router.put('/sessions/:id/status', authenticateToken, async (req, res) => {
       }
     }
 
-    // Update status
-    await schemaRun(req, 'UPDATE detention_sessions SET status = $1 WHERE id = $2', [status, req.params.id]);
+    // IDEMPOTENCY GUARD: if the session is already completed, return early without
+    // re-running the completion logic. Prevents double-resolving incidents if the
+    // endpoint is accidentally called twice.
+    if (session.status === 'completed' && status === 'completed') {
+      const alreadyDone = await schemaGet(req, 'SELECT * FROM detention_sessions WHERE id = $1', [req.params.id]);
+      return res.json(alreadyDone);
+    }
 
-    // If session is completed, mark incidents as resolved for students who attended
+    // Update session status only — detention_assignments are NOT touched here.
+    // All attendance records (attended, absent, late, excused, assigned) submitted
+    // by the teacher are permanently preserved exactly as recorded.
+    // DO NOT add any UPDATE to detention_assignments in this block.
+    if (status === 'completed') {
+      // When completing: stamp completed_at and freeze the session so no further
+      // attendance edits are possible. Falls back gracefully if the migration
+      // add_detention_freeze_columns.sql has not been applied yet.
+      try {
+        await schemaRun(req, `
+          UPDATE detention_sessions
+          SET status = $1, completed_at = NOW(), is_frozen = true
+          WHERE id = $2
+        `, [status, req.params.id]);
+      } catch (freezeColErr) {
+        console.warn('completed_at/is_frozen columns missing — run add_detention_freeze_columns.sql:', freezeColErr.message);
+        await schemaRun(req, 'UPDATE detention_sessions SET status = $1 WHERE id = $2', [status, req.params.id]);
+      }
+    } else {
+      await schemaRun(req, 'UPDATE detention_sessions SET status = $1 WHERE id = $2', [status, req.params.id]);
+    }
+
+    // If session is completed, mark behaviour incidents as resolved for students
+    // who attended. We only READ detention_assignments here (status = 'attended');
+    // we never write back to detention_assignments, ensuring attendance is preserved.
     if (status === 'completed') {
       const attendedStudents = await schemaAll(req, `
         SELECT student_id 
@@ -237,18 +274,31 @@ router.put('/assignments/:id/attendance', authenticateToken, async (req, res) =>
     };
     const dbStatus = statusMapping[attendance_status] || attendance_status;
 
-    // Get assignment details
+    // Get assignment details (enhanced to include session status + grade for freeze/notification)
     const assignment = await schemaGet(req, `
       SELECT da.*, s.first_name || ' ' || s.last_name as student_name, s.parent_id,
-             ds.teacher_on_duty_id
+             ds.teacher_on_duty_id, ds.status as session_status, ds.detention_date,
+             c.grade_level as student_grade,
+             u.name as teacher_name
       FROM detention_assignments da
       JOIN students s ON da.student_id = s.id
       JOIN detention_sessions ds ON da.detention_id = ds.id
+      LEFT JOIN classes c ON s.class_id = c.id
+      LEFT JOIN teachers t ON ds.teacher_on_duty_id = t.id
+      LEFT JOIN public.users u ON t.user_id = u.id
       WHERE da.id = $1
     `, [req.params.id]);
 
     if (!assignment) {
       return res.status(404).json({ error: 'Detention assignment not found' });
+    }
+
+    // FREEZE GUARD: block all attendance changes once the session is completed.
+    // This is the authoritative server-side enforcement — the frontend lock is UI-only.
+    if (assignment.session_status === 'completed') {
+      return res.status(403).json({
+        error: 'This detention session is completed and locked. Attendance records cannot be modified.'
+      });
     }
 
     // Check authorization
@@ -307,6 +357,31 @@ router.put('/assignments/:id/attendance', authenticateToken, async (req, res) =>
       if (dbStatus === 'absent') {
         await notifySchoolAdmins(req, 'detention_absence', 'Detention Absence', 
           `${assignment.student_name} was marked absent from detention.`, req.params.id, 'detention');
+      }
+
+      // Notify grade head(s) for the student's grade when marked absent
+      if (dbStatus === 'absent' && assignment.student_grade) {
+        try {
+          const gradeHeads = await schemaAll(req, `
+            SELECT t.user_id
+            FROM teachers t
+            WHERE t.is_grade_head = true
+              AND t.grade_head_for = $1
+          `, [assignment.student_grade]);
+          const detDateStr = assignment.detention_date
+            ? new Date(assignment.detention_date).toLocaleDateString()
+            : 'N/A';
+          for (const gh of gradeHeads) {
+            await createNotification(
+              req, gh.user_id, 'detention_absence',
+              'Student Absent from Detention',
+              `${assignment.student_name} was absent from detention on ${detDateStr}. Teacher on duty: ${assignment.teacher_name || 'N/A'}.`,
+              req.params.id, 'detention'
+            );
+          }
+        } catch (ghErr) {
+          console.error('Error notifying grade heads of detention absence:', ghErr);
+        }
       }
     }
 
@@ -627,15 +702,28 @@ router.put('/assignments/:id', authenticateToken, async (req, res) => {
     // Get assignment details before update
     const assignment = await schemaGet(req, `
       SELECT da.*, s.first_name, s.last_name, s.parent_id, s.id as student_id,
-             d.detention_date, d.detention_time, d.id as detention_id
+             d.detention_date, d.detention_time, d.id as detention_id,
+             d.status as session_status,
+             c.grade_level as student_grade,
+             u.name as teacher_name
       FROM detention_assignments da
       INNER JOIN students s ON da.student_id = s.id
       INNER JOIN detention_sessions d ON da.detention_id = d.id
+      LEFT JOIN classes c ON s.class_id = c.id
+      LEFT JOIN teachers t ON d.teacher_on_duty_id = t.id
+      LEFT JOIN public.users u ON t.user_id = u.id
       WHERE da.id = $1
     `, [req.params.id]);
 
     if (!assignment) {
       return res.status(404).json({ error: 'Assignment not found' });
+    }
+
+    // FREEZE GUARD: block all attendance changes once the session is completed
+    if (assignment.session_status === 'completed') {
+      return res.status(403).json({
+        error: 'This detention session is completed and locked. Attendance records cannot be modified.'
+      });
     }
 
     // Update the assignment status
@@ -760,6 +848,31 @@ router.put('/assignments/:id', authenticateToken, async (req, res) => {
         assignment.detention_id,
         'detention'
       );
+
+      // Notify grade head(s) for the student's grade when marked absent
+      if (status === 'absent' && assignment.student_grade) {
+        try {
+          const gradeHeads = await schemaAll(req, `
+            SELECT t.user_id
+            FROM teachers t
+            WHERE t.is_grade_head = true
+              AND t.grade_head_for = $1
+          `, [assignment.student_grade]);
+          const detDateStr = assignment.detention_date
+            ? new Date(assignment.detention_date).toLocaleDateString()
+            : 'N/A';
+          for (const gh of gradeHeads) {
+            await createNotification(
+              req, gh.user_id, 'detention_absence',
+              'Student Absent from Detention',
+              `${assignment.first_name} ${assignment.last_name} was absent from detention on ${detDateStr}. Teacher on duty: ${assignment.teacher_name || 'N/A'}.`,
+              assignment.detention_id, 'detention'
+            );
+          }
+        } catch (ghErr) {
+          console.error('Error notifying grade heads of detention absence:', ghErr);
+        }
+      }
     }
 
     // Handle other statuses
