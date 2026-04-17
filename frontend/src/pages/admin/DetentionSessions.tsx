@@ -974,11 +974,12 @@ const SessionDetailsModal: React.FC<{
       const response = await api.getDetention(session.id);
       const detention = response.data;
       const students = (detention.assignments || []).map((assignment: any) => ({
-        id: assignment.student_id,
+        id: assignment.id,
+        student_number: assignment.student_number || '',
         name: assignment.student_name,
         grade: `Grade ${assignment.grade_level || 'N/A'}`,
         reason: assignment.reason || 'Not specified',
-        points: assignment.demerit_points || 0,
+        points: 0,
         status: assignment.status || 'assigned',
         attendance_time: assignment.attendance_time
       }));

@@ -110,12 +110,13 @@ const MyDetentions: React.FC = () => {
     try {
       const response = await api.getDetention(detention.id);
       const assignments = response.data.assignments || [];
-      // Use String() on the key to avoid type-coercion issues: node-postgres may
-      // return da.student_id (integer FK) or s.student_id (varchar student no.)
-      // depending on column ordering in the SELECT *.
+      // Key by assignment PK (a.id) — always unique integer.
+      // Previously keyed by a.student_id (varchar student number) which could be
+      // NULL or shared, causing multiple students to collide on the same key and
+      // attendance saves to target the wrong DB row.
       const att: Record<string, string> = {};
       assignments.forEach((a: any) => {
-        att[String(a.student_id)] = DB_TO_FRONTEND_STATUS[a.status as string] ?? 'pending';
+        att[String(a.id)] = DB_TO_FRONTEND_STATUS[a.status as string] ?? 'pending';
       });
       setAttendance(att);
       setSelectedDetention({ ...detention, ...response.data, assignments });
@@ -152,7 +153,7 @@ const MyDetentions: React.FC = () => {
       const assignments = response.data.assignments || [];
       const att: Record<string, string> = {};
       assignments.forEach((a: any) => {
-        att[String(a.student_id)] = DB_TO_FRONTEND_STATUS[a.status as string] ?? 'pending';
+        att[String(a.id)] = DB_TO_FRONTEND_STATUS[a.status as string] ?? 'pending';
       });
       setAttendance(att);
       setSelectedDetention((prev: any) => ({ ...prev, ...response.data, assignments }));
@@ -185,24 +186,21 @@ const MyDetentions: React.FC = () => {
 
     try {
       for (const [studentId, status] of Object.entries(attendance)) {
-        // String comparison handles the node-postgres column-name conflict:
-        // da.student_id (integer FK) is overwritten by s.student_id (varchar)
-        // in the SELECT *, making the key always a string in practice.
-        const assignment = selectedDetention.assignments?.find(
-          (a: any) => String(a.student_id) === String(studentId)
-        );
-        if (!assignment) continue;
+        // Keys are assignment PKs (String(a.id)) — use directly, no .find() needed.
+        const assignmentId = Number(studentId);
+        if (!assignmentId) continue;
 
         try {
-          await api.markDetentionAttendance(assignment.id, status as string);
+          await api.markDetentionAttendance(assignmentId, status as string);
           savedCount++;
         } catch (err: any) {
           // Capture the actual backend error message so the teacher can see what
           // went wrong (e.g. "session is locked", "not authorised") instead of
           // seeing a silent reset back to Pending.
           const msg = err?.response?.data?.error || err?.message || 'unknown error';
-          console.error(`Failed to save attendance for ${studentId}: ${msg}`);
-          failedNames.push(assignment.student_name || String(studentId));
+          console.error(`Failed to save attendance for assignment ${assignmentId}: ${msg}`);
+          const asgn = selectedDetention.assignments?.find((a: any) => a.id === assignmentId);
+          failedNames.push(asgn?.student_name || `Assignment ${assignmentId}`);
         }
       }
 
@@ -619,12 +617,12 @@ const MyDetentions: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {selectedDetention.assignments.map((assignment: any, index: number) => (
-                        <tr key={assignment.student_id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                        <tr key={assignment.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                           <td className="px-4 py-3">
                             <p className="font-medium text-gray-900">{assignment.student_name}</p>
                           </td>
                           <td className="px-4 py-3">
-                            <p className="text-sm text-gray-600">{assignment.student_id}</p>
+                            <p className="text-sm text-gray-600">{assignment.student_number}</p>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-1 justify-center">
@@ -635,7 +633,7 @@ const MyDetentions: React.FC = () => {
                                 { value: 'late',    label: 'Late',    active: 'bg-amber-500 text-white'  },
                                 { value: 'excused', label: 'Excused', active: 'bg-blue-500 text-white'   },
                               ].map(opt => {
-                                const current = attendance[String(assignment.student_id)] || 'pending';
+                                const current = attendance[String(assignment.id)] || 'pending';
                                 const isSelected = current === opt.value;
                                 const isLocked  = selectedDetention.status === 'completed';
                                 return (
@@ -645,7 +643,7 @@ const MyDetentions: React.FC = () => {
                                     disabled={isLocked}
                                     onClick={() => !isLocked && setAttendance({
                                       ...attendance,
-                                      [String(assignment.student_id)]: opt.value,
+                                      [String(assignment.id)]: opt.value,
                                     })}
                                     className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all whitespace-nowrap ${
                                       isLocked

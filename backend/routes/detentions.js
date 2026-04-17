@@ -773,16 +773,28 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
 
     const assignments = await schemaAll(req, `
-      SELECT da.*, 
-             s.first_name || ' ' || s.last_name as student_name, 
-             s.student_id,
+      SELECT da.id,
+             da.detention_id,
+             da.student_id       AS student_db_id,
+             da.status,
+             da.notes,
+             da.attendance_time,
+             da.departure_time,
+             da.reason,
+             da.incident_id,
+             da.assigned_by,
+             da.parent_notified,
+             da.created_at,
+             da.updated_at,
+             s.student_id        AS student_number,
+             s.first_name || ' ' || s.last_name AS student_name,
              c.grade_level,
              c.class_name
       FROM detention_assignments da
       INNER JOIN students s ON da.student_id = s.id
-      LEFT JOIN classes c ON s.class_id = c.id
+      LEFT  JOIN classes  c ON s.class_id    = c.id
       WHERE da.detention_id = $1
-      ORDER BY da.created_at DESC
+      ORDER BY s.last_name, s.first_name
     `, [req.params.id]);
 
     detention.assignments = assignments;
