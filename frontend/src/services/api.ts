@@ -322,6 +322,7 @@ export const api = {
   getDetentionQueue: () => axiosInstance.get('/detentions/queue'),
   processDetentionQueue: (detentionId: number) => axiosInstance.post(`/detentions/${detentionId}/process-queue`),
   getQualifyingStudents: () => axiosInstance.get('/detentions/qualifying-students'),
+  getAllDetentionAssignments: () => axiosInstance.get('/detentions/assignments/all'),
 
   // Merits
   getMerits: (params?: any) => axiosInstance.get('/merits', { params }),

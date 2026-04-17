@@ -167,8 +167,9 @@ const ReportsAnalytics: React.FC = () => {
 
   const scopedDetentions = useMemo(() => {
     if (reportScope === 'overall') return allDetentions;
-    return allDetentions;
-  }, [allDetentions, reportScope]);
+    const studentIds = new Set(scopedStudents.map((s: any) => s.id));
+    return allDetentions.filter((d: any) => studentIds.has(d.student_id));
+  }, [allDetentions, reportScope, scopedStudents]);
 
   // ── Derived: behaviour data for chart ─────────────────────────────────────
   const behaviourData = useMemo(() => {
@@ -208,11 +209,14 @@ const ReportsAnalytics: React.FC = () => {
         fetchWithRetry(() => api.getClasses()),
       ]);
 
-      // Batch 2: behaviour data (incidents, merits, detentions)
+      // Batch 2: behaviour data (incidents, merits, detention assignments)
+      // Note: getAllDetentionAssignments returns per-student rows with attendance_status
+      // (attended/absent/late/excused/assigned) — NOT session-level status.
+      // This is essential so the 'Served' column and student names in reports are correct.
       const batch2 = await Promise.allSettled([
         fetchWithRetry(() => api.getIncidents(dateParams)),
         fetchWithRetry(() => api.getMerits(dateParams)),
-        fetchWithRetry(() => api.getDetentions(dateParams)),
+        fetchWithRetry(() => api.getAllDetentionAssignments()),
       ]);
 
       // Batch 3: supplementary (teachers, parents)
@@ -367,17 +371,24 @@ const ReportsAnalytics: React.FC = () => {
     }
 
     // Section 4: Detentions
+    // attendance_status values: attended, absent, late, excused, assigned (pending)
+    const attendanceLabel: Record<string, string> = {
+      attended: 'Present', absent: 'Absent', late: 'Late',
+      excused: 'Excused', assigned: 'Pending', rescheduled: 'Rescheduled',
+    };
     if (scopedDetentions.length > 0) {
       sections.push({
         title: `Detentions — ${scopeLabel}`,
-        headers: ['Date', 'Student', 'Reason', 'Status', 'Duration', 'Served'],
+        headers: ['Date', 'Student', 'Grade', 'Class', 'Reason', 'Attendance', 'Served', 'Notes'],
         data: scopedDetentions.map((d: any) => [
-          d.date || d.detention_date || 'N/A',
+          d.detention_date || 'N/A',
           d.student_name || 'N/A',
-          d.reason || d.description || 'N/A',
-          d.status || 'N/A',
-          d.duration || 'N/A',
-          (d.status === 'attended' || d.status === 'present') ? 'Yes' : 'No',
+          d.grade_level || 'N/A',
+          d.class_name || 'N/A',
+          d.reason || 'N/A',
+          attendanceLabel[d.attendance_status] || d.attendance_status || 'Pending',
+          d.attendance_status === 'attended' ? 'Yes' : 'No',
+          d.notes || '',
         ]),
       });
     }
@@ -586,17 +597,23 @@ const ReportsAnalytics: React.FC = () => {
       });
     }
 
-    // Section 4: Detentions
+    // Section 4: Detentions — attendance_status from assignment records
+    const detAttLabel: Record<string, string> = {
+      attended: 'Present', absent: 'Absent', late: 'Late',
+      excused: 'Excused', assigned: 'Pending', rescheduled: 'Rescheduled',
+    };
     if (sDet.length > 0) {
       sections.push({
         title: 'Detentions',
-        headers: ['Date', 'Reason', 'Status', 'Duration', 'Served'],
+        headers: ['Date', 'Location', 'Duration (min)', 'Reason', 'Attendance', 'Served', 'Notes'],
         data: sDet.map((d: any) => [
-          d.date || d.detention_date || 'N/A',
-          d.reason || d.description || 'N/A',
-          d.status || 'N/A',
-          d.duration || 'N/A',
-          (d.status === 'attended' || d.status === 'present') ? 'Yes' : 'No',
+          d.detention_date || 'N/A',
+          d.location || 'N/A',
+          d.duration || 60,
+          d.reason || 'N/A',
+          detAttLabel[d.attendance_status] || d.attendance_status || 'Pending',
+          d.attendance_status === 'attended' ? 'Yes' : 'No',
+          d.notes || '',
         ]),
       });
     }

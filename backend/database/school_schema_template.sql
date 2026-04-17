@@ -233,8 +233,9 @@ CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.detention_rules (
 
 -- ============================================================================
 -- DETENTION SESSIONS
+-- All backend routes query detention_sessions (not 'detentions').
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.detentions (
+CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.detention_sessions (
     id SERIAL PRIMARY KEY,
     detention_date DATE NOT NULL,
     detention_time TIME NOT NULL,
@@ -242,17 +243,21 @@ CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.detentions (
     duration INTEGER DEFAULT 60,
     location TEXT,
     teacher_on_duty_id INTEGER,
-    max_capacity INTEGER,
+    max_capacity INTEGER DEFAULT 30,
     current_count INTEGER DEFAULT 0,
     status TEXT DEFAULT 'scheduled' CHECK(status IN ('scheduled', 'in_progress', 'completed', 'cancelled')),
+    is_frozen BOOLEAN DEFAULT false,
+    completed_at TIMESTAMPTZ,
     notes TEXT,
     created_by INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (teacher_on_duty_id) REFERENCES {SCHEMA_NAME}.teachers(id) ON DELETE SET NULL
 );
 
 -- ============================================================================
 -- DETENTION ASSIGNMENTS
+-- status CHECK includes 'late' — required by teacher attendance UI.
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.detention_assignments (
     id SERIAL PRIMARY KEY,
@@ -270,9 +275,20 @@ CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.detention_assignments (
     assigned_by INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (detention_id) REFERENCES {SCHEMA_NAME}.detentions(id) ON DELETE CASCADE,
+    FOREIGN KEY (detention_id) REFERENCES {SCHEMA_NAME}.detention_sessions(id) ON DELETE CASCADE,
     FOREIGN KEY (student_id) REFERENCES {SCHEMA_NAME}.students(id) ON DELETE CASCADE,
     FOREIGN KEY (incident_id) REFERENCES {SCHEMA_NAME}.behaviour_incidents(id) ON DELETE SET NULL
+);
+
+-- ============================================================================
+-- DETENTION SESSION TEACHERS  (multi-teacher / invigilator support)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.detention_session_teachers (
+    id SERIAL PRIMARY KEY,
+    session_id INTEGER NOT NULL REFERENCES {SCHEMA_NAME}.detention_sessions(id) ON DELETE CASCADE,
+    teacher_id INTEGER NOT NULL REFERENCES {SCHEMA_NAME}.teachers(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (session_id, teacher_id)
 );
 
 -- ============================================================================

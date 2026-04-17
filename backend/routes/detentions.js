@@ -752,6 +752,48 @@ router.get('/:id/report/excel', authenticateToken, async (req, res) => {
   }
 });
 
+// Get ALL detention assignment records for admin reporting
+// Returns per-student rows with actual attendance_status — NOT session-level status.
+// Used by ReportsAnalytics so the 'Served' column and student details are accurate.
+router.get('/assignments/all', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    if (!schema) return res.status(403).json({ error: 'School context required' });
+
+    const assignments = await schemaAll(req, `
+      SELECT da.id,
+             da.status              AS attendance_status,
+             da.notes,
+             da.attendance_time,
+             da.reason,
+             da.created_at,
+             da.updated_at,
+             da.student_id          AS student_db_id,
+             s.id                   AS student_id,
+             s.student_id           AS student_number,
+             s.first_name || ' ' || s.last_name AS student_name,
+             c.id                   AS class_id,
+             c.grade_level,
+             c.class_name,
+             ds.id                  AS session_id,
+             ds.detention_date,
+             ds.detention_time,
+             ds.duration,
+             ds.location,
+             ds.status              AS session_status
+      FROM   detention_assignments  da
+      INNER  JOIN students          s  ON da.student_id  = s.id
+      INNER  JOIN detention_sessions ds ON da.detention_id = ds.id
+      LEFT   JOIN classes           c  ON s.class_id     = c.id
+      ORDER  BY ds.detention_date DESC, s.last_name, s.first_name
+    `);
+    res.json(assignments);
+  } catch (err) {
+    console.error('Error fetching all detention assignments:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get detention by ID with assignments
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
