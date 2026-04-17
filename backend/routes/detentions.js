@@ -124,8 +124,24 @@ router.get('/', authenticateToken, async (req, res) => {
     } else if (req.user.role === 'teacher') {
       const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
       if (teacher) {
-        query += ` AND d.teacher_on_duty_id = $${paramIndex++}`;
-        params.push(teacher.id);
+        // Also include sessions where this teacher is a co-teacher
+        let coTeacherSessionIds = [];
+        try {
+          const coRows = await schemaAll(req,
+            'SELECT session_id FROM detention_session_teachers WHERE teacher_id = $1',
+            [teacher.id]
+          );
+          coTeacherSessionIds = (coRows || []).map(r => Number(r.session_id));
+        } catch { /* junction table not yet created — skip co-teacher filter */ }
+
+        if (coTeacherSessionIds.length > 0) {
+          query += ` AND (d.teacher_on_duty_id = $${paramIndex} OR d.id = ANY($${paramIndex + 1}::int[]))`;
+          params.push(teacher.id, coTeacherSessionIds);
+          paramIndex += 2;
+        } else {
+          query += ` AND d.teacher_on_duty_id = $${paramIndex++}`;
+          params.push(teacher.id);
+        }
       }
     }
 
@@ -377,11 +393,20 @@ router.put('/assignments/:id/attendance', authenticateToken, async (req, res) =>
     const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
 
     // Update attendance using the mapped database status
-    await schemaRun(req, `
-      UPDATE detention_assignments 
-      SET status = $1, notes = COALESCE($2, notes), updated_at = NOW()
-      WHERE id = $3
-    `, [dbStatus, notes || null, req.params.id]);
+    // Try with updated_at first; fall back without it for older schemas
+    try {
+      await schemaRun(req, `
+        UPDATE detention_assignments 
+        SET status = $1, notes = COALESCE($2, notes), updated_at = NOW()
+        WHERE id = $3
+      `, [dbStatus, notes || null, req.params.id]);
+    } catch (colErr) {
+      await schemaRun(req, `
+        UPDATE detention_assignments 
+        SET status = $1, notes = COALESCE($2, notes)
+        WHERE id = $3
+      `, [dbStatus, notes || null, req.params.id]);
+    }
 
     // If student attended detention, mark their unresolved incidents as resolved
     if (dbStatus === 'attended') {
@@ -771,7 +796,7 @@ router.get('/assignments/all', authenticateToken, requireRole('admin'), async (r
              da.student_id          AS student_db_id,
              s.id                   AS student_id,
              s.student_id           AS student_number,
-             s.first_name || ' ' || s.last_name AS student_name,
+             TRIM(COALESCE(s.first_name, '') || ' ' || COALESCE(s.last_name, '')) AS student_name,
              c.id                   AS class_id,
              c.grade_level,
              c.class_name,
@@ -815,28 +840,16 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
 
     const assignments = await schemaAll(req, `
-      SELECT da.id,
-             da.detention_id,
-             da.student_id       AS student_db_id,
-             da.status,
-             da.notes,
-             da.attendance_time,
-             da.departure_time,
-             da.reason,
-             da.incident_id,
-             da.assigned_by,
-             da.parent_notified,
-             da.created_at,
-             da.updated_at,
+      SELECT da.*,
              s.student_id        AS student_number,
-             s.first_name || ' ' || s.last_name AS student_name,
+             TRIM(COALESCE(s.first_name, '') || ' ' || COALESCE(s.last_name, '')) AS student_name,
              c.grade_level,
              c.class_name
       FROM detention_assignments da
       INNER JOIN students s ON da.student_id = s.id
       LEFT  JOIN classes  c ON s.class_id    = c.id
       WHERE da.detention_id = $1
-      ORDER BY s.last_name, s.first_name
+      ORDER BY da.created_at DESC
     `, [req.params.id]);
 
     detention.assignments = assignments;
@@ -946,9 +959,9 @@ router.post('/:id/assign', authenticateToken, requireRole('admin'), async (req, 
     const { student_id, incident_id, reason } = req.body;
 
     const result = await schemaRun(req,
-      `INSERT INTO detention_assignments (detention_id, student_id, incident_id, notes)
-       VALUES ($1, $2, $3, $4) RETURNING id`,
-      [req.params.id, student_id, incident_id || null, reason || null]
+      `INSERT INTO detention_assignments (detention_id, student_id, incident_id, notes, assigned_by, status)
+       VALUES ($1, $2, $3, $4, $5, 'assigned') RETURNING id`,
+      [req.params.id, student_id, incident_id || null, reason || null, req.user.id]
     );
 
     const assignment = await schemaGet(req, 'SELECT * FROM detention_assignments WHERE id = $1', [result.id]);

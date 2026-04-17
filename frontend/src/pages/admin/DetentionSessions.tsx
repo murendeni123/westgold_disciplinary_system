@@ -632,9 +632,8 @@ const DetentionSessions: React.FC = () => {
             }}
             onAutoAssign={async (sessionId) => {
               await handleAutoAssign(sessionId);
-              setShowDetailsModal(false);
-              setTimeout(() => setShowDetailsModal(true), 100);
             }}
+            onStudentsRefresh={fetchData}
             autoAssignLoading={autoAssignLoading === selectedSession.id}
           />
         )}
@@ -914,10 +913,12 @@ const SessionDetailsModal: React.FC<{
   teachers: Teacher[];
   onClose: () => void;
   onAutoAssign?: (sessionId: number) => Promise<void>;
+  onStudentsRefresh?: () => void;
   autoAssignLoading?: boolean;
-}> = ({ session, teachers, onClose, onAutoAssign, autoAssignLoading }) => {
+}> = ({ session, teachers, onClose, onAutoAssign, onStudentsRefresh, autoAssignLoading }) => {
   const [assignedStudents, setAssignedStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [coTeachers, setCoTeachers] = useState<any[]>([]);
   const [addingTeacher, setAddingTeacher] = useState(false);
   const [newCoTeacherId, setNewCoTeacherId] = useState<string>('');
@@ -971,21 +972,23 @@ const SessionDetailsModal: React.FC<{
   const fetchAssignedStudents = async () => {
     try {
       setLoading(true);
+      setFetchError(null);
       const response = await api.getDetention(session.id);
       const detention = response.data;
       const students = (detention.assignments || []).map((assignment: any) => ({
         id: assignment.id,
         student_number: assignment.student_number || '',
-        name: assignment.student_name,
+        name: assignment.student_name || 'Unknown Student',
         grade: `Grade ${assignment.grade_level || 'N/A'}`,
         reason: assignment.reason || 'Not specified',
-        points: 0,
         status: assignment.status || 'assigned',
         attendance_time: assignment.attendance_time
       }));
       setAssignedStudents(students);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching assigned students:', error);
+      const msg = error?.response?.data?.error || error?.message || 'Failed to load students';
+      setFetchError(msg);
       setAssignedStudents([]);
     } finally {
       setLoading(false);
@@ -1208,9 +1211,16 @@ const SessionDetailsModal: React.FC<{
         <div className="p-6 border-t border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-xl font-bold text-gray-900">Assigned Students</h3>
-            <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-bold">
-              {assignedStudents.length} Students
-            </span>
+            <div className="flex items-center gap-2">
+              {fetchError && (
+                <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-lg">
+                  {fetchError}
+                </span>
+              )}
+              <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-bold">
+                {assignedStudents.length} Students
+              </span>
+            </div>
           </div>
 
           {loading ? (
@@ -1230,7 +1240,11 @@ const SessionDetailsModal: React.FC<{
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => onAutoAssign(session.id)}
+                  onClick={async () => {
+                    await onAutoAssign(session.id);
+                    await fetchAssignedStudents();
+                    onStudentsRefresh?.();
+                  }}
                   disabled={autoAssignLoading}
                   className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
                 >
