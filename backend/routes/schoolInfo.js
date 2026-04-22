@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const { dbGet } = require('../database/db');
 const { authenticateToken } = require('../middleware/auth');
+const cache = require('../utils/cache');
 
 /**
  * GET /api/school-info
@@ -24,6 +25,13 @@ router.get('/', authenticateToken, async (req, res) => {
         
         const schoolId = user.schoolId || user.primary_school_id;
         
+        // Serve from cache when available (5 min TTL)
+        const cacheKey = `school_info_${schoolId}`;
+        const cached = cache.get(cacheKey);
+        if (cached) {
+            return res.json(cached);
+        }
+
         // Get school information
         const school = await dbGet(`
             SELECT 
@@ -56,7 +64,8 @@ router.get('/', authenticateToken, async (req, res) => {
         if (!school) {
             return res.status(404).json({ error: 'School not found' });
         }
-        
+
+        cache.set(cacheKey, school, 5 * 60 * 1000);
         res.json(school);
         
     } catch (error) {

@@ -36,6 +36,7 @@ interface OnboardingData {
   // Step 3: Trial/Subscription
   trial_days: number;
   plan_id: number | null;
+  is_free_plan: boolean;
   
   // Step 4: Branding
   primary_color: string;
@@ -66,6 +67,7 @@ const SchoolOnboardingWizard: React.FC = () => {
     admin_password_confirm: '',
     trial_days: 30,
     plan_id: null,
+    is_free_plan: false,
     primary_color: '#3B82F6',
     secondary_color: '#8B5CF6',
     logo_url: ''
@@ -168,8 +170,9 @@ const SchoolOnboardingWizard: React.FC = () => {
         admin_name: formData.admin_name,
         admin_email: formData.admin_email,
         admin_password: formData.admin_password,
-        trial_days: formData.trial_days,
+        trial_days: formData.is_free_plan ? 30 : formData.trial_days,
         plan_id: formData.plan_id,
+        is_free_plan: formData.is_free_plan,
         primary_color: formData.primary_color,
         secondary_color: formData.secondary_color,
         logo_url: formData.logo_url || null
@@ -301,24 +304,68 @@ const SchoolOnboardingWizard: React.FC = () => {
 
       case 3:
         return (
-          <div className="space-y-4">
-            <Input
-              label="Trial Period (Days)"
-              type="number"
-              value={formData.trial_days.toString()}
-              onChange={(e) => setFormData({ ...formData, trial_days: parseInt(e.target.value) || 30 })}
-              required
-              min="1"
-              max="365"
-            />
-            <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
-              <p className="text-sm text-green-800 mb-2">
-                <strong>Trial Period:</strong> {formData.trial_days} days
-              </p>
-              <p className="text-xs text-green-700">
-                The school will have full access for {formData.trial_days} days. After that, they'll need an active subscription.
-              </p>
+          <div className="space-y-5">
+            {/* Free Plan Toggle */}
+            <div
+              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                formData.is_free_plan
+                  ? 'border-amber-400 bg-amber-50'
+                  : 'border-gray-200 bg-white hover:border-amber-300'
+              }`}
+              onClick={() => setFormData({ ...formData, is_free_plan: !formData.is_free_plan })}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                    formData.is_free_plan ? 'bg-amber-500 border-amber-500' : 'border-gray-400'
+                  }`}>
+                    {formData.is_free_plan && <span className="text-white text-xs font-bold">✓</span>}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">Enable Free Trial Plan</p>
+                    <p className="text-xs text-gray-500">Enforce strict limits for 30 days</p>
+                  </div>
+                </div>
+                <span className="text-xs font-medium px-2 py-1 rounded-full bg-amber-100 text-amber-700">FREE</span>
+              </div>
             </div>
+
+            {formData.is_free_plan ? (
+              <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl space-y-2">
+                <p className="text-sm font-semibold text-amber-800">Free Trial Plan — Limits</p>
+                <ul className="text-xs text-amber-700 space-y-1">
+                  <li>• 30-day trial (fixed)</li>
+                  <li>• Max 200 students</li>
+                  <li>• Max 5 teachers</li>
+                  <li>• Max 1 admin</li>
+                  <li>• Max 1 grade head</li>
+                  <li>• Parents <strong>not allowed</strong></li>
+                </ul>
+                <p className="text-xs text-amber-600 mt-2">
+                  After 30 days the school will be suspended until upgraded.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <Input
+                  label="Trial Period (Days)"
+                  type="number"
+                  value={formData.trial_days.toString()}
+                  onChange={(e) => setFormData({ ...formData, trial_days: parseInt(e.target.value) || 30 })}
+                  required
+                  min="1"
+                  max="365"
+                />
+                <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl">
+                  <p className="text-sm text-green-800 mb-2">
+                    <strong>Trial Period:</strong> {formData.trial_days} days
+                  </p>
+                  <p className="text-xs text-green-700">
+                    The school will have full access for {formData.trial_days} days.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         );
 
@@ -466,6 +513,7 @@ const SchoolOnboardingWizard: React.FC = () => {
                     admin_password_confirm: '',
                     trial_days: 30,
                     plan_id: null,
+                    is_free_plan: false,
                     primary_color: '#3B82F6',
                     secondary_color: '#8B5CF6',
                     logo_url: ''

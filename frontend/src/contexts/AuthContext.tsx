@@ -56,14 +56,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isSupabaseEnabled = isSupabaseConfigured();
 
   useEffect(() => {
-    // One-time fix: Clear potentially corrupted auth data
-    const needsReset = localStorage.getItem('auth_needs_reset');
-    if (needsReset !== 'false') {
-      console.log('Clearing auth data to fix refresh loop...');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      localStorage.setItem('auth_needs_reset', 'false');
-    }
     initializeAuth();
   }, []);
 

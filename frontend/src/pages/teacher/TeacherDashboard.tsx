@@ -86,9 +86,19 @@ const TeacherDashboard: React.FC = () => {
 
   const fetchBehaviorData = async () => {
     try {
+      // Fetch class list first so we can scope charts to the teacher's classes
+      let classFilter: Record<string, any> = {};
+      try {
+        const classesRes = await api.getClasses();
+        const classes: any[] = classesRes.data || [];
+        if (classes.length > 0) {
+          classFilter = { class_id: classes[0].id };
+        }
+      } catch {}
+
       const [incidentsRes, meritsRes] = await Promise.all([
-        api.getIncidents({}),
-        api.getMerits({ start_date: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }),
+        api.getIncidents(classFilter),
+        api.getMerits({ ...classFilter, start_date: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] }),
       ]);
 
       const allIncidents = incidentsRes.data;

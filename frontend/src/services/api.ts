@@ -4,12 +4,14 @@ import axios from 'axios';
 // Falls back to /api for local development with proxy
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
-// Log the API base URL for debugging
-console.log('🔧 API Configuration:', {
-  VITE_API_URL: import.meta.env.VITE_API_URL,
-  API_BASE_URL: API_BASE_URL,
-  mode: import.meta.env.MODE
-});
+// Only log configuration in development
+if (import.meta.env.DEV) {
+  console.log('🔧 API Configuration:', {
+    VITE_API_URL: import.meta.env.VITE_API_URL,
+    API_BASE_URL: API_BASE_URL,
+    mode: import.meta.env.MODE
+  });
+}
 
 // Create axios instance
 const axiosInstance = axios.create({
@@ -557,6 +559,7 @@ export const api = {
   deletePlatformSchool: (id: number) => axiosInstance.delete(`/platform/schools/${id}`),
   bulkUpdateSchoolStatus: (schoolIds: number[], status: string) => axiosInstance.put('/platform/schools/bulk/status', { school_ids: schoolIds, status }),
   updateSchoolSubscription: (id: number, data: any) => axiosInstance.put(`/platform/schools/${id}/subscription`, data),
+  removeSchoolFreePlan: (id: number) => axiosInstance.post(`/platform/schools/${id}/remove-free-plan`),
   // School Branding Management
   getSchoolBranding: (id: number) => axiosInstance.get(`/platform/schools/${id}/branding`),
   updateSchoolBranding: (id: number, data: any) => axiosInstance.put(`/platform/schools/${id}/branding`, data),

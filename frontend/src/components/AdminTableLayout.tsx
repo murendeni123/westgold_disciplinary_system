@@ -23,33 +23,33 @@ const AdminTableLayout: React.FC<AdminTableLayoutProps> = ({
   createLabel = 'Create New',
 }) => {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
-        <div className="flex items-center space-x-3">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">{title}</h1>
+        <div className="flex items-center flex-wrap gap-2 sm:gap-3 flex-shrink-0">
           {onExport && (
             <Button variant="secondary" onClick={onExport}>
-              <Download size={20} className="mr-2" />
-              Export
+              <Download size={18} className="mr-1.5 sm:mr-2" />
+              <span className="hidden sm:inline">Export</span>
             </Button>
           )}
           <Button onClick={onCreateClick}>
-            <Plus size={20} className="mr-2" />
+            <Plus size={18} className="mr-1.5 sm:mr-2" />
             {createLabel}
           </Button>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-4">
-        <div className="flex items-center space-x-4 mb-4">
+      <div className="bg-white rounded-lg shadow p-3 sm:p-4">
+        <div className="flex items-center gap-3 mb-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <Input
               type="text"
               placeholder="Search..."
               value={searchValue}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10"
+              className="pl-9"
             />
           </div>
         </div>

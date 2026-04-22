@@ -196,7 +196,7 @@ const NotificationBell: React.FC = () => {
         )}
       </motion.button>
 
-      {/* Dropdown */}
+      {/* Dropdown — fixed on mobile to avoid overflow, absolute on sm+ */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -204,7 +204,7 @@ const NotificationBell: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
+            className="fixed left-2 right-2 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
             style={{ zIndex: 99999 }}
           >
             {/* Header */}

@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { DarkModeProvider } from './contexts/DarkModeContext';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { PlatformAuthProvider } from './contexts/PlatformAuthContext';
@@ -8,9 +8,8 @@ import { SchoolThemeProvider } from './contexts/SchoolThemeContext';
 import { FeatureFlagsProvider } from './contexts/FeatureFlagsContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { setNavigationCallback } from './services/api';
-import Login from './pages/Login';
-import ParentSignup from './pages/ParentSignup';
-import AuthCallback from './pages/AuthCallback';
+
+// Layouts and guards remain static — needed immediately for routing
 import AdminLayout from './layouts/AdminLayout';
 import TeacherLayout from './layouts/TeacherLayout';
 import GradeHeadLayout from './layouts/GradeHeadLayout';
@@ -19,87 +18,99 @@ import PlatformLayout from './layouts/PlatformLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import OnboardingGuard from './components/OnboardingGuard';
 
-// Admin pages
-import AdminDashboard from './pages/admin/AdminDashboard';
-import Students from './pages/admin/Students';
-import StudentProfile from './pages/admin/StudentProfile';
-import Classes from './pages/admin/Classes';
-import ClassDetail from './pages/admin/ClassDetail';
-import Teachers from './pages/admin/Teachers';
-import MeritsDemerits from './pages/admin/MeritsDemerits';
-import AdminSettings from './pages/admin/AdminSettings';
-import AdminTeacherProfile from './pages/admin/TeacherProfile';
-import Parents from './pages/admin/Parents';
-import BulkImport from './pages/admin/BulkImport';
-import BulkImportV2 from './pages/admin/BulkImportV2';
-import UserManagement from './pages/admin/UserManagement';
-import DisciplineCenter from './pages/admin/DisciplineCenter';
-import DisciplineRules from './pages/admin/DisciplineRules';
-import DetentionSessions from './pages/admin/DetentionSessions';
-import AdminConsequences from './pages/admin/Consequences';
-import ConsequenceManagement from './pages/admin/ConsequenceManagement';
-import ReportsAnalytics from './pages/admin/ReportsAnalytics';
-import BehaviourDashboard from './pages/admin/BehaviourDashboard';
-import AdminNotifications from './pages/admin/NotificationsEnhanced';
-
-// Platform pages
+// Auth pages — small, load eagerly
+import Login from './pages/Login';
+import ParentSignup from './pages/ParentSignup';
+import AuthCallback from './pages/AuthCallback';
 import PlatformLogin from './pages/platform/PlatformLogin';
-import PlatformDashboard from './pages/platform/PlatformDashboard';
-import PlatformSettings from './pages/platform/PlatformSettings';
-import PlatformSchools from './pages/platform/PlatformSchools';
-import PlatformSchoolDetails from './pages/platform/PlatformSchoolDetails';
-import SchoolCustomizations from './pages/platform/SchoolCustomizations';
-import ThemeBuilder from './pages/platform/ThemeBuilder';
-import PlatformSubscriptions from './pages/platform/PlatformSubscriptions';
-import PlatformAnalytics from './pages/platform/PlatformAnalytics';
-import PlatformBilling from './pages/platform/PlatformBilling';
-import PlatformLogs from './pages/platform/PlatformLogs';
-import PlatformUsers from './pages/platform/PlatformUsers';
-import SchoolOnboardingWizard from './pages/platform/SchoolOnboardingWizard';
-import PlatformNotifications from './pages/platform/NotificationsPage';
-import FeatureFlagsManagement from './pages/platform/FeatureFlagsManagement';
-import PlatformInvoiceTemplates from './pages/platform/PlatformInvoiceTemplates';
-import PlatformInvoices from './pages/platform/PlatformInvoices';
 
-// Teacher pages
-import TeacherDashboard from './pages/teacher/TeacherDashboard';
-import MyClasses from './pages/teacher/MyClasses';
-import ClassDetails from './pages/teacher/ClassDetails';
-import TeacherBehaviour from './pages/teacher/Behaviour';
-import LogIncident from './pages/teacher/LogIncident';
-import TeacherMerits from './pages/teacher/Merits';
-import AwardMerit from './pages/teacher/AwardMerit';
-import TeacherDetentions from './pages/teacher/Detentions';
-import TeacherStudentProfile from './pages/teacher/StudentProfile';
-import TeacherSettings from './pages/teacher/TeacherSettings';
-import TeacherInterventions from './pages/teacher/Interventions';
-import GuidedIntervention from './pages/teacher/GuidedIntervention';
-import TeacherConsequences from './pages/teacher/Consequences';
-import AssignConsequence from './pages/teacher/AssignConsequence';
-import TeacherNotifications from './pages/teacher/NotificationsPage';
-import TeacherReports from './pages/teacher/TeacherReports';
-import GradeHeadSettings from './pages/grade-head/GradeHeadSettings';
-import GradeHeadMyClass from './pages/grade-head/GradeHeadMyClass';
-import GradeHeadMyDashboard from './pages/grade-head/GradeHeadMyDashboard';
+// Admin pages — lazy loaded
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
+const Students = lazy(() => import('./pages/admin/Students'));
+const StudentProfile = lazy(() => import('./pages/admin/StudentProfile'));
+const Classes = lazy(() => import('./pages/admin/Classes'));
+const ClassDetail = lazy(() => import('./pages/admin/ClassDetail'));
+const Teachers = lazy(() => import('./pages/admin/Teachers'));
+const MeritsDemerits = lazy(() => import('./pages/admin/MeritsDemerits'));
+const AdminSettings = lazy(() => import('./pages/admin/AdminSettings'));
+const AdminTeacherProfile = lazy(() => import('./pages/admin/TeacherProfile'));
+const Parents = lazy(() => import('./pages/admin/Parents'));
+const BulkImport = lazy(() => import('./pages/admin/BulkImport'));
+const BulkImportV2 = lazy(() => import('./pages/admin/BulkImportV2'));
+const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
+const DisciplineCenter = lazy(() => import('./pages/admin/DisciplineCenter'));
+const DisciplineRules = lazy(() => import('./pages/admin/DisciplineRules'));
+const DetentionSessions = lazy(() => import('./pages/admin/DetentionSessions'));
+const AdminConsequences = lazy(() => import('./pages/admin/Consequences'));
+const ConsequenceManagement = lazy(() => import('./pages/admin/ConsequenceManagement'));
+const ReportsAnalytics = lazy(() => import('./pages/admin/ReportsAnalytics'));
+const BehaviourDashboard = lazy(() => import('./pages/admin/BehaviourDashboard'));
+const AdminNotifications = lazy(() => import('./pages/admin/NotificationsEnhanced'));
 
-// Parent pages
-import ModernParentDashboard from './pages/parent/ModernParentDashboard';
-import LinkChild from './pages/parent/LinkChild';
-import ModernMyChildren from './pages/parent/ModernMyChildren';
-import ChildProfile from './pages/parent/ChildProfile';
-import ModernBehaviourReport from './pages/parent/ModernBehaviourReport';
-import BehaviourDetails from './pages/parent/BehaviourDetails';
-import ModernViewMerits from './pages/parent/ModernViewMerits';
-import ModernViewDetentions from './pages/parent/ModernViewDetentions';
-import ParentMessages from './pages/parent/ParentMessages';
-import ModernSettings from './pages/parent/ModernSettings';
-import ModernNotifications from './pages/parent/ModernNotifications';
-import ParentNotifications from './pages/parent/NotificationsPage';
-import ModernInterventions from './pages/parent/ModernInterventions';
-import ModernConsequences from './pages/parent/ModernConsequences';
-import LinkSchool from './pages/parent/LinkSchool';
-import ParentOnboarding from './pages/parent/Onboarding';
-import ParentProfile from './pages/parent/ParentProfile';
+// Platform pages — lazy loaded
+const PlatformDashboard = lazy(() => import('./pages/platform/PlatformDashboard'));
+const PlatformSettings = lazy(() => import('./pages/platform/PlatformSettings'));
+const PlatformSchools = lazy(() => import('./pages/platform/PlatformSchools'));
+const PlatformSchoolDetails = lazy(() => import('./pages/platform/PlatformSchoolDetails'));
+const SchoolCustomizations = lazy(() => import('./pages/platform/SchoolCustomizations'));
+const ThemeBuilder = lazy(() => import('./pages/platform/ThemeBuilder'));
+const PlatformSubscriptions = lazy(() => import('./pages/platform/PlatformSubscriptions'));
+const PlatformAnalytics = lazy(() => import('./pages/platform/PlatformAnalytics'));
+const PlatformBilling = lazy(() => import('./pages/platform/PlatformBilling'));
+const PlatformLogs = lazy(() => import('./pages/platform/PlatformLogs'));
+const PlatformUsers = lazy(() => import('./pages/platform/PlatformUsers'));
+const SchoolOnboardingWizard = lazy(() => import('./pages/platform/SchoolOnboardingWizard'));
+const PlatformNotifications = lazy(() => import('./pages/platform/NotificationsPage'));
+const FeatureFlagsManagement = lazy(() => import('./pages/platform/FeatureFlagsManagement'));
+const PlatformInvoiceTemplates = lazy(() => import('./pages/platform/PlatformInvoiceTemplates'));
+const PlatformInvoices = lazy(() => import('./pages/platform/PlatformInvoices'));
+
+// Teacher pages — lazy loaded
+const TeacherDashboard = lazy(() => import('./pages/teacher/TeacherDashboard'));
+const MyClasses = lazy(() => import('./pages/teacher/MyClasses'));
+const ClassDetails = lazy(() => import('./pages/teacher/ClassDetails'));
+const TeacherBehaviour = lazy(() => import('./pages/teacher/Behaviour'));
+const LogIncident = lazy(() => import('./pages/teacher/LogIncident'));
+const TeacherMerits = lazy(() => import('./pages/teacher/Merits'));
+const AwardMerit = lazy(() => import('./pages/teacher/AwardMerit'));
+const TeacherDetentions = lazy(() => import('./pages/teacher/Detentions'));
+const TeacherStudentProfile = lazy(() => import('./pages/teacher/StudentProfile'));
+const TeacherSettings = lazy(() => import('./pages/teacher/TeacherSettings'));
+const TeacherInterventions = lazy(() => import('./pages/teacher/Interventions'));
+const GuidedIntervention = lazy(() => import('./pages/teacher/GuidedIntervention'));
+const TeacherConsequences = lazy(() => import('./pages/teacher/Consequences'));
+const AssignConsequence = lazy(() => import('./pages/teacher/AssignConsequence'));
+const TeacherNotifications = lazy(() => import('./pages/teacher/NotificationsPage'));
+const TeacherReports = lazy(() => import('./pages/teacher/TeacherReports'));
+const GradeHeadSettings = lazy(() => import('./pages/grade-head/GradeHeadSettings'));
+const GradeHeadMyClass = lazy(() => import('./pages/grade-head/GradeHeadMyClass'));
+const GradeHeadMyDashboard = lazy(() => import('./pages/grade-head/GradeHeadMyDashboard'));
+
+// Parent pages — lazy loaded
+const ModernParentDashboard = lazy(() => import('./pages/parent/ModernParentDashboard'));
+const LinkChild = lazy(() => import('./pages/parent/LinkChild'));
+const ModernMyChildren = lazy(() => import('./pages/parent/ModernMyChildren'));
+const ChildProfile = lazy(() => import('./pages/parent/ChildProfile'));
+const ModernBehaviourReport = lazy(() => import('./pages/parent/ModernBehaviourReport'));
+const BehaviourDetails = lazy(() => import('./pages/parent/BehaviourDetails'));
+const ModernViewMerits = lazy(() => import('./pages/parent/ModernViewMerits'));
+const ModernViewDetentions = lazy(() => import('./pages/parent/ModernViewDetentions'));
+const ParentMessages = lazy(() => import('./pages/parent/ParentMessages'));
+const ModernSettings = lazy(() => import('./pages/parent/ModernSettings'));
+const ModernNotifications = lazy(() => import('./pages/parent/ModernNotifications'));
+const ParentNotifications = lazy(() => import('./pages/parent/NotificationsPage'));
+const ModernInterventions = lazy(() => import('./pages/parent/ModernInterventions'));
+const ModernConsequences = lazy(() => import('./pages/parent/ModernConsequences'));
+const LinkSchool = lazy(() => import('./pages/parent/LinkSchool'));
+const ParentOnboarding = lazy(() => import('./pages/parent/Onboarding'));
+const ParentProfile = lazy(() => import('./pages/parent/ParentProfile'));
+
+// Lightweight page loading fallback
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-64">
+    <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin" />
+  </div>
+);
 
 // Component to set up navigation callback for API interceptor
 function NavigationSetup() {
@@ -125,6 +136,7 @@ function App() {
               <FeatureFlagsProvider>
                 <ToastProvider>
                   <NavigationSetup />
+            <Suspense fallback={<PageLoader />}>
             <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/login" element={<Login />} />
@@ -242,6 +254,7 @@ function App() {
 
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+            </Suspense>
                 </ToastProvider>
               </FeatureFlagsProvider>
             </PlatformAuthProvider>

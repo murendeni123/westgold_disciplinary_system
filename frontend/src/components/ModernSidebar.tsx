@@ -161,19 +161,8 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
               }}
             />
 
-            {/* Floating Orb */}
-            <motion.div
-              className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-xl"
-              animate={{
-                scale: [1, 1.2, 1],
-                opacity: [0.3, 0.5, 0.3],
-              }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: 'easeInOut',
-              }}
-            />
+            {/* Static orb — no infinite animation */}
+            <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-xl opacity-40" />
 
             {/* Header Content */}
             <div className="relative z-10 p-4 sm:p-5">

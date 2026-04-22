@@ -113,19 +113,8 @@ const ModernParentLayout: React.FC = () => {
             }}
           />
 
-          {/* Floating Orbs */}
-          <motion.div
-            className="absolute top-0 right-20 w-32 h-32 bg-white/10 rounded-full blur-2xl"
-            animate={{
-              scale: [1, 1.2, 1],
-              x: [0, 20, 0],
-            }}
-            transition={{
-              duration: 6,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-          />
+          {/* Static orb — no infinite animation to avoid GPU overhead */}
+          <div className="absolute top-0 right-20 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
 
           {/* Header Content */}
           <div className="relative z-50 flex items-center justify-between px-6 py-4 gap-4">
@@ -153,9 +142,9 @@ const ModernParentLayout: React.FC = () => {
               </div>
             </div>
 
-            {/* Center - Search */}
-            <div className="flex-1 max-w-lg">
-              <div className="relative">
+            {/* Center - Search — hidden on mobile to prevent header overcrowding */}
+            <div className="hidden md:flex flex-1 max-w-lg">
+              <div className="relative w-full">
                 <QuickStudentSearch />
               </div>
             </div>
@@ -179,10 +168,8 @@ const ModernParentLayout: React.FC = () => {
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto">
-          <div className="p-6 lg:p-10 xl:p-12 max-w-[1600px] mx-auto">
-            <PageTransition>
-              <Outlet />
-            </PageTransition>
+          <div className="p-4 sm:p-6 lg:p-10 xl:p-12 max-w-[1600px] mx-auto">
+            <Outlet />
           </div>
         </main>
       </div>

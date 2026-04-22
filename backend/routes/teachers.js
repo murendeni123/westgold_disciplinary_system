@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const { dbRun, dbGet } = require('../database/db');
 const { schemaAll, schemaGet, schemaRun, getSchema } = require('../utils/schemaHelper');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { checkResourceLimit } = require('../utils/planEnforcement');
 const multer = require('multer');
 const { uploadToSupabase, deleteFromSupabase } = require('../middleware/supabaseUpload');
 
@@ -141,6 +142,14 @@ router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
 
         if (!email || !password || !name) {
             return res.status(400).json({ error: 'Email, password, and name are required' });
+        }
+
+        const schoolId = req.schoolId || req.user?.schoolId;
+        if (schoolId) {
+            const limitCheck = await checkResourceLimit(schoolId, schema, 'teacher');
+            if (!limitCheck.allowed) {
+                return res.status(403).json({ error: limitCheck.message, code: 'PLAN_LIMIT_REACHED' });
+            }
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);

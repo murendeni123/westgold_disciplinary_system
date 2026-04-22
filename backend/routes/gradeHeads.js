@@ -2,6 +2,7 @@ const express = require('express');
 const { schemaGet, schemaRun, schemaAll } = require('../utils/schemaHelper');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { requireAdminOnly } = require('../middleware/permissions');
+const { checkResourceLimit } = require('../utils/planEnforcement');
 
 const router = express.Router();
 
@@ -16,6 +17,16 @@ router.post('/assign', requireAdminOnly, async (req, res) => {
         error: 'Missing required fields',
         required: ['teacherId', 'grade']
       });
+    }
+
+    // Free plan: maximum 1 grade head
+    const schoolId = req.schoolId || req.user?.schoolId;
+    const schemaName = req.schemaName || req.user?.schemaName;
+    if (schoolId && schemaName) {
+      const limitCheck = await checkResourceLimit(schoolId, schemaName, 'grade_head');
+      if (!limitCheck.allowed) {
+        return res.status(403).json({ error: limitCheck.message, code: 'PLAN_LIMIT_REACHED' });
+      }
     }
 
     // Validate grade format (1-12 or string like "8", "9", etc.)

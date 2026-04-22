@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import Table from '../../components/Table';
 import Button from '../../components/Button';
+import SearchableSelect from '../../components/SearchableSelect';
 import { motion } from 'framer-motion';
-import { Plus, AlertTriangle, Edit2, Trash2, Eye, TrendingUp } from 'lucide-react';
+import { Plus, AlertTriangle, Edit2, Trash2, Eye, TrendingUp, Filter, X } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { useToast } from '../../hooks/useToast';
 import { decodeHtmlEntities } from '../../utils/htmlDecode';
@@ -13,17 +14,31 @@ const IncidentHistory: React.FC = () => {
   const navigate = useNavigate();
   const { success, error, ToastContainer } = useToast();
   const [incidents, setIncidents] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [selectedIncident, setSelectedIncident] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchIncidents();
+    fetchStudents();
   }, []);
+
+  const fetchStudents = async () => {
+    try {
+      const res = await api.getStudents();
+      setStudents(res.data || []);
+    } catch {}
+  };
 
   const [severityData, setSeverityData] = useState<any[]>([]);
   const [trendData, setTrendData] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
+
+  const filteredIncidents = selectedStudentId
+    ? incidents.filter((i: any) => String(i.student_id) === selectedStudentId)
+    : incidents;
 
   const fetchIncidents = async () => {
     try {
@@ -209,13 +224,13 @@ const IncidentHistory: React.FC = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex justify-between items-center"
+        className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4"
       >
         <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
             Incident History
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">View all incidents you've logged</p>
+          <p className="text-gray-600 mt-2">View all incidents you've logged</p>
         </div>
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button
@@ -226,6 +241,47 @@ const IncidentHistory: React.FC = () => {
             Log New Incident
           </Button>
         </motion.div>
+      </motion.div>
+
+      {/* Student Filter */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-4 sm:p-6"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl">
+            <Filter className="text-white" size={18} />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900">Filter by Student</h2>
+          {selectedStudentId && (
+            <button
+              onClick={() => setSelectedStudentId('')}
+              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+            >
+              <X size={14} /> Clear filter
+            </button>
+          )}
+        </div>
+        <div className="max-w-sm">
+          <SearchableSelect
+            value={selectedStudentId}
+            onChange={(v) => setSelectedStudentId(String(v))}
+            options={students.map((s: any) => ({
+              value: String(s.id),
+              label: `${s.first_name} ${s.last_name}${s.class_name ? ` — ${s.class_name}` : ''}`,
+            }))}
+            placeholder="All students (no filter)"
+            showClear={!!selectedStudentId}
+            onClear={() => setSelectedStudentId('')}
+          />
+        </div>
+        {selectedStudentId && (
+          <p className="mt-3 text-sm text-gray-500">
+            Showing <strong>{filteredIncidents.length}</strong> incident{filteredIncidents.length !== 1 ? 's' : ''} for selected student
+          </p>
+        )}
       </motion.div>
 
       {/* Summary Stats */}
@@ -345,10 +401,12 @@ const IncidentHistory: React.FC = () => {
         className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Incident Records ({incidents.length})</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Incident Records ({filteredIncidents.length}{selectedStudentId ? ` filtered` : ''})
+          </h2>
           <AlertTriangle className="text-red-600" size={24} />
         </div>
-        <Table columns={columns} data={incidents} />
+        <Table columns={columns} data={filteredIncidents} />
       </motion.div>
 
       {/* Incident Details Modal */}

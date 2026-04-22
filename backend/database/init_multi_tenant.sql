@@ -269,5 +269,17 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- ============================================================================
+-- FREE TRIAL PLAN: add plan_type column if not already present
+-- ============================================================================
+-- Safe to run multiple times — ADD COLUMN IF NOT EXISTS is idempotent.
+-- plan_type values:
+--   'full'        → no restrictions (default for all schools)
+--   'free_trial'  → free-trial limits apply; trial_ends_at governs expiry
+
+ALTER TABLE public.schools
+  ADD COLUMN IF NOT EXISTS plan_type TEXT NOT NULL DEFAULT 'full'
+  CHECK (plan_type IN ('free_trial', 'full'));
+
+-- ============================================================================
 -- END OF PUBLIC SCHEMA
 -- ============================================================================

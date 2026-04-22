@@ -5,6 +5,7 @@ const { dbAll, dbGet, dbRun, pool } = require('../database/db');
 const { authenticateToken } = require('../middleware/auth');
 const { createSchoolSchema, generateSchemaName } = require('../database/schemaManager');
 const { seedDefaultTypes } = require('../database/seedDefaultTypes');
+const { FREE_PLAN_LIMITS } = require('../utils/planEnforcement');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -347,7 +348,8 @@ router.post('/schools/onboard', requirePlatformAdmin, async (req, res) => {
             // Step 3: Trial/Subscription
             trial_days = 30,
             plan_id,
-            
+            is_free_plan,
+
             // Step 4: Branding
             primary_color,
             secondary_color,
@@ -399,11 +401,24 @@ router.post('/schools/onboard', requirePlatformAdmin, async (req, res) => {
         // Generate schema name from school code
         const schemaName = generateSchemaName(school_code);
 
+        // Free plan: fixed 30-day trial with strict limits
+        const applyFreePlan = is_free_plan === true || is_free_plan === 'true';
+        const effectiveTrialDays = applyFreePlan ? 30 : (trial_days || 30);
+        const trialEndsAt = new Date(Date.now() + effectiveTrialDays * 24 * 60 * 60 * 1000);
+
         // 1. Create school with schema_name
         const schoolResult = await dbRun(
-            `INSERT INTO public.schools (name, email, phone, address, city, postal_code, code, school_code, schema_name, status, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'trial', CURRENT_TIMESTAMP) RETURNING id`,
-            [school_name, school_email, school_phone || null, school_address || null, school_city || null, school_postal_code || null, school_code, school_code, schemaName]
+            `INSERT INTO public.schools (name, email, phone, address, city, postal_code, code, school_code, schema_name, status,
+               trial_ends_at, plan_type, max_students, max_teachers, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'trial', $10, $11, $12, $13, CURRENT_TIMESTAMP) RETURNING id`,
+            [
+                school_name, school_email, school_phone || null, school_address || null,
+                school_city || null, school_postal_code || null, school_code, school_code, schemaName,
+                trialEndsAt.toISOString(),
+                applyFreePlan ? 'free_trial' : 'full',
+                applyFreePlan ? FREE_PLAN_LIMITS.students : 1000,
+                applyFreePlan ? FREE_PLAN_LIMITS.teachers : 100
+            ]
         );
         const school_id = schoolResult.id;
         
@@ -464,14 +479,11 @@ router.post('/schools/onboard', requirePlatformAdmin, async (req, res) => {
         }
 
         // 8. Set trial/subscription
-        const trial_end_date = new Date();
-        trial_end_date.setDate(trial_end_date.getDate() + trial_days);
-        
         if (plan_id) {
             await dbRun(
                 `INSERT INTO public.school_subscriptions (school_id, plan_id, start_date, end_date, status, created_at)
                  VALUES ($1, $2, CURRENT_TIMESTAMP, $3, 'trial', CURRENT_TIMESTAMP)`,
-                [school_id, plan_id, trial_end_date.toISOString()]
+                [school_id, plan_id, trialEndsAt.toISOString()]
             );
         }
 
@@ -532,12 +544,41 @@ router.post('/schools/onboard', requirePlatformAdmin, async (req, res) => {
                 'Admin should login and customize school settings',
                 'Import students and create classes',
                 'Set up behaviour policies and merit systems',
-                `Trial expires in ${trial_days} days`
+                applyFreePlan
+                    ? `Free trial active — expires in ${effectiveTrialDays} days (${FREE_PLAN_LIMITS.students} students, ${FREE_PLAN_LIMITS.teachers} teachers, no parents)`
+                    : `Trial expires in ${effectiveTrialDays} days`
             ]
         });
     } catch (error) {
         console.error('Error onboarding school:', error);
         res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+});
+
+// Remove free plan from a school (upgrade to full)
+router.post('/schools/:id/remove-free-plan', requirePlatformAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const school = await dbGet('SELECT * FROM public.schools WHERE id = $1', [id]);
+        if (!school) {
+            return res.status(404).json({ error: 'School not found' });
+        }
+        if (school.plan_type !== 'free_trial') {
+            return res.status(400).json({ error: 'School is not on a free trial plan', currentPlan: school.plan_type });
+        }
+        await dbRun(
+            `UPDATE public.schools
+             SET plan_type = 'full', max_students = 1000, max_teachers = 100,
+                 status = CASE WHEN status = 'suspended' THEN 'active' ELSE status END,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $1`,
+            [id]
+        );
+        const updated = await dbGet('SELECT * FROM public.schools WHERE id = $1', [id]);
+        res.json({ success: true, message: 'Free trial removed. School upgraded to full plan.', school: updated });
+    } catch (error) {
+        console.error('Remove free plan error:', error);
+        res.status(500).json({ error: 'Failed to remove free plan' });
     }
 });
 

@@ -7,7 +7,7 @@ import Select from '../../components/Select';
 import Input from '../../components/Input';
 import Modal from '../../components/Modal';
 import SchoolAdminManagement from '../../components/SchoolAdminManagement';
-import { ArrowLeft, Save, Palette, Edit, Trash2, Power, Building2, Users, GraduationCap, CreditCard, TrendingUp, Activity, Clock, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Save, Palette, Edit, Trash2, Power, Building2, Users, GraduationCap, CreditCard, TrendingUp, Activity, Clock, BarChart3, AlertTriangle, Zap } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 
 const PlatformSchoolDetails: React.FC = () => {
@@ -159,6 +159,27 @@ const PlatformSchoolDetails: React.FC = () => {
     }
   };
 
+  const handleRemoveFreePlan = async () => {
+    if (!window.confirm('Remove the Free Trial plan and upgrade this school to the Full plan? This will lift all restrictions.')) return;
+    setSaving(true);
+    try {
+      await api.removeSchoolFreePlan(Number(id));
+      success('School upgraded to full plan successfully');
+      fetchSchool();
+    } catch (err: any) {
+      error(err.response?.data?.error || 'Error upgrading plan');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getFreePlanInfo = () => {
+    if (!school || school.plan_type !== 'free_trial') return null;
+    if (!school.trial_ends_at) return { days: null, expired: false };
+    const days = Math.ceil((new Date(school.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return { days: days > 0 ? days : 0, expired: days <= 0 };
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -259,6 +280,51 @@ const PlatformSchoolDetails: React.FC = () => {
           </motion.div>
         </div>
       </motion.div>
+
+      {/* Free Plan Banner */}
+      {school.plan_type === 'free_trial' && (() => {
+        const freePlan = getFreePlanInfo();
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`rounded-2xl p-5 border-2 flex items-center justify-between flex-wrap gap-4 ${
+              freePlan?.expired
+                ? 'bg-red-50 border-red-300'
+                : 'bg-amber-50 border-amber-300'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <AlertTriangle size={24} className={freePlan?.expired ? 'text-red-500' : 'text-amber-500'} />
+              <div>
+                <p className={`font-semibold text-lg ${
+                  freePlan?.expired ? 'text-red-800' : 'text-amber-800'
+                }`}>
+                  {freePlan?.expired ? 'Free Trial Expired' : 'Free Trial Active'}
+                </p>
+                <p className={`text-sm ${
+                  freePlan?.expired ? 'text-red-600' : 'text-amber-600'
+                }`}>
+                  {freePlan?.expired
+                    ? 'This school is suspended. Upgrade to restore full access.'
+                    : `${freePlan?.days} days remaining • Max 200 students, 5 teachers, 1 admin, 1 grade head • No parents`
+                  }
+                </p>
+              </div>
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleRemoveFreePlan}
+              disabled={saving}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 transition-all"
+            >
+              <Zap size={18} />
+              {saving ? 'Upgrading...' : 'Upgrade to Full Plan'}
+            </motion.button>
+          </motion.div>
+        );
+      })()}
 
       {/* Cards Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

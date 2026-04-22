@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { decodeHtmlEntities } from '../../utils/htmlDecode';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../services/api';
 import {
@@ -962,7 +963,7 @@ const DisciplineCenter: React.FC = () => {
                     </div>
                     <div className="bg-gray-50 rounded-xl p-4">
                       <p className="text-sm text-gray-500 mb-1">Description</p>
-                      <p className="text-gray-900">{selectedItem.description || 'No description provided'}</p>
+                      <p className="text-gray-900 whitespace-pre-wrap">{decodeHtmlEntities(selectedItem.description) || 'No description provided'}</p>
                     </div>
                   </div>
                 )}
@@ -997,7 +998,7 @@ const DisciplineCenter: React.FC = () => {
                     </div>
                     <div className="bg-gray-50 rounded-xl p-4">
                       <p className="text-sm text-gray-500 mb-1">Reason</p>
-                      <p className="text-gray-900">{selectedItem.reason || 'No reason provided'}</p>
+                      <p className="text-gray-900 whitespace-pre-wrap">{decodeHtmlEntities(selectedItem.reason) || 'No reason provided'}</p>
                     </div>
                   </div>
                 )}
@@ -1065,7 +1066,7 @@ const DisciplineCenter: React.FC = () => {
                     </div>
                     <div className="bg-gray-50 rounded-xl p-4">
                       <p className="text-sm text-gray-500 mb-1">Description</p>
-                      <p className="text-gray-900">{selectedItem.description || 'No description provided'}</p>
+                      <p className="text-gray-900 whitespace-pre-wrap">{decodeHtmlEntities(selectedItem.description) || 'No description provided'}</p>
                     </div>
                   </div>
                 )}

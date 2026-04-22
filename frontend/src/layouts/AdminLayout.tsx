@@ -5,11 +5,11 @@ import QuickStudentSearch from '../components/QuickStudentSearch';
 import NotificationBell from '../components/NotificationBell';
 import TokenExpirationWarning from '../components/TokenExpirationWarning';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
-import { motion } from 'framer-motion';
-import { Menu, X, Shield } from 'lucide-react';
+import { Menu, X, Shield, Search } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
+  const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
   const { customizations } = useSchoolTheme();
 
@@ -21,49 +21,21 @@ const AdminLayout: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Close sidebar on every navigation on mobile — prevents overlay getting stuck
+  useEffect(() => {
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false);
+      setSearchOpen(false);
+    }
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{
-            x: [0, 100, 0],
-            y: [0, 100, 0],
-            scale: [1, 1.2, 1],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: "linear"
-          }}
-          className="absolute -top-40 -right-40 w-80 h-80 bg-amber-300 rounded-full mix-blend-multiply filter blur-xl opacity-20"
-        />
-        <motion.div
-          animate={{
-            x: [0, -100, 0],
-            y: [0, -100, 0],
-            scale: [1, 1.2, 1],
-          }}
-          transition={{
-            duration: 25,
-            repeat: Infinity,
-            ease: "linear"
-          }}
-          className="absolute -bottom-40 -left-40 w-80 h-80 bg-orange-300 rounded-full mix-blend-multiply filter blur-xl opacity-20"
-        />
-        <motion.div
-          animate={{
-            x: [0, 50, 0],
-            y: [0, -50, 0],
-            scale: [1, 1.1, 1],
-          }}
-          transition={{
-            duration: 30,
-            repeat: Infinity,
-            ease: "linear"
-          }}
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-red-300 rounded-full mix-blend-multiply filter blur-xl opacity-20"
-        />
+      {/* Static Background Elements — hidden on mobile to avoid GPU stress */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none hidden lg:block">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-amber-300 rounded-full mix-blend-multiply filter blur-xl opacity-20" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-orange-300 rounded-full mix-blend-multiply filter blur-xl opacity-20" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-red-300 rounded-full mix-blend-multiply filter blur-xl opacity-20" />
       </div>
 
       <TokenExpirationWarning />
@@ -71,12 +43,7 @@ const AdminLayout: React.FC = () => {
       
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-80 relative z-10">
         {/* Modern Header */}
-        <motion.header
-          initial={{ y: -100 }}
-          animate={{ y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="backdrop-blur-xl bg-white/80 shadow-lg sticky top-0 z-30 border-b border-white/20"
-        >
+        <header className="backdrop-blur-xl bg-white/80 shadow-lg sticky top-0 z-30 border-b border-white/20">
           <div className="flex items-center justify-between px-4 py-4 lg:px-8">
             <div className="flex items-center space-x-4">
               <button
@@ -85,12 +52,7 @@ const AdminLayout: React.FC = () => {
               >
                 {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: 'spring' }}
-                className="flex items-center space-x-3"
-              >
+              <div className="flex items-center space-x-3">
                 <div className="relative">
                   <div className="absolute inset-0 bg-gradient-to-r from-amber-600 to-orange-600 rounded-xl blur opacity-50"></div>
                   <div className="relative bg-gradient-to-r from-amber-600 to-orange-600 p-2 rounded-xl">
@@ -103,30 +65,38 @@ const AdminLayout: React.FC = () => {
                   </h1>
                   <p className="text-xs text-gray-500">Manage your school efficiently</p>
                 </div>
-              </motion.div>
+              </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex-1 max-w-md hidden md:block">
+            <div className="flex items-center space-x-2">
+              {/* Search icon — mobile only */}
+              <button
+                onClick={() => setSearchOpen(!searchOpen)}
+                className="md:hidden p-2 rounded-xl hover:bg-white/50 transition-all duration-200"
+                aria-label="Search students"
+              >
+                {searchOpen ? <X size={22} /> : <Search size={22} />}
+              </button>
+              {/* Full search bar — desktop only */}
+              <div className="hidden md:block flex-1 max-w-md">
                 <QuickStudentSearch />
               </div>
               <NotificationBell />
             </div>
           </div>
-        </motion.header>
+        </header>
 
-        {/* Main content with smooth transitions */}
-        <motion.main
-          key={location.pathname}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.3 }}
-          className="flex-1 overflow-y-auto"
-        >
-          <div className="p-6 lg:p-10 xl:p-12 max-w-[1600px] mx-auto">
+        {/* Mobile search bar */}
+        {searchOpen && (
+          <div className="md:hidden px-4 pb-3 bg-white/90 border-b border-gray-100 z-20">
+            <QuickStudentSearch />
+          </div>
+        )}
+
+        <main className="flex-1 overflow-y-auto">
+          <div className="p-4 sm:p-6 lg:p-10 xl:p-12 max-w-[1600px] mx-auto">
             <Outlet />
           </div>
-        </motion.main>
+        </main>
       </div>
     </div>
   );

@@ -23,13 +23,16 @@ import Button from '../components/Button';
 
 const PlatformLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const { user, logout } = usePlatformAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
     const handleResize = () => {
-      setSidebarOpen(window.innerWidth >= 1024);
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      setSidebarOpen(!mobile);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -64,20 +67,15 @@ const PlatformLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
-      {/* Animated Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+      {/* Static Background Elements — visible on desktop only to avoid GPU overhead on mobile */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none hidden lg:block">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-20"></div>
       </div>
 
       {/* Header */}
-      <motion.header
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="backdrop-blur-xl bg-white/80 shadow-lg sticky top-0 z-30 border-b border-white/20"
-      >
+      <header className="backdrop-blur-xl bg-white/80 shadow-lg sticky top-0 z-30 border-b border-white/20">
         <div className="flex items-center justify-between px-4 py-4 lg:px-8">
           <div className="flex items-center space-x-4">
             <button
@@ -86,12 +84,7 @@ const PlatformLayout: React.FC = () => {
             >
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: 'spring' }}
-              className="flex items-center space-x-3"
-            >
+            <div className="flex items-center space-x-3">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl blur opacity-50"></div>
                 <div className="relative bg-gradient-to-r from-purple-600 to-pink-600 p-2 rounded-xl">
@@ -104,14 +97,9 @@ const PlatformLayout: React.FC = () => {
                 </h1>
                 <p className="text-xs text-gray-500">Super Admin Portal</p>
               </div>
-            </motion.div>
+            </div>
           </div>
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex items-center space-x-4"
-          >
+          <div className="flex items-center space-x-4">
             <div className="hidden md:flex items-center space-x-3 px-4 py-2 rounded-xl bg-white/50 backdrop-blur-sm">
               <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
                 <span className="text-white text-sm font-bold">
@@ -132,19 +120,19 @@ const PlatformLayout: React.FC = () => {
               <LogOut size={16} className="mr-2" />
               Logout
             </Button>
-          </motion.div>
+          </div>
         </div>
-      </motion.header>
+      </header>
 
       <div className="flex relative z-10">
         {/* Sidebar */}
         <AnimatePresence>
-          {(sidebarOpen || window.innerWidth >= 1024) && (
+          {sidebarOpen && (
             <motion.aside
               initial={{ x: -300, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -300, opacity: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
               className={`fixed top-0 left-0 z-50 h-full w-72 backdrop-blur-xl bg-white/70 shadow-2xl border-r border-white/20 lg:translate-x-0 ${
                 sidebarOpen ? 'translate-x-0' : '-translate-x-full'
               }`}
@@ -152,12 +140,7 @@ const PlatformLayout: React.FC = () => {
             >
               <div className="flex flex-col h-full">
                 {/* User info */}
-                <motion.div
-                  initial={{ y: -20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="p-6 border-b border-white/20 bg-gradient-to-r from-purple-500/10 to-pink-500/10"
-                >
+                <div className="p-6 border-b border-white/20 bg-gradient-to-r from-purple-500/10 to-pink-500/10">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center shadow-lg">
                       <span className="text-white text-lg font-bold">
@@ -169,40 +152,27 @@ const PlatformLayout: React.FC = () => {
                       <p className="text-xs text-gray-500">Platform Administrator</p>
                     </div>
                   </div>
-                </motion.div>
+                </div>
 
                 {/* Menu */}
                 <nav className="flex-1 overflow-y-auto p-4">
                   <ul className="space-y-2">
-                    {menuItems.map((item, index) => {
+                    {menuItems.map((item) => {
                       const Icon = item.icon;
                       const active = isActive(item.path);
                       return (
-                        <motion.li
-                          key={item.path}
-                          initial={{ x: -20, opacity: 0 }}
-                          animate={{ x: 0, opacity: 1 }}
-                          transition={{ delay: 0.1 * index }}
-                        >
+                        <li key={item.path}>
                           <button
                             onClick={() => {
                               navigate(item.path);
-                              if (window.innerWidth < 1024) setSidebarOpen(false);
+                              if (isMobile) setSidebarOpen(false);
                             }}
-                            className={`group relative flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 w-full text-left overflow-hidden ${
+                            className={`group relative flex items-center space-x-3 px-4 py-3 rounded-xl transition-colors duration-150 w-full text-left overflow-hidden ${
                               active
-                                ? 'bg-gradient-to-r ' + item.color + ' text-white shadow-lg scale-105'
-                                : 'text-gray-700 hover:bg-white/50 hover:scale-105'
+                                ? 'bg-gradient-to-r ' + item.color + ' text-white shadow-lg'
+                                : 'text-gray-700 hover:bg-white/50'
                             }`}
                           >
-                            {active && (
-                              <motion.div
-                                layoutId="activeTab"
-                                className="absolute inset-0 bg-gradient-to-r opacity-100"
-                                initial={false}
-                                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                              />
-                            )}
                             <div className={`relative z-10 ${active ? 'text-white' : 'text-gray-600 group-hover:text-purple-600'}`}>
                               <Icon size={20} />
                             </div>
@@ -210,14 +180,10 @@ const PlatformLayout: React.FC = () => {
                               {item.label}
                             </span>
                             {active && (
-                              <motion.div
-                                initial={{ scale: 0 }}
-                                animate={{ scale: 1 }}
-                                className="absolute right-2 w-2 h-2 bg-white rounded-full"
-                              />
+                              <div className="absolute right-2 w-2 h-2 bg-white rounded-full" />
                             )}
                           </button>
-                        </motion.li>
+                        </li>
                       );
                     })}
                   </ul>
@@ -229,7 +195,7 @@ const PlatformLayout: React.FC = () => {
 
         {/* Mobile overlay */}
         <AnimatePresence>
-          {sidebarOpen && window.innerWidth < 1024 && (
+          {sidebarOpen && isMobile && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -244,43 +210,16 @@ const PlatformLayout: React.FC = () => {
         {/* Main content */}
         <main
           className={`flex-1 transition-all duration-300 ${
-            sidebarOpen || window.innerWidth >= 1024 ? 'lg:ml-72' : 'lg:ml-0'
+            sidebarOpen && !isMobile ? 'lg:ml-72' : ''
           }`}
           style={{ marginTop: '73px' }}
         >
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="p-6 lg:p-8"
-          >
+          <div className="p-6 lg:p-8">
             <Outlet />
-          </motion.div>
+          </div>
         </main>
       </div>
 
-      <style>{`
-        @keyframes blob {
-          0%, 100% {
-            transform: translate(0, 0) scale(1);
-          }
-          33% {
-            transform: translate(30px, -50px) scale(1.1);
-          }
-          66% {
-            transform: translate(-20px, 20px) scale(0.9);
-          }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-      `}</style>
     </div>
   );
 };

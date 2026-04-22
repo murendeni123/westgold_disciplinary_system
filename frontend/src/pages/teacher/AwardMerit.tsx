@@ -7,7 +7,7 @@ import Select from '../../components/Select';
 import SearchableSelect from '../../components/SearchableSelect';
 import Textarea from '../../components/Textarea';
 import { motion } from 'framer-motion';
-import { Award } from 'lucide-react';
+import { Award, CheckCircle, User, Calendar, Star, FileText } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import BadgeStatusModal from '../../components/BadgeStatusModal';
 
@@ -30,6 +30,7 @@ const AwardMerit: React.FC = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [showBadgeModal, setShowBadgeModal] = useState(false);
   const [badgeModalData, setBadgeModalData] = useState<any>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -117,39 +118,33 @@ const AwardMerit: React.FC = () => {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.description.trim()) {
+      error('Description is required');
+      return;
+    }
+    setShowConfirmation(true);
+  };
+
+  const handleConfirmSubmit = async () => {
     setLoading(true);
-
     try {
-      if (!formData.description.trim()) {
-        error('Description is required');
-        return;
-      }
-
       const response = await api.createMerit({
         ...formData,
         points: Number(formData.points),
       });
-      
-      // Check if badge status changed
+
       if (response.data.badgeStatusChange) {
         const { badgeEarned, badgeLost, studentName, cleanPoints, totalMerits } = response.data.badgeStatusChange;
-        
         if (badgeEarned || badgeLost) {
-          setBadgeModalData({
-            badgeEarned,
-            badgeLost,
-            studentName,
-            cleanPoints,
-            totalMerits
-          });
+          setBadgeModalData({ badgeEarned, badgeLost, studentName, cleanPoints, totalMerits });
           setShowBadgeModal(true);
         }
       }
-      
+
       success('Merit awarded successfully!');
-      // Reset form
+      setShowConfirmation(false);
       setFormData({
         student_id: '',
         merit_date: new Date().toISOString().split('T')[0],
@@ -181,7 +176,103 @@ const AwardMerit: React.FC = () => {
   return (
     <div className="space-y-8">
       <ToastContainer />
-      
+
+      {/* Confirmation Modal */}
+      {showConfirmation && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-white/20 overflow-hidden"
+          >
+            <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-5 text-white">
+              <div className="flex items-center space-x-3">
+                <CheckCircle size={28} />
+                <div>
+                  <h2 className="text-xl font-bold">Confirm Merit Award</h2>
+                  <p className="text-green-100 text-sm">Please review before confirming</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              {[
+                {
+                  icon: User,
+                  label: 'Student',
+                  value: (() => {
+                    const all = selectedClassId ? classStudents : allStudents;
+                    const s = all.find((s: any) => String(s.id) === formData.student_id);
+                    return s ? `${s.first_name} ${s.last_name}` : '—';
+                  })(),
+                  color: 'text-blue-600',
+                  bg: 'bg-blue-50',
+                },
+                {
+                  icon: Star,
+                  label: 'Merit Type',
+                  value: meritTypes.find((t: any) => String(t.id) === formData.merit_type_id)?.name || '—',
+                  color: 'text-green-600',
+                  bg: 'bg-green-50',
+                },
+                {
+                  icon: Award,
+                  label: 'Points',
+                  value: `+${formData.points} merit point${Number(formData.points) !== 1 ? 's' : ''}`,
+                  color: 'text-emerald-600',
+                  bg: 'bg-emerald-50',
+                },
+                {
+                  icon: Calendar,
+                  label: 'Date',
+                  value: new Date(formData.merit_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+                  color: 'text-purple-600',
+                  bg: 'bg-purple-50',
+                },
+                {
+                  icon: FileText,
+                  label: 'Description',
+                  value: formData.description,
+                  color: 'text-gray-600',
+                  bg: 'bg-gray-50',
+                },
+              ].map(({ icon: Icon, label, value, color, bg }) => (
+                <div key={label} className={`flex items-start space-x-3 p-3 rounded-xl ${bg}`}>
+                  <Icon className={`${color} mt-0.5 flex-shrink-0`} size={18} />
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">{label}</p>
+                    <p className="text-sm font-semibold text-gray-900">{value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowConfirmation(false)}
+                className="flex-1 rounded-xl"
+              >
+                Go Back
+              </Button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleConfirmSubmit}
+                disabled={loading}
+                className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold shadow-lg hover:shadow-xl disabled:opacity-60"
+              >
+                <Award size={18} />
+                <span>{loading ? 'Awarding...' : 'Confirm Award'}</span>
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+
       {/* Badge Status Modal */}
       {badgeModalData && (
         <BadgeStatusModal

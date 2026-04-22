@@ -1,6 +1,7 @@
 const express = require('express');
 const { schemaAll, schemaGet, schemaRun, getSchema } = require('../utils/schemaHelper');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { checkResourceLimit } = require('../utils/planEnforcement');
 const multer = require('multer');
 const { uploadToSupabase, deleteFromSupabase } = require('../middleware/supabaseUpload');
 const path = require('path');
@@ -213,6 +214,14 @@ router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
 
         if (!schema) {
             return res.status(403).json({ error: 'School context required' });
+        }
+
+        const schoolId = req.schoolId || req.user?.schoolId;
+        if (schoolId) {
+            const limitCheck = await checkResourceLimit(schoolId, schema, 'student');
+            if (!limitCheck.allowed) {
+                return res.status(403).json({ error: limitCheck.message, code: 'PLAN_LIMIT_REACHED' });
+            }
         }
 
         // Generate unique parent link code

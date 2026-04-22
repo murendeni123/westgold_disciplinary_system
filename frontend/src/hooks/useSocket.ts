@@ -19,8 +19,11 @@ export const useSocket = () => {
         auth: { token },
         transports: ['websocket', 'polling'],
         reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionAttempts: 5,
+        reconnectionDelay: 2000,
+        reconnectionDelayMax: 15000,
+        reconnectionAttempts: 3,
+        timeout: 10000,
+        randomizationFactor: 0.5,
       });
 
       socketRef.current = socket;

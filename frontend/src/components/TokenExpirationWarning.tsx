@@ -43,7 +43,7 @@ const TokenExpirationWarning: React.FC = () => {
   }, [user]);
 
   // Use visibility-aware interval to prevent mobile reload issues
-  useVisibilityAwareInterval(checkTokenExpiration, 30000, { pauseWhenHidden: true });
+  useVisibilityAwareInterval(checkTokenExpiration, 30000, { pauseWhenHidden: true, staleAfterMs: 60000 });
 
   const handleRefresh = async () => {
     setIsRefreshing(true);

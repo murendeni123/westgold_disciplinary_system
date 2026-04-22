@@ -14,8 +14,9 @@ interface TableProps {
 
 const Table: React.FC<TableProps> = ({ columns, data, onRowClick }) => {
   return (
-    <div className="table-container">
-      <table className="table">
+    <div className="table-container overflow-x-auto -mx-1 px-1">
+      <p className="text-xs text-gray-400 mb-2 sm:hidden">← Scroll to see more →</p>
+      <table className="table min-w-full">
         <thead>
           <tr>
             {columns.map((column) => (

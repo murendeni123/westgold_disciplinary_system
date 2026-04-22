@@ -15,6 +15,7 @@ const {
     loginLimiter, 
     signupLimiter, 
     linkStudentLimiter,
+    refreshTokenLimiter,
     trackFailedLogin,
     resetFailedLogins,
     isAccountLocked
@@ -24,6 +25,7 @@ const {
     validateSignup, 
     validateLinkStudent 
 } = require('../middleware/validationSchemas');
+const { checkResourceLimit } = require('../utils/planEnforcement');
 
 const router = express.Router();
 
@@ -815,6 +817,12 @@ router.post('/link-student', authenticateToken, linkStudentLimiter, validateLink
             return res.status(404).json({ error: 'Invalid link code. Please check and try again.' });
         }
 
+        // Free plan: parents are not permitted
+        const parentCheck = await checkResourceLimit(foundSchool.id, foundSchool.schema_name, 'parent');
+        if (!parentCheck.allowed) {
+            return res.status(403).json({ error: parentCheck.message, code: 'PLAN_LIMIT_REACHED' });
+        }
+
         // Check if student already has a parent linked
         if (foundStudent.parent_id && foundStudent.parent_id !== req.user.id) {
             return res.status(409).json({ 
@@ -1061,7 +1069,7 @@ router.post('/supabase-sync', async (req, res) => {
  * POST /api/auth/refresh-token
  * Refresh JWT token
  */
-router.post('/refresh-token', async (req, res) => {
+router.post('/refresh-token', refreshTokenLimiter, async (req, res) => {
     try {
         const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1];

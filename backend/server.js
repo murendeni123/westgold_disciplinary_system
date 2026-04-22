@@ -115,7 +115,12 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 const { setSchemaFromToken } = require('./middleware/schemaContext');
 const { enforceSchemaAccess } = require('./utils/schemaHelper');
 const { authenticateToken } = require('./middleware/auth');
-const { strictLimiter, uploadLimiter } = require('./middleware/rateLimiter');
+const { strictLimiter, uploadLimiter, apiLimiter } = require('./middleware/rateLimiter');
+const { enforceActivePlan } = require('./middleware/planExpiry');
+
+// SECURITY: Apply general rate limiting to all API routes
+// Auth routes have their own stricter limiters applied per-endpoint
+app.use('/api', apiLimiter);
 
 // Routes - Public (no schema context needed)
 app.use('/api/auth', require('./routes/auth'));
@@ -134,36 +139,37 @@ app.use('/api/school-info', authenticateToken, require('./routes/schoolInfo'));
 
 // Routes - School-specific (schema context + security enforcement applied)
 // SECURITY: enforceSchemaAccess prevents cross-schema access attacks
-app.use('/api/students', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/students'));
-app.use('/api/classes', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/classes'));
-app.use('/api/teachers', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/teachers'));
-app.use('/api/behaviour', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/behaviour'));
-app.use('/api/attendance', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/attendance'));
-app.use('/api/messages', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/messages'));
-app.use('/api/parents', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/parents'));
+// PLAN: enforceActivePlan blocks writes for expired free-trial schools
+app.use('/api/students', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/students'));
+app.use('/api/classes', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/classes'));
+app.use('/api/teachers', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/teachers'));
+app.use('/api/behaviour', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/behaviour'));
+app.use('/api/attendance', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/attendance'));
+app.use('/api/messages', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/messages'));
+app.use('/api/parents', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/parents'));
 app.use('/api/analytics', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/analytics'));
-app.use('/api/timetables', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/timetables'));
-app.use('/api/period-timetables', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/periodTimetables'));
-app.use('/api/subjects', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/subjects'));
-app.use('/api/period-register', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/periodRegister'));
-app.use('/api/detentions', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/detentions'));
-app.use('/api/merits', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/merits'));
+app.use('/api/timetables', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/timetables'));
+app.use('/api/period-timetables', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/periodTimetables'));
+app.use('/api/subjects', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/subjects'));
+app.use('/api/period-register', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/periodRegister'));
+app.use('/api/detentions', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/detentions'));
+app.use('/api/merits', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/merits'));
 app.use('/api/exports', authenticateToken, setSchemaFromToken, enforceSchemaAccess, strictLimiter, require('./routes/exports'));
-app.use('/api/bulk-import', authenticateToken, setSchemaFromToken, enforceSchemaAccess, strictLimiter, require('./routes/bulkImport'));
-app.use('/api/bulk-import-v2', authenticateToken, setSchemaFromToken, enforceSchemaAccess, strictLimiter, require('./routes/bulkImportV2'));
+app.use('/api/bulk-import', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, strictLimiter, require('./routes/bulkImport'));
+app.use('/api/bulk-import-v2', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, strictLimiter, require('./routes/bulkImportV2'));
 app.use('/api/notifications', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/notifications').router);
-app.use('/api/incident-types', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/incidentTypes'));
-app.use('/api/merit-types', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/meritTypes'));
-app.use('/api/interventions', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/interventions'));
-app.use('/api/guided-interventions', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/guidedInterventions'));
-app.use('/api/consequences', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/consequences'));
-app.use('/api/consequence-assignments', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/consequence_assignments'));
+app.use('/api/incident-types', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/incidentTypes'));
+app.use('/api/merit-types', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/meritTypes'));
+app.use('/api/interventions', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/interventions'));
+app.use('/api/guided-interventions', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/guidedInterventions'));
+app.use('/api/consequences', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/consequences'));
+app.use('/api/consequence-assignments', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/consequence_assignments'));
 app.use('/api/push', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/push').router);
 app.use('/api/platform', require('./routes/platform'));
 app.use('/api/school-customizations', require('./routes/schoolCustomizations'));
 app.use('/api/theme-builder', require('./routes/themeBuilder'));
-app.use('/api/users', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/users'));
-app.use('/api/grade-heads', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/gradeHeads'));
+app.use('/api/users', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/users'));
+app.use('/api/grade-heads', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/gradeHeads'));
 app.use('/api/preferences', authenticateToken, require('./routes/preferences'));
 app.use('/api/feature-flags', require('./routes/featureFlags'));
 app.use('/api/goldie-badge', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/goldieBadge'));

@@ -175,7 +175,8 @@ const AdminDashboard: React.FC = () => {
   };
 
   // Use visibility-aware interval to prevent mobile reload issues
-  useVisibilityAwareInterval(fetchAllData, 5 * 60 * 1000, { pauseWhenHidden: true });
+  // staleAfterMs ensures we only re-fetch on foreground if data is actually stale
+  useVisibilityAwareInterval(fetchAllData, 5 * 60 * 1000, { pauseWhenHidden: true, staleAfterMs: 5 * 60 * 1000 });
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -892,6 +893,11 @@ const AdminDashboard: React.FC = () => {
                     <div className="min-w-0">
                       <p className="font-medium text-gray-900 text-sm truncate">{inc.student_name}</p>
                       <p className="text-xs text-gray-500 truncate">{inc.incident_type_name || inc.incident_type}</p>
+                      {(inc.incident_date || inc.created_at) && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {new Date(inc.incident_date || inc.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 ${
@@ -928,6 +934,11 @@ const AdminDashboard: React.FC = () => {
                     <div className="min-w-0">
                       <p className="font-medium text-gray-900 text-sm truncate">{m.student_name}</p>
                       <p className="text-xs text-gray-500 truncate">{m.merit_type || m.merit_type_name || 'Merit'}</p>
+                      {(m.merit_date || m.created_at) && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {new Date(m.merit_date || m.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 flex-shrink-0">

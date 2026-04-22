@@ -287,30 +287,23 @@ const PlatformSchools: React.FC = () => {
   const getPlanBadge = (plan: string) => {
     switch (plan?.toLowerCase()) {
       case 'pro':
-        return {
-          icon: Crown,
-          color: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white',
-          label: 'Pro'
-        };
+        return { icon: Crown, color: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white', label: 'Pro' };
       case 'starter':
-        return {
-          icon: Zap,
-          color: 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white',
-          label: 'Starter'
-        };
+        return { icon: Zap, color: 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white', label: 'Starter' };
       case 'enterprise':
-        return {
-          icon: Building2,
-          color: 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white',
-          label: 'Enterprise'
-        };
+        return { icon: Building2, color: 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white', label: 'Enterprise' };
       default:
-        return {
-          icon: Star,
-          color: 'bg-gradient-to-r from-amber-400 to-orange-500 text-white',
-          label: 'Trial'
-        };
+        return { icon: Star, color: 'bg-gradient-to-r from-amber-400 to-orange-500 text-white', label: 'Trial' };
     }
+  };
+
+  // Get free trial badge with days remaining
+  const getFreePlanBadge = (school: any) => {
+    if (school.plan_type !== 'free_trial') return null;
+    if (!school.trial_ends_at) return { label: 'Free Trial', color: 'bg-amber-100 text-amber-700 border border-amber-300', expired: false, days: null };
+    const days = Math.ceil((new Date(school.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    if (days <= 0) return { label: 'Trial Expired', color: 'bg-red-100 text-red-700 border border-red-300', expired: true, days: 0 };
+    return { label: `Free Trial • ${days}d left`, color: 'bg-amber-100 text-amber-700 border border-amber-300', expired: false, days };
   };
 
   // Filter schools based on search
@@ -534,6 +527,7 @@ const PlatformSchools: React.FC = () => {
             {filteredSchools.map((school, index) => {
               const statusBadge = getStatusBadge(school.status);
               const planBadge = getPlanBadge(school.plan);
+              const freePlanBadge = getFreePlanBadge(school);
               const StatusIcon = statusBadge.icon;
               const PlanIcon = planBadge.icon;
               const isSelected = selectedSchools.includes(school.id);
@@ -576,10 +570,17 @@ const PlatformSchools: React.FC = () => {
                               {statusBadge.label}
                             </span>
                             {/* Plan Badge */}
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${planBadge.color}`}>
-                              <PlanIcon size={12} />
-                              {planBadge.label}
-                            </span>
+                            {freePlanBadge ? (
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${freePlanBadge.color}`}>
+                                <Clock size={12} />
+                                {freePlanBadge.label}
+                              </span>
+                            ) : (
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${planBadge.color}`}>
+                                <PlanIcon size={12} />
+                                {planBadge.label}
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-4 mt-2 text-sm text-gray-500 flex-wrap">
                             <span className="flex items-center gap-1.5">

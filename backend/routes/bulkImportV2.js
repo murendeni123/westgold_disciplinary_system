@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const { dbAll, dbGet, dbRun, pool } = require('../database/db');
 const { schemaAll, schemaGet, schemaRun, getSchema, getSchemaClient } = require('../utils/schemaHelper');
 const { authenticateToken, requireRole } = require('../middleware/auth');
+const { checkBulkImportLimit } = require('../utils/planEnforcement');
 const { 
   importRateLimiter, 
   validateFile, 
@@ -232,6 +233,24 @@ router.post('/students', authenticateToken, requireRole('admin'), importRateLimi
     const autoCreateClasses = req.body.autoCreateClasses !== 'false';
     const useSheetNames = req.body.useSheetNames !== 'false';
     const academicYear = req.body.academicYear || getCurrentAcademicYear();
+
+    // Free plan: count incoming rows to validate before processing
+    const schoolId = req.schoolId || req.user?.schoolId;
+    if (schoolId && mode !== 'update') {
+      const previewWorkbook = new ExcelJS.Workbook();
+      await previewWorkbook.xlsx.load(req.file.buffer);
+      let incomingCount = 0;
+      for (const ws of previewWorkbook.worksheets) {
+        // rowCount includes header; subtract 1 and ignore trailing empty rows
+        incomingCount += Math.max(0, ws.rowCount - 1);
+      }
+      if (incomingCount > 0) {
+        const limitCheck = await checkBulkImportLimit(schoolId, schema, 'student', incomingCount);
+        if (!limitCheck.allowed) {
+          return res.status(403).json({ error: limitCheck.message, code: 'PLAN_LIMIT_REACHED' });
+        }
+      }
+    }
 
     // Create import history record
     historyId = await createImportHistory(req, userId, {
@@ -775,6 +794,21 @@ router.post('/teachers', authenticateToken, requireRole('admin'), importRateLimi
     }
     const userId = req.user.id;
     const mode = req.body.mode || 'upsert';
+
+    // Free plan: count incoming rows to validate before processing
+    const schoolId = req.schoolId || req.user?.schoolId;
+    if (schoolId && mode !== 'update') {
+      const previewWorkbook = new ExcelJS.Workbook();
+      await previewWorkbook.xlsx.load(req.file.buffer);
+      const ws = previewWorkbook.getWorksheet(1);
+      const incomingCount = ws ? Math.max(0, ws.rowCount - 1) : 0;
+      if (incomingCount > 0) {
+        const limitCheck = await checkBulkImportLimit(schoolId, schema, 'teacher', incomingCount);
+        if (!limitCheck.allowed) {
+          return res.status(403).json({ error: limitCheck.message, code: 'PLAN_LIMIT_REACHED' });
+        }
+      }
+    }
 
     // Create import history record
     historyId = await createImportHistory(req, userId, {

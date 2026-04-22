@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, CSSProperties } from 'react';
+import ReactDOM from 'react-dom';
 import { ChevronDown, X, Search } from 'lucide-react';
 
 interface Option {
@@ -34,40 +35,77 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
-
   const filteredOptions = options.filter((option) =>
     option.label.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-        setSearchTerm('');
-        setFocusedIndex(-1);
-      }
-    };
+  const DROPDOWN_MAX_HEIGHT = 264;
 
+  const updatePosition = () => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUpward = spaceBelow < DROPDOWN_MAX_HEIGHT && rect.top > spaceBelow;
+
+    setDropdownStyle({
+      position: 'fixed',
+      left: rect.left,
+      width: rect.width,
+      zIndex: 9999,
+      ...(openUpward
+        ? { bottom: window.innerHeight - rect.top + 4 }
+        : { top: rect.bottom + 4 }),
+    });
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      updatePosition();
+      if (inputRef.current) inputRef.current.focus();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onScroll = () => updatePosition();
+    const onResize = () => updatePosition();
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        containerRef.current?.contains(target) ||
+        dropdownRef.current?.contains(target)
+      ) return;
+      setIsOpen(false);
+      setSearchTerm('');
+      setFocusedIndex(-1);
+    };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
     if (isOpen && listRef.current && focusedIndex >= 0) {
       const items = listRef.current.children;
       if (items[focusedIndex]) {
-        items[focusedIndex].scrollIntoView({ block: 'nearest' });
+        (items[focusedIndex] as HTMLElement).scrollIntoView({ block: 'nearest' });
       }
     }
   }, [focusedIndex, isOpen]);
@@ -81,7 +119,6 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (disabled) return;
-
     switch (e.key) {
       case 'Enter':
         e.preventDefault();
@@ -93,13 +130,11 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
         break;
       case 'ArrowDown':
         e.preventDefault();
-        setFocusedIndex((prev) =>
-          prev < filteredOptions.length - 1 ? prev + 1 : prev
-        );
+        setFocusedIndex((prev) => Math.min(prev + 1, filteredOptions.length - 1));
         break;
       case 'ArrowUp':
         e.preventDefault();
-        setFocusedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+        setFocusedIndex((prev) => Math.max(prev - 1, -1));
         break;
       case 'Escape':
         setIsOpen(false);
@@ -111,13 +146,64 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (onClear) {
-      onClear();
-    } else {
-      onChange('');
-    }
+    if (onClear) onClear();
+    else onChange('');
     setSearchTerm('');
   };
+
+  const dropdownContent = (
+    <div
+      ref={dropdownRef}
+      style={dropdownStyle}
+      className="bg-white border-2 border-blue-500 rounded-xl shadow-2xl overflow-hidden"
+    >
+      <div className="p-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
+        <div className="relative">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={searchTerm}
+            onChange={(e) => { setSearchTerm(e.target.value); setFocusedIndex(-1); }}
+            onKeyDown={handleKeyDown}
+            placeholder="Type to search..."
+            className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-gray-700 transition-all duration-200"
+          />
+        </div>
+      </div>
+      <ul
+        ref={listRef}
+        style={{ maxHeight: '192px' }}
+        className="overflow-y-auto scrollbar-thin scrollbar-thumb-blue-300 scrollbar-track-gray-100"
+        onKeyDown={handleKeyDown}
+      >
+        {filteredOptions.length === 0 ? (
+          <li className="px-4 py-4 text-sm text-gray-500 text-center">
+            <div className="flex flex-col items-center">
+              <Search size={32} className="text-gray-300 mb-2" />
+              <span className="font-medium">No options found</span>
+            </div>
+          </li>
+        ) : (
+          filteredOptions.map((option, index) => (
+            <li
+              key={option.value}
+              onMouseDown={(e) => { e.preventDefault(); handleSelect(option.value); }}
+              className={`px-4 py-2.5 cursor-pointer transition-all duration-150 font-medium ${
+                value === option.value
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                  : focusedIndex === index
+                  ? 'bg-blue-100 text-gray-700'
+                  : 'hover:bg-blue-50 text-gray-700'
+              }`}
+            >
+              {option.label}
+            </li>
+          ))
+        )}
+      </ul>
+    </div>
+  );
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
@@ -127,92 +213,38 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => !disabled && setIsOpen(!isOpen)}
-          disabled={disabled}
-          className={`
-            w-full px-4 py-3 text-left bg-gray-50 border-2 border-gray-200 rounded-xl
-            focus:outline-none focus:border-blue-500 focus:bg-white
-            disabled:bg-gray-100 disabled:cursor-not-allowed
-            flex items-center justify-between
-            transition-all duration-200 font-medium
-            hover:border-blue-300 hover:shadow-md
-            ${isOpen ? 'border-blue-500 bg-white shadow-md' : ''}
-          `}
-        >
-          <span className={selectedOption ? 'text-gray-700' : 'text-gray-500'}>
-            {selectedOption ? selectedOption.label : placeholder}
-          </span>
-          <div className="flex items-center space-x-2">
-            {showClear && value && (
-              <X
-                size={16}
-                className="text-gray-400 hover:text-red-500 transition-colors"
-                onClick={handleClear}
-              />
-            )}
-            <ChevronDown
-              size={20}
-              className={`text-gray-400 transition-transform duration-200 ${isOpen ? 'transform rotate-180' : ''}`}
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={() => !disabled && setIsOpen((prev) => !prev)}
+        disabled={disabled}
+        className={`w-full px-4 py-3 text-left bg-gray-50 border-2 border-gray-200 rounded-xl
+          focus:outline-none focus:border-blue-500 focus:bg-white
+          disabled:bg-gray-100 disabled:cursor-not-allowed
+          flex items-center justify-between
+          transition-all duration-200 font-medium
+          hover:border-blue-300 hover:shadow-md
+          ${isOpen ? 'border-blue-500 bg-white shadow-md' : ''}`}
+      >
+        <span className={selectedOption ? 'text-gray-700' : 'text-gray-500'}>
+          {selectedOption ? selectedOption.label : placeholder}
+        </span>
+        <div className="flex items-center space-x-2">
+          {showClear && value && (
+            <X
+              size={16}
+              className="text-gray-400 hover:text-red-500 transition-colors"
+              onClick={handleClear}
             />
-          </div>
-        </button>
+          )}
+          <ChevronDown
+            size={20}
+            className={`text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          />
+        </div>
+      </button>
 
-        {isOpen && (
-          <div className="absolute z-50 w-full mt-2 bg-white border-2 border-blue-500 rounded-xl shadow-2xl max-h-64 overflow-hidden">
-            <div className="p-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
-              <div className="relative">
-                <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500" />
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setFocusedIndex(-1);
-                  }}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Type to search..."
-                  className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-gray-700 transition-all duration-200"
-                />
-              </div>
-            </div>
-            <ul
-              ref={listRef}
-              className="max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-blue-300 scrollbar-track-gray-100"
-              onKeyDown={handleKeyDown}
-            >
-              {filteredOptions.length === 0 ? (
-                <li className="px-4 py-4 text-sm text-gray-500 text-center">
-                  <div className="flex flex-col items-center">
-                    <Search size={32} className="text-gray-300 mb-2" />
-                    <span className="font-medium">No options found</span>
-                  </div>
-                </li>
-              ) : (
-                filteredOptions.map((option, index) => (
-                  <li
-                    key={option.value}
-                    onClick={() => handleSelect(option.value)}
-                    className={`
-                      px-4 py-2.5 cursor-pointer transition-all duration-150 font-medium
-                      ${value === option.value 
-                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' 
-                        : 'hover:bg-blue-50 text-gray-700'
-                      }
-                      ${focusedIndex === index && value !== option.value ? 'bg-blue-100' : ''}
-                    `}
-                  >
-                    {option.label}
-                  </li>
-                ))
-              )}
-            </ul>
-          </div>
-        )}
-      </div>
+      {isOpen && ReactDOM.createPortal(dropdownContent, document.body)}
     </div>
   );
 };

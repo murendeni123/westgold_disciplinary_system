@@ -61,7 +61,7 @@ const loginLimiter = rateLimit({
  */
 const signupLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
-    max: 3, // 3 signups per hour per IP
+    max: 10, // 10 signups per hour per IP (realistic for shared school networks)
     message: {
         error: 'Too many signup attempts',
         message: 'Too many accounts created from this IP. Please try again later.',
@@ -141,33 +141,86 @@ const linkStudentLimiter = rateLimit({
     }
 });
 
+/**
+ * Rate limiter for token refresh endpoint
+ * Prevents token refresh abuse / enumeration
+ */
+const refreshTokenLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 15, // 15 refresh attempts per 15 minutes per IP
+    message: {
+        error: 'Too many token refresh attempts',
+        message: 'Too many token refresh attempts. Please try again later.',
+        retryAfter: '15 minutes'
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: false,
+    keyGenerator: (req) => {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        if (token) {
+            try {
+                const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+                const uid = payload.userId || payload.platformUserId;
+                if (uid) return `refresh_user_${uid}`;
+            } catch (_) {}
+        }
+        return `refresh_ip_${normalizeIp(req)}`;
+    },
+    validate: false,
+    handler: (req, res) => {
+        console.warn(`RATE LIMIT: Token refresh exceeded from IP: ${req.ip}`);
+        res.status(429).json({
+            error: 'Too many token refresh attempts',
+            message: 'Too many token refresh attempts. Please try again in 15 minutes.',
+            retryAfter: '15 minutes'
+        });
+    }
+});
+
 // ============================================================================
 // GENERAL API RATE LIMITERS
 // ============================================================================
 
 /**
  * General API rate limiter
- * Prevents API abuse and DoS attacks
+ * Keys by authenticated user ID (from JWT) so teachers/admins at the same school
+ * never share quotas with each other on a shared network (NAT/WiFi).
+ * Falls back to IP for unauthenticated requests.
  */
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // 100 requests per 15 minutes
+    max: 500, // 500 requests per 15 minutes per user — ample for active teachers
     message: {
         error: 'Too many requests',
-        message: 'Too many requests from this IP. Please slow down.',
+        message: 'Too many requests. Please slow down.',
         retryAfter: '15 minutes'
     },
     standardHeaders: true,
     legacyHeaders: false,
-    
-    keyGenerator: normalizeIp,
+
+    keyGenerator: (req) => {
+        // Prefer per-user keying for authenticated requests
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+        if (token) {
+            try {
+                const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+                const uid = payload.userId || payload.platformUserId;
+                if (uid) return `api_user_${uid}`;
+            } catch (_) {}
+        }
+        // Unauthenticated: fall back to IP
+        return `api_ip_${normalizeIp(req)}`;
+    },
     validate: false,
-    
+
     handler: (req, res) => {
-        console.warn(`RATE LIMIT: API requests exceeded from IP: ${req.ip}, Path: ${req.path}`);
+        console.warn(`RATE LIMIT: API requests exceeded — path: ${req.path}, ip: ${req.ip}`);
         res.status(429).json({
             error: 'Too many requests',
-            message: 'Too many requests from this IP. Please slow down.',
+            message: 'You have made too many requests. Please wait a few minutes before trying again.',
             retryAfter: '15 minutes'
         });
     }
@@ -345,6 +398,7 @@ module.exports = {
     signupLimiter,
     passwordResetLimiter,
     linkStudentLimiter,
+    refreshTokenLimiter,
     
     // General rate limiters
     apiLimiter,

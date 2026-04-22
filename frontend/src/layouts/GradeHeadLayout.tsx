@@ -168,10 +168,8 @@ const GradeHeadLayout: React.FC = () => {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar */}
-      <motion.aside
-        initial={false}
-        animate={{ width: sidebarOpen ? 260 : 64 }}
-        transition={{ duration: 0.2 }}
+      <aside
+        style={{ width: sidebarOpen ? 260 : 64, transition: 'width 0.2s ease' }}
         className="bg-gradient-to-b from-indigo-900 via-indigo-800 to-purple-900 text-white shadow-2xl flex flex-col flex-shrink-0 z-20 overflow-hidden"
       >
         {/* Sidebar Header */}
@@ -326,7 +324,7 @@ const GradeHeadLayout: React.FC = () => {
             {sidebarOpen && <span className="ml-2.5 text-sm font-medium">Logout</span>}
           </button>
         </div>
-      </motion.aside>
+      </aside>
 
       {/* Main area */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -360,9 +358,10 @@ const GradeHeadLayout: React.FC = () => {
             <AnimatePresence>
               {showSearchResults && searchResults.length > 0 && (
                 <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.1 }}
                   className="absolute top-full mt-1 left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden"
                 >
                   <div className="px-3 py-2 border-b border-gray-100 text-xs text-gray-500 font-medium">
@@ -397,9 +396,10 @@ const GradeHeadLayout: React.FC = () => {
               )}
               {showSearchResults && searchQuery && searchResults.length === 0 && !searchLoading && (
                 <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.1 }}
                   className="absolute top-full mt-1 left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-200 z-50 p-4 text-center text-sm text-gray-500"
                 >
                   No students found for "{searchQuery}"

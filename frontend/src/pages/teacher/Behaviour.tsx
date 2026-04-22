@@ -45,13 +45,13 @@ const Behaviour: React.FC = () => {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 px-6 py-3 rounded-xl font-medium transition-all ${
+              className={`flex-1 flex items-center justify-center space-x-2 px-3 sm:px-6 py-3 rounded-xl font-medium transition-all text-sm sm:text-base ${
                 activeTab === tab.id
                   ? 'bg-gradient-to-r from-red-500 to-orange-600 text-white shadow-lg'
                   : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              <tab.icon size={18} />
+              <tab.icon size={16} />
               <span>{tab.label}</span>
             </motion.button>
           ))}
