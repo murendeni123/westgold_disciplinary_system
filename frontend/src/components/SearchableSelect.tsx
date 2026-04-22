@@ -35,7 +35,12 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(-1);
-  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
+  // Start hidden+fixed so the portal never renders in normal document flow
+  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({
+    position: 'fixed',
+    visibility: 'hidden',
+    zIndex: 9999,
+  });
 
   const containerRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -58,6 +63,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
 
     setDropdownStyle({
       position: 'fixed',
+      visibility: 'visible',
       left: rect.left,
       width: rect.width,
       zIndex: 9999,
@@ -67,22 +73,19 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
     });
   };
 
+  // Focus the search input whenever the dropdown opens
   useEffect(() => {
-    if (isOpen) {
-      updatePosition();
-      if (inputRef.current) inputRef.current.focus();
-    }
+    if (isOpen && inputRef.current) inputRef.current.focus();
   }, [isOpen]);
 
+  // Keep dropdown anchored while the user scrolls or resizes
   useEffect(() => {
     if (!isOpen) return;
-    const onScroll = () => updatePosition();
-    const onResize = () => updatePosition();
-    window.addEventListener('scroll', onScroll, true);
-    window.addEventListener('resize', onResize);
+    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', updatePosition);
     return () => {
-      window.removeEventListener('scroll', onScroll, true);
-      window.removeEventListener('resize', onResize);
+      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', updatePosition);
     };
   }, [isOpen]);
 
@@ -216,7 +219,20 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
       <button
         ref={buttonRef}
         type="button"
-        onClick={() => !disabled && setIsOpen((prev) => !prev)}
+        onClick={() => {
+          if (disabled) return;
+          if (!isOpen) {
+            // Calculate position first — React 18 batches this setState with
+            // setIsOpen(true) below into a single render, so the portal renders
+            // at the correct fixed position immediately with no layout shift.
+            updatePosition();
+            setIsOpen(true);
+          } else {
+            setIsOpen(false);
+            setSearchTerm('');
+            setFocusedIndex(-1);
+          }
+        }}
         disabled={disabled}
         className={`w-full px-4 py-3 text-left bg-gray-50 border-2 border-gray-200 rounded-xl
           focus:outline-none focus:border-blue-500 focus:bg-white

@@ -39,7 +39,9 @@ const GradeHeadLayout: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [openSubMenus, setOpenSubMenus] = useState<string[]>(['Discipline', 'Behaviour']);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -149,6 +151,26 @@ const GradeHeadLayout: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Track mobile/desktop breakpoint
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 1024;
+      setIsMobile(mobile);
+      if (!mobile) setSidebarOpen(true);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close sidebar and search on navigation (mobile only)
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false);
+      setSearchOpen(false);
+      setShowSearchResults(false);
+    }
+  }, [location.pathname]);
+
   // Close search results on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -165,16 +187,37 @@ const GradeHeadLayout: React.FC = () => {
     navigate('/login');
   };
 
+  const handleNavClick = () => {
+    if (isMobile) setSidebarOpen(false);
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Sidebar */}
+
+      {/* Mobile backdrop */}
+      {sidebarOpen && isMobile && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar
+          Mobile:  fixed overlay, slides in/out with CSS transform
+          Desktop: flex item with width transition */}
       <aside
-        style={{ width: sidebarOpen ? 260 : 64, transition: 'width 0.2s ease' }}
-        className="bg-gradient-to-b from-indigo-900 via-indigo-800 to-purple-900 text-white shadow-2xl flex flex-col flex-shrink-0 z-20 overflow-hidden"
+        style={!isMobile ? { width: sidebarOpen ? 260 : 64, transition: 'width 0.2s ease' } : {}}
+        className={`
+          bg-gradient-to-b from-indigo-900 via-indigo-800 to-purple-900 text-white shadow-2xl flex flex-col overflow-hidden flex-shrink-0
+          fixed top-0 left-0 h-full z-50 w-72
+          transform transition-transform duration-200 ease-out
+          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+          lg:relative lg:z-20 lg:h-auto lg:translate-x-0
+        `}
       >
         {/* Sidebar Header */}
-        <div className="p-3 border-b border-white/10 flex items-center justify-between min-h-[60px]">
-          {sidebarOpen && (
+        <div className="p-3 border-b border-white/10 flex items-center justify-between min-h-[60px] flex-shrink-0">
+          {(sidebarOpen || isMobile) && (
             <div className="flex items-center space-x-2 overflow-hidden">
               <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Shield size={16} className="text-white" />
@@ -186,16 +229,17 @@ const GradeHeadLayout: React.FC = () => {
             </div>
           )}
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
+            onClick={() => isMobile ? setSidebarOpen(false) : setSidebarOpen(!sidebarOpen)}
+            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0 min-w-[36px] min-h-[36px] flex items-center justify-center"
+            aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
           >
-            <Menu size={18} />
+            {isMobile ? <X size={18} /> : <Menu size={18} />}
           </button>
         </div>
 
         {/* User Info */}
-        {sidebarOpen && (
-          <div className="px-3 py-2.5 border-b border-white/10">
+        {(sidebarOpen || isMobile) && (
+          <div className="px-3 py-2.5 border-b border-white/10 flex-shrink-0">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
                 {user?.name?.charAt(0)?.toUpperCase() || 'G'}
@@ -210,10 +254,10 @@ const GradeHeadLayout: React.FC = () => {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-2 px-2">
-          {/* ── Personal section (only if teacher has a class) ── */}
+          {/* Personal section */}
           {user?.hasClass && (
             <div className="mb-1">
-              {sidebarOpen && (
+              {(sidebarOpen || isMobile) && (
                 <p className="px-2 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-indigo-400 select-none">
                   My Teaching
                 </p>
@@ -223,64 +267,59 @@ const GradeHeadLayout: React.FC = () => {
                   <NavLink
                     key={item.path}
                     to={item.path!}
+                    onClick={handleNavClick}
                     className={({ isActive }) =>
-                      `flex items-center px-2 py-2 rounded-lg transition-all ${
-                        isActive
-                          ? 'bg-amber-500/30 text-amber-200 shadow-sm'
-                          : 'text-indigo-200 hover:bg-white/10 hover:text-white'
-                      } ${!sidebarOpen ? 'justify-center' : ''}`
+                      `flex items-center px-2 py-2 rounded-lg transition-colors min-h-[44px] ${
+                        isActive ? 'bg-amber-500/30 text-amber-200' : 'text-indigo-200 hover:bg-white/10 hover:text-white'
+                      } ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`
                     }
                   >
                     <item.icon size={18} className="flex-shrink-0" />
-                    {sidebarOpen && <span className="ml-2.5 text-sm font-medium">{item.name}</span>}
+                    {(sidebarOpen || isMobile) && <span className="ml-2.5 text-sm font-medium">{item.name}</span>}
                   </NavLink>
                 ))}
               </div>
-              {sidebarOpen && <div className="mt-2 border-t border-white/10" />}
+              {(sidebarOpen || isMobile) && <div className="mt-2 border-t border-white/10" />}
             </div>
           )}
 
-          {/* ── Grade Management section ── */}
+          {/* Grade Management section */}
           <div className="space-y-0.5 mt-1">
-            {sidebarOpen && (
+            {(sidebarOpen || isMobile) && (
               <p className="px-2 pt-1 pb-1 text-[10px] font-bold uppercase tracking-widest text-indigo-400 select-none">
                 Grade Management
               </p>
             )}
             {gradeNavItems.map((item) => {
               if (item.subItems) {
-                const isOpen = openSubMenus.includes(item.name);
+                const isSubOpen = openSubMenus.includes(item.name);
                 const hasActiveChild = item.subItems.some(sub => location.pathname === sub.path);
                 return (
                   <div key={item.name}>
                     <button
-                      onClick={() => sidebarOpen && toggleSubMenu(item.name)}
-                      className={`w-full flex items-center px-2 py-2 rounded-lg transition-all text-left ${
+                      onClick={() => (sidebarOpen || isMobile) && toggleSubMenu(item.name)}
+                      className={`w-full flex items-center px-2 py-2 rounded-lg transition-colors text-left min-h-[44px] ${
                         hasActiveChild ? 'bg-white/15 text-white' : 'text-indigo-200 hover:bg-white/10 hover:text-white'
-                      } ${!sidebarOpen ? 'justify-center' : ''}`}
+                      } ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`}
                     >
                       <item.icon size={18} className="flex-shrink-0" />
-                      {sidebarOpen && (
+                      {(sidebarOpen || isMobile) && (
                         <>
                           <span className="ml-2.5 text-sm font-medium flex-1">{item.name}</span>
-                          <ChevronDown
-                            size={14}
-                            className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                          />
+                          <ChevronDown size={14} className={`transition-transform ${isSubOpen ? 'rotate-180' : ''}`} />
                         </>
                       )}
                     </button>
-                    {sidebarOpen && isOpen && (
+                    {(sidebarOpen || isMobile) && isSubOpen && (
                       <div className="ml-4 mt-0.5 space-y-0.5">
                         {item.subItems.map((sub) => (
                           <NavLink
                             key={sub.path}
                             to={sub.path}
+                            onClick={handleNavClick}
                             className={({ isActive }) =>
-                              `flex items-center space-x-2 px-2 py-1.5 rounded-lg transition-all text-sm ${
-                                isActive
-                                  ? 'bg-white/20 text-white font-medium'
-                                  : 'text-indigo-300 hover:bg-white/10 hover:text-white'
+                              `flex items-center space-x-2 px-2 py-1.5 rounded-lg transition-colors text-sm min-h-[40px] ${
+                                isActive ? 'bg-white/20 text-white font-medium' : 'text-indigo-300 hover:bg-white/10 hover:text-white'
                               }`
                             }
                           >
@@ -298,16 +337,15 @@ const GradeHeadLayout: React.FC = () => {
                   key={item.path}
                   to={item.path!}
                   end={item.path === '/grade-head'}
+                  onClick={handleNavClick}
                   className={({ isActive }) =>
-                    `flex items-center px-2 py-2 rounded-lg transition-all ${
-                      isActive
-                        ? 'bg-white/20 text-white shadow-sm'
-                        : 'text-indigo-200 hover:bg-white/10 hover:text-white'
-                    } ${!sidebarOpen ? 'justify-center' : ''}`
+                    `flex items-center px-2 py-2 rounded-lg transition-colors min-h-[44px] ${
+                      isActive ? 'bg-white/20 text-white' : 'text-indigo-200 hover:bg-white/10 hover:text-white'
+                    } ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`
                   }
                 >
                   <item.icon size={18} className="flex-shrink-0" />
-                  {sidebarOpen && <span className="ml-2.5 text-sm font-medium">{item.name}</span>}
+                  {(sidebarOpen || isMobile) && <span className="ml-2.5 text-sm font-medium">{item.name}</span>}
                 </NavLink>
               );
             })}
@@ -315,31 +353,41 @@ const GradeHeadLayout: React.FC = () => {
         </nav>
 
         {/* Logout */}
-        <div className="p-2 border-t border-white/10">
+        <div className="p-2 border-t border-white/10 flex-shrink-0">
           <button
             onClick={handleLogout}
-            className={`flex items-center px-2 py-2 rounded-lg text-red-300 hover:bg-red-500/20 hover:text-red-100 transition-all w-full ${!sidebarOpen ? 'justify-center' : ''}`}
+            className={`flex items-center px-2 py-2 rounded-lg text-red-300 hover:bg-red-500/20 hover:text-red-100 transition-colors w-full min-h-[44px] ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`}
           >
             <LogOut size={18} className="flex-shrink-0" />
-            {sidebarOpen && <span className="ml-2.5 text-sm font-medium">Logout</span>}
+            {(sidebarOpen || isMobile) && <span className="ml-2.5 text-sm font-medium">Logout</span>}
           </button>
         </div>
       </aside>
 
-      {/* Main area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Header with global search */}
-        <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-shrink-0 shadow-sm">
-          <div className="flex items-center space-x-3">
-            <div className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center space-x-1.5">
-              <Shield size={12} />
-              <span>Grade {user?.gradeHeadFor} Head</span>
-            </div>
+      {/* Main area — full width on mobile, adjusted on desktop */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-shrink-0 shadow-sm">
+
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
+            aria-label="Open menu"
+          >
+            <Menu size={20} className="text-gray-600" />
+          </button>
+
+          {/* Grade badge */}
+          <div className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center space-x-1.5 flex-shrink-0">
+            <Shield size={12} />
+            <span>Grade {user?.gradeHeadFor} Head</span>
           </div>
 
-          {/* Global Search (searches all grades) */}
-          <div className="relative flex-1 max-w-md mx-6" ref={searchRef}>
-            <div className="relative">
+          {/* Search bar — desktop only inline, mobile as toggle */}
+          <div className="hidden md:flex relative flex-1 max-w-md" ref={searchRef}>
+            <div className="relative w-full">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
@@ -353,65 +401,94 @@ const GradeHeadLayout: React.FC = () => {
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
               )}
             </div>
-
-            {/* Search Results Dropdown */}
-            <AnimatePresence>
-              {showSearchResults && searchResults.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.1 }}
-                  className="absolute top-full mt-1 left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden"
-                >
-                  <div className="px-3 py-2 border-b border-gray-100 text-xs text-gray-500 font-medium">
-                    {searchResults.length} student{searchResults.length !== 1 ? 's' : ''} found across all grades
-                  </div>
-                  {searchResults.map((student: any) => (
-                    <button
-                      key={student.id}
-                      onClick={() => {
-                        navigate(`/grade-head/students/${student.id}`);
-                        setSearchQuery('');
-                        setShowSearchResults(false);
-                      }}
-                      className="w-full flex items-center space-x-3 px-3 py-2.5 hover:bg-indigo-50 transition-colors text-left"
-                    >
-                      <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-semibold text-indigo-600">
-                          {student.first_name?.charAt(0)}{student.last_name?.charAt(0)}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {student.first_name} {student.last_name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {student.class_name || 'No class'} {student.grade_level ? `• Grade ${student.grade_level}` : ''}
-                        </p>
-                      </div>
-                    </button>
-                  ))}
-                </motion.div>
-              )}
-              {showSearchResults && searchQuery && searchResults.length === 0 && !searchLoading && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.1 }}
-                  className="absolute top-full mt-1 left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-200 z-50 p-4 text-center text-sm text-gray-500"
-                >
-                  No students found for "{searchQuery}"
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Desktop search results */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="absolute top-full mt-1 left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
+                <div className="px-3 py-2 border-b border-gray-100 text-xs text-gray-500 font-medium">
+                  {searchResults.length} student{searchResults.length !== 1 ? 's' : ''} found
+                </div>
+                {searchResults.map((student: any) => (
+                  <button
+                    key={student.id}
+                    onClick={() => { navigate(`/grade-head/students/${student.id}`); setSearchQuery(''); setShowSearchResults(false); }}
+                    className="w-full flex items-center space-x-3 px-3 py-2.5 hover:bg-indigo-50 transition-colors text-left"
+                  >
+                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-semibold text-indigo-600">
+                        {student.first_name?.charAt(0)}{student.last_name?.charAt(0)}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{student.first_name} {student.last_name}</p>
+                      <p className="text-xs text-gray-500">{student.class_name || 'No class'} {student.grade_level ? `• Grade ${student.grade_level}` : ''}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {showSearchResults && searchQuery && searchResults.length === 0 && !searchLoading && (
+              <div className="absolute top-full mt-1 left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-200 z-50 p-4 text-center text-sm text-gray-500">
+                No students found for "{searchQuery}"
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <span className="hidden sm:block">{user?.name}</span>
-          </div>
+          {/* Mobile search toggle */}
+          <button
+            onClick={() => setSearchOpen(!searchOpen)}
+            className="md:hidden ml-auto p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            aria-label="Search"
+          >
+            {searchOpen ? <X size={20} className="text-gray-600" /> : <Search size={20} className="text-gray-600" />}
+          </button>
+
+          <span className="hidden lg:block text-sm text-gray-500 ml-auto">{user?.name}</span>
         </header>
+
+        {/* Mobile search bar */}
+        {searchOpen && (
+          <div className="md:hidden px-4 py-2 bg-white border-b border-gray-200" ref={searchRef}>
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search students..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:bg-white"
+                autoFocus
+              />
+              {searchLoading && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+              )}
+            </div>
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="mt-1 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
+                {searchResults.map((student: any) => (
+                  <button
+                    key={student.id}
+                    onClick={() => { navigate(`/grade-head/students/${student.id}`); setSearchQuery(''); setShowSearchResults(false); setSearchOpen(false); }}
+                    className="w-full flex items-center space-x-3 px-3 py-2.5 hover:bg-indigo-50 transition-colors text-left"
+                  >
+                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-semibold text-indigo-600">
+                        {student.first_name?.charAt(0)}{student.last_name?.charAt(0)}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{student.first_name} {student.last_name}</p>
+                      <p className="text-xs text-gray-500">{student.class_name || 'No class'}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {showSearchResults && searchQuery && searchResults.length === 0 && !searchLoading && (
+              <p className="mt-2 text-center text-sm text-gray-500">No students found for "{searchQuery}"</p>
+            )}
+          </div>
+        )}
 
         {/* Page Content */}
         <main className="flex-1 overflow-auto">
