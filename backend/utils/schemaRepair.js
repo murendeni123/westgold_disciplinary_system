@@ -173,7 +173,40 @@ const repairSchema = async (schemaName) => {
             SELECT 100, 10, 30, true
             WHERE NOT EXISTS (SELECT 1 FROM goldie_badge_config);
         `);
-        
+
+        // Create import_history table if it doesn't exist
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS import_history (
+                id SERIAL PRIMARY KEY,
+                school_id INTEGER NOT NULL,
+                user_id   INTEGER NOT NULL,
+                import_type VARCHAR(50)  NOT NULL DEFAULT 'students',
+                file_name   VARCHAR(255),
+                mode        VARCHAR(100) NOT NULL DEFAULT 'upsert',
+                academic_year VARCHAR(100),
+                total_rows    INTEGER DEFAULT 0,
+                created_count INTEGER DEFAULT 0,
+                updated_count INTEGER DEFAULT 0,
+                skipped_count INTEGER DEFAULT 0,
+                failed_count  INTEGER DEFAULT 0,
+                classes_created INTEGER DEFAULT 0,
+                status       VARCHAR(100) NOT NULL DEFAULT 'pending',
+                error_message TEXT,
+                started_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP WITH TIME ZONE,
+                created_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_import_history_school ON import_history(school_id);`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_import_history_created ON import_history(created_at DESC);`);
+
+        // Widen short VARCHAR columns on import_history that overflow with 'completed_with_errors'
+        for (const col of ['status', 'mode', 'academic_year']) {
+            try {
+                await client.query(`ALTER TABLE import_history ALTER COLUMN ${col} TYPE VARCHAR(100)`);
+            } catch (e) { /* already correct type or column absent */ }
+        }
+
         console.log(`  ✓ Schema ${schemaName} repaired`);
     } catch (error) {
         console.error(`  ✗ Error repairing schema ${schemaName}:`, error.message);

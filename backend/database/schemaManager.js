@@ -56,14 +56,21 @@ const createSchoolSchema = async (schoolCode, options = {}) => {
     const client = await pool.connect();
     
     try {
-        // Check if schema already exists
+        // Check if schema already exists and already has tables
         const exists = await schemaExists(schemaName);
         if (exists) {
-            return {
-                success: false,
-                schemaName,
-                error: `Schema ${schemaName} already exists`
-            };
+            const tablesResult = await client.query(
+                `SELECT COUNT(*) AS cnt FROM information_schema.tables WHERE table_schema = $1`,
+                [schemaName]
+            );
+            if (parseInt(tablesResult.rows[0].cnt) > 0) {
+                return {
+                    success: false,
+                    schemaName,
+                    error: `Schema ${schemaName} already exists`
+                };
+            }
+            // Schema exists but is empty — fall through and populate it
         }
         
         // Read the template SQL file
@@ -72,44 +79,67 @@ const createSchoolSchema = async (schoolCode, options = {}) => {
         
         // Replace all occurrences of {SCHEMA_NAME} with actual schema name
         templateSql = templateSql.replace(/{SCHEMA_NAME}/g, schemaName);
-        
-        // Begin transaction
-        await client.query('BEGIN');
-        
-        // Split SQL into individual statements and execute
+
+        // Step 1: Create the schema explicitly (must happen before any table creation)
+        await client.query(`CREATE SCHEMA IF NOT EXISTS ${schemaName}`);
+
+        // Set search_path so unqualified references resolve correctly
+        await client.query(`SET search_path TO ${schemaName}, public`);
+
+        // Step 2: Execute remaining statements WITHOUT a wrapping transaction.
+        // A BEGIN/COMMIT wrapper causes PostgreSQL to abort ALL subsequent
+        // statements the moment any single statement fails, silently swallowing
+        // the rest. Running in autocommit mode lets each statement succeed or
+        // fail independently.
         const statements = templateSql
             .split(';')
             .map(s => s.trim())
-            .filter(s => s.length > 0 && !s.startsWith('--'));
+            .filter(s => s.length > 0);
         
+        let warnings = 0;
         for (const statement of statements) {
-            if (statement.trim()) {
-                try {
-                    await client.query(statement);
-                } catch (err) {
-                    // Log but continue for non-critical errors (like "already exists")
-                    if (!err.message.includes('already exists') && 
-                        !err.message.includes('duplicate key')) {
-                        console.warn(`Warning executing statement: ${err.message}`);
-                    }
+            // Strip leading comment lines to identify statement type
+            const stripped = statement.replace(/^(--[^\n]*\n)*/g, '').trim();
+            if (!stripped) continue;
+            // Skip CREATE SCHEMA — already handled above
+            if (/^\s*CREATE\s+SCHEMA/i.test(stripped)) continue;
+
+            try {
+                await client.query(statement);
+            } catch (err) {
+                if (!err.message.includes('already exists') && 
+                    !err.message.includes('duplicate key')) {
+                    console.warn(`Warning creating schema ${schemaName}: ${err.message}`);
+                    warnings++;
                 }
             }
         }
+
+        // Step 3: Verify the schema was actually created with tables
+        const verifyResult = await client.query(
+            `SELECT COUNT(*) AS cnt FROM information_schema.tables WHERE table_schema = $1`,
+            [schemaName]
+        );
+        const tableCount = parseInt(verifyResult.rows[0].cnt);
+        if (tableCount === 0) {
+            console.error(`❌ Schema ${schemaName} was created but contains no tables (${warnings} warnings)`);
+            return {
+                success: false,
+                schemaName,
+                error: `Schema created but no tables were initialised. Check template SQL.`
+            };
+        }
         
-        // Commit transaction
-        await client.query('COMMIT');
-        
-        console.log(`✅ Successfully created schema: ${schemaName}`);
+        console.log(`✅ Successfully created schema: ${schemaName} (${tableCount} tables, ${warnings} warnings)`);
         
         return {
             success: true,
             schemaName,
-            tablesCreated: true
+            tablesCreated: true,
+            tableCount
         };
         
     } catch (error) {
-        // Rollback on error
-        await client.query('ROLLBACK');
         console.error(`❌ Error creating schema ${schemaName}:`, error.message);
         
         return {

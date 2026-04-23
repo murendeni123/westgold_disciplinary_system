@@ -53,7 +53,7 @@ const seedDefaultTypes = async (schoolId, schemaName) => {
             );
             if (existing.rows.length === 0) {
                 await client.query(`
-                    INSERT INTO incident_types (name, points, severity, description, is_active)
+                    INSERT INTO incident_types (name, default_points, default_severity, description, is_active)
                     VALUES ($1, $2, $3, $4, true)
                 `, [type.name, type.points, type.severity, type.description]);
                 counts.incidentTypes++;
@@ -83,7 +83,7 @@ const seedDefaultTypes = async (schoolId, schemaName) => {
             );
             if (existing.rows.length === 0) {
                 await client.query(`
-                    INSERT INTO merit_types (name, points, description, is_active)
+                    INSERT INTO merit_types (name, default_points, description, is_active)
                     VALUES ($1, $2, $3, true)
                 `, [type.name, type.points, type.description]);
                 counts.meritTypes++;
@@ -113,9 +113,9 @@ const seedDefaultTypes = async (schoolId, schemaName) => {
             );
             if (existing.rows.length === 0) {
                 await client.query(`
-                    INSERT INTO intervention_types (name, description, default_duration, is_active, school_id)
-                    VALUES ($1, $2, $3, true, $4)
-                `, [type.name, type.description, type.duration, schoolId]);
+                    INSERT INTO intervention_types (name, description, default_duration_days, is_active)
+                    VALUES ($1, $2, $3, true)
+                `, [type.name, type.description, type.duration]);
                 counts.interventionTypes++;
             }
         }

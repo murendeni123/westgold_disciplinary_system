@@ -552,185 +552,142 @@ async function importStudentsWorkbook(req, workbook, options) {
         await client.query('BEGIN');
         // Set schema for this transaction
         await client.query(`SET search_path TO ${schema}, public`);
-        
-        const toInsert = [];
-        const toUpdate = [];
+
         const batchDetails = [];
         const batchErrors = [];
-        
+
+        // ── helper: run a query inside a savepoint so one failure never aborts
+        //    the surrounding transaction for all subsequent rows
+        const withSavepoint = async (name, fn) => {
+          await client.query(`SAVEPOINT ${name}`);
+          try {
+            const result = await fn();
+            await client.query(`RELEASE SAVEPOINT ${name}`);
+            return { ok: true, result };
+          } catch (err) {
+            await client.query(`ROLLBACK TO SAVEPOINT ${name}`);
+            return { ok: false, error: err.message };
+          }
+        };
+
         for (const rowData of batch) {
           results.summary.totalProcessed++;
-          
+          const { rowNumber, studentId, firstName, lastName, dateOfBirth, gradeLevel, className, sheetName } = rowData;
+
           try {
-            const { rowNumber, studentId, firstName, lastName, dateOfBirth, gradeLevel, className, sheetName } = rowData;
-            
             // Validate
             if (!studentId || !firstName || !lastName) {
               throw new Error('Missing required fields');
             }
 
-            // Get or create class - smart linking by name + academic year
+            // ── Get or create class ──────────────────────────────────────────
             let classId = null;
             if (className) {
               const compositeKey = `${className.toLowerCase()}_${targetAcademicYear}`;
-              // First try to match by name + academic year (smart linking)
-              let existingClass = existingClassByYearMap.get(compositeKey);
-              // Fall back to matching by name only
-              if (!existingClass) {
-                existingClass = existingClassMap.get(className.toLowerCase());
-              }
-              
+              let existingClass = existingClassByYearMap.get(compositeKey)
+                               || existingClassMap.get(className.toLowerCase());
+
               if (existingClass) {
                 classId = existingClass.id;
               } else if (autoCreateClasses) {
-                // Auto-create class within transaction for the target academic year
-                const classResult = await client.query(
-                  `INSERT INTO classes (class_name, grade_level, academic_year)
-                   VALUES ($1, $2, $3) RETURNING id`,
-                  [className, gradeLevel, targetAcademicYear]
+                // Use a savepoint so a duplicate-class constraint doesn't abort the whole batch
+                const spName = `cls_${currentBatch}_${rowNumber}`;
+                const classRes = await withSavepoint(spName, () =>
+                  client.query(
+                    `INSERT INTO classes (class_name, grade_level, academic_year)
+                     VALUES ($1, $2, $3) RETURNING id`,
+                    [className, gradeLevel, targetAcademicYear]
+                  )
                 );
-                classId = classResult.rows[0].id;
-                const newClass = { id: classId, class_name: className, academic_year: targetAcademicYear };
-                existingClassMap.set(className.toLowerCase(), newClass);
-                existingClassByYearMap.set(compositeKey, newClass);
-                results.classesCreated.push(`${className} (${targetAcademicYear})`);
-                results.summary.classesCreated++;
+                if (classRes.ok) {
+                  classId = classRes.result.rows[0].id;
+                  const newClass = { id: classId, class_name: className, academic_year: targetAcademicYear };
+                  existingClassMap.set(className.toLowerCase(), newClass);
+                  existingClassByYearMap.set(compositeKey, newClass);
+                  results.classesCreated.push(`${className} (${targetAcademicYear})`);
+                  results.summary.classesCreated++;
+                } else {
+                  // Class may have been inserted by a concurrent row — retry lookup
+                  const found = await client.query(
+                    `SELECT id FROM classes WHERE class_name = $1 AND academic_year = $2 LIMIT 1`,
+                    [className, targetAcademicYear]
+                  );
+                  if (found.rows.length) {
+                    classId = found.rows[0].id;
+                    const newClass = { id: classId, class_name: className, academic_year: targetAcademicYear };
+                    existingClassMap.set(className.toLowerCase(), newClass);
+                    existingClassByYearMap.set(compositeKey, newClass);
+                  } else {
+                    throw new Error(`Could not create or find class "${className}": ${classRes.error}`);
+                  }
+                }
               } else {
                 throw new Error(`Class "${className}" not found for ${targetAcademicYear}`);
               }
             }
 
+            // ── Insert or update student ──────────────────────────────────────
             const existingStudent = existingStudentMap.get(studentId);
+            const spName = `stu_${currentBatch}_${rowNumber}`;
 
             if (existingStudent) {
-              // Student exists
               if (mode === 'create') {
                 results.summary.skipped++;
-                batchDetails.push({
-                  sheet: sheetName,
-                  row: rowNumber,
-                  studentId,
-                  action: 'skipped',
-                  reason: 'Already exists (create mode)',
-                });
+                batchDetails.push({ sheet: sheetName, row: rowNumber, studentId, action: 'skipped', reason: 'Already exists (create mode)' });
                 continue;
               }
-
-              // Queue for batch update
-              toUpdate.push({
-                query: `UPDATE students SET first_name = $1, last_name = $2, date_of_birth = $3, class_id = $4, grade_level = $5 WHERE id = $6`,
-                params: [firstName, lastName, dateOfBirth, classId, gradeLevel, existingStudent.id],
-                detail: {
-                  sheet: sheetName,
-                  row: rowNumber,
-                  studentId,
-                  name: `${firstName} ${lastName}`,
-                  action: 'updated',
-                },
-              });
+              const upd = await withSavepoint(spName, () =>
+                client.query(
+                  `UPDATE students SET first_name=$1, last_name=$2, date_of_birth=$3, class_id=$4, grade_level=$5 WHERE id=$6`,
+                  [firstName, lastName, dateOfBirth, classId, gradeLevel, existingStudent.id]
+                )
+              );
+              if (upd.ok) {
+                results.summary.updated++;
+                batchDetails.push({ sheet: sheetName, row: rowNumber, studentId, name: `${firstName} ${lastName}`, action: 'updated' });
+              } else {
+                batchErrors.push({ sheet: sheetName, row: rowNumber, error: upd.error });
+              }
             } else {
-              // New student
               if (mode === 'update') {
                 results.summary.skipped++;
-                batchDetails.push({
-                  sheet: sheetName,
-                  row: rowNumber,
-                  studentId,
-                  action: 'skipped',
-                  reason: 'Does not exist (update mode)',
-                });
+                batchDetails.push({ sheet: sheetName, row: rowNumber, studentId, action: 'skipped', reason: 'Does not exist (update mode)' });
                 continue;
               }
-
-              // Queue for batch insert
               const parentLinkCode = generateParentLinkCode();
-              toInsert.push({
-                values: [studentId, firstName, lastName, dateOfBirth, classId, gradeLevel, parentLinkCode],
-                detail: {
-                  sheet: sheetName,
-                  row: rowNumber,
-                  studentId,
-                  name: `${firstName} ${lastName}`,
-                  action: 'created',
-                },
-              });
-            }
-          } catch (error) {
-            batchErrors.push({
-              sheet: rowData.sheetName,
-              row: rowData.rowNumber,
-              error: error.message,
-            });
-          }
-        }
-
-        // Execute batch inserts
-        if (toInsert.length > 0) {
-          const insertColumns = ['student_id', 'first_name', 'last_name', 'date_of_birth', 'class_id', 'grade_level', 'parent_link_code'];
-          const insertRows = toInsert.map(item => item.values);
-          
-          try {
-            const insertedIds = await executeBatchInsert(client, 'students', insertColumns, insertRows);
-            
-            // Update maps and results
-            toInsert.forEach((item, idx) => {
-              existingStudentMap.set(item.detail.studentId, { id: insertedIds[idx], student_id: item.detail.studentId });
-              results.summary.created++;
-              batchDetails.push(item.detail);
-            });
-          } catch (insertError) {
-            // If batch insert fails, try individual inserts
-            for (const item of toInsert) {
-              try {
-                const result = await client.query(
+              const ins = await withSavepoint(spName, () =>
+                client.query(
                   `INSERT INTO students (student_id, first_name, last_name, date_of_birth, class_id, grade_level, parent_link_code)
-                   VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-                  item.values
-                );
-                existingStudentMap.set(item.detail.studentId, { id: result.rows[0].id, student_id: item.detail.studentId });
+                   VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+                  [studentId, firstName, lastName, dateOfBirth, classId, gradeLevel, parentLinkCode]
+                )
+              );
+              if (ins.ok) {
+                existingStudentMap.set(studentId, { id: ins.result.rows[0].id, student_id: studentId });
                 results.summary.created++;
-                batchDetails.push(item.detail);
-              } catch (individualError) {
-                batchErrors.push({
-                  sheet: item.detail.sheet,
-                  row: item.detail.row,
-                  error: individualError.message,
-                });
+                batchDetails.push({ sheet: sheetName, row: rowNumber, studentId, name: `${firstName} ${lastName}`, action: 'created' });
+              } else {
+                batchErrors.push({ sheet: sheetName, row: rowNumber, error: ins.error });
               }
             }
+          } catch (rowError) {
+            batchErrors.push({ sheet: rowData.sheetName, row: rowData.rowNumber, error: rowError.message });
           }
         }
 
-        // Execute batch updates
-        for (const update of toUpdate) {
-          try {
-            await client.query(update.query, update.params);
-            results.summary.updated++;
-            batchDetails.push(update.detail);
-          } catch (updateError) {
-            batchErrors.push({
-              sheet: update.detail.sheet,
-              row: update.detail.row,
-              error: updateError.message,
-            });
-          }
-        }
-
-        // Commit transaction for this batch
+        // Commit everything that succeeded in this batch
         await client.query('COMMIT');
         results.summary.batchesProcessed++;
-        
-        // Add batch results
+
         results.details.push(...batchDetails);
         results.errors.push(...batchErrors);
         results.summary.failed += batchErrors.length;
-        
+
       } catch (batchError) {
-        // Rollback entire batch on critical error
-        await client.query('ROLLBACK');
+        // Rollback entire batch on unexpected critical error
+        try { await client.query('ROLLBACK'); } catch (_) {}
         console.error('Batch rollback:', batchError);
-        
-        // Mark all rows in batch as failed
+
         for (const rowData of batch) {
           results.summary.failed++;
           results.errors.push({
@@ -1039,6 +996,19 @@ async function importTeachersWorkbook(req, workbook, options) {
       const batchDetails = [];
       const batchErrors = [];
 
+      // Helper: isolate each row with a savepoint
+      const withSavepoint = async (name, fn) => {
+        await client.query(`SAVEPOINT ${name}`);
+        try {
+          const result = await fn();
+          await client.query(`RELEASE SAVEPOINT ${name}`);
+          return { ok: true, result };
+        } catch (err) {
+          await client.query(`ROLLBACK TO SAVEPOINT ${name}`);
+          return { ok: false, error: err.message };
+        }
+      };
+
       for (const rowData of batch) {
         results.summary.totalProcessed++;
         const { rowNumber, email, name, password, employeeId, phone } = rowData;
@@ -1049,6 +1019,7 @@ async function importTeachersWorkbook(req, workbook, options) {
           }
 
           const existingUser = existingEmailMap.get(email);
+          const spName = `tch_${currentBatch}_${rowNumber}`;
 
           if (existingUser) {
             if (mode === 'create') {
@@ -1057,18 +1028,21 @@ async function importTeachersWorkbook(req, workbook, options) {
               continue;
             }
 
-            // Update existing teacher within transaction - update user in public schema
-            await client.query('UPDATE public.users SET name = $1 WHERE id = $2', [name, existingUser.user_id]);
-            
-            if (phone || employeeId) {
-              await client.query(
-                `UPDATE teachers SET phone = COALESCE($1, phone), employee_id = COALESCE($2, employee_id) WHERE user_id = $3`,
-                [phone || null, employeeId || null, existingUser.user_id]
-              );
+            const upd = await withSavepoint(spName, async () => {
+              await client.query('UPDATE public.users SET name = $1 WHERE id = $2', [name, existingUser.user_id]);
+              if (phone || employeeId) {
+                await client.query(
+                  `UPDATE teachers SET phone = COALESCE($1, phone), employee_id = COALESCE($2, employee_id) WHERE user_id = $3`,
+                  [phone || null, employeeId || null, existingUser.user_id]
+                );
+              }
+            });
+            if (upd.ok) {
+              results.summary.updated++;
+              batchDetails.push({ row: rowNumber, email, name, action: 'updated' });
+            } else {
+              batchErrors.push({ row: rowNumber, error: upd.error });
             }
-
-            results.summary.updated++;
-            batchDetails.push({ row: rowNumber, email, name, action: 'updated' });
           } else {
             if (mode === 'update') {
               results.summary.skipped++;
@@ -1076,7 +1050,6 @@ async function importTeachersWorkbook(req, workbook, options) {
               continue;
             }
 
-            // Password is already set to 'teacher123' if not provided
             if (password.length < 6) {
               throw new Error('Password must be at least 6 characters');
             }
@@ -1084,39 +1057,41 @@ async function importTeachersWorkbook(req, workbook, options) {
             const hashedPassword = await bcrypt.hash(password, 10);
             const finalEmployeeId = employeeId || `EMP${String(nextEmpId++).padStart(4, '0')}`;
 
-            // Insert user in public schema
-            const userResult = await client.query(
-              `INSERT INTO public.users (email, password, name, role, school_id)
-               VALUES ($1, $2, $3, 'teacher', (SELECT id FROM public.schools WHERE schema_name = $4)) RETURNING id`,
-              [email, hashedPassword, name, schema]
-            );
-
-            // Insert teacher in school schema (search_path already set)
-            await client.query(
-              `INSERT INTO teachers (user_id, employee_id, phone)
-               VALUES ($1, $2, $3)`,
-              [userResult.rows[0].id, finalEmployeeId, phone || null]
-            );
-
-            existingEmailMap.set(email, { id: userResult.rows[0].id, email });
-            results.summary.created++;
-            batchDetails.push({ row: rowNumber, email, name, employeeId: finalEmployeeId, action: 'created' });
+            const ins = await withSavepoint(spName, async () => {
+              const userResult = await client.query(
+                `INSERT INTO public.users (email, password, name, role, school_id)
+                 VALUES ($1, $2, $3, 'teacher', (SELECT id FROM public.schools WHERE schema_name = $4)) RETURNING id`,
+                [email, hashedPassword, name, schema]
+              );
+              await client.query(
+                `INSERT INTO teachers (user_id, employee_id, phone) VALUES ($1, $2, $3)`,
+                [userResult.rows[0].id, finalEmployeeId, phone || null]
+              );
+              return userResult;
+            });
+            if (ins.ok) {
+              existingEmailMap.set(email, { id: ins.result.rows[0].id, email });
+              results.summary.created++;
+              batchDetails.push({ row: rowNumber, email, name, employeeId: finalEmployeeId, action: 'created' });
+            } else {
+              batchErrors.push({ row: rowNumber, error: ins.error });
+            }
           }
         } catch (error) {
           batchErrors.push({ row: rowNumber, error: error.message });
         }
       }
 
-      // Commit transaction for this batch
+      // Commit everything that succeeded in this batch
       await client.query('COMMIT');
       results.summary.batchesProcessed++;
-      
+
       results.details.push(...batchDetails);
       results.errors.push(...batchErrors);
       results.summary.failed += batchErrors.length;
 
     } catch (batchError) {
-      await client.query('ROLLBACK');
+      try { await client.query('ROLLBACK'); } catch (_) {}
       console.error('Teacher batch rollback:', batchError);
       
       for (const rowData of batch) {

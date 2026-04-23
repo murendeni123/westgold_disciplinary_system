@@ -5,15 +5,15 @@ CREATE TABLE IF NOT EXISTS import_history (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     import_type VARCHAR(50) NOT NULL, -- 'students', 'teachers', 'classes'
     file_name VARCHAR(255),
-    mode VARCHAR(20) NOT NULL DEFAULT 'upsert', -- 'create', 'update', 'upsert'
-    academic_year VARCHAR(20),
+    mode VARCHAR(100) NOT NULL DEFAULT 'upsert', -- 'create', 'update', 'upsert'
+    academic_year VARCHAR(100),
     total_rows INTEGER DEFAULT 0,
     created_count INTEGER DEFAULT 0,
     updated_count INTEGER DEFAULT 0,
     skipped_count INTEGER DEFAULT 0,
     failed_count INTEGER DEFAULT 0,
     classes_created INTEGER DEFAULT 0,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending', -- 'pending', 'processing', 'completed', 'failed'
+    status VARCHAR(100) NOT NULL DEFAULT 'pending', -- 'pending', 'processing', 'completed', 'failed'
     error_message TEXT,
     started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP WITH TIME ZONE,

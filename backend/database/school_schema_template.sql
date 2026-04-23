@@ -698,5 +698,32 @@ INSERT INTO {SCHEMA_NAME}.customizations (
 );
 
 -- ============================================================================
+-- IMPORT HISTORY
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.import_history (
+    id SERIAL PRIMARY KEY,
+    school_id INTEGER NOT NULL,
+    user_id   INTEGER NOT NULL,
+    import_type VARCHAR(50)  NOT NULL DEFAULT 'students',
+    file_name   VARCHAR(255),
+    mode        VARCHAR(100) NOT NULL DEFAULT 'upsert',
+    academic_year VARCHAR(100),
+    total_rows    INTEGER DEFAULT 0,
+    created_count INTEGER DEFAULT 0,
+    updated_count INTEGER DEFAULT 0,
+    skipped_count INTEGER DEFAULT 0,
+    failed_count  INTEGER DEFAULT 0,
+    classes_created INTEGER DEFAULT 0,
+    status       VARCHAR(100) NOT NULL DEFAULT 'pending',
+    error_message TEXT,
+    started_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    created_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_import_history_school   ON {SCHEMA_NAME}.import_history(school_id);
+CREATE INDEX IF NOT EXISTS idx_import_history_created  ON {SCHEMA_NAME}.import_history(created_at DESC);
+
+-- ============================================================================
 -- END OF SCHOOL SCHEMA TEMPLATE
 -- ============================================================================
