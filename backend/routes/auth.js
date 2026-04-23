@@ -651,8 +651,8 @@ router.put('/change-password', authenticateToken, async (req, res) => {
         });
         
         const updateResult = await dbRun(
-            'UPDATE public.users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
-            [hashedPassword, req.user.id]
+            'UPDATE public.users SET password = $1, password_hash = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+            [hashedPassword, hashedPassword, req.user.id]
         );
         
         console.log('✅ Password update result:', {
@@ -725,8 +725,8 @@ router.post('/signup', signupLimiter, validateSignup, async (req, res) => {
             if (!existingUser.password && existingUser.supabase_user_id) {
                 // This is a Supabase user without local password - update it
                 await dbRun(
-                    'UPDATE public.users SET password = $1, name = $2, phone = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4',
-                    [hashedPassword, name, phone, existingUser.id]
+                    'UPDATE public.users SET password = $1, password_hash = $2, name = $3, phone = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5',
+                    [hashedPassword, hashedPassword, name, phone, existingUser.id]
                 );
                 userId = existingUser.id;
             } else {
@@ -736,10 +736,10 @@ router.post('/signup', signupLimiter, validateSignup, async (req, res) => {
         } else {
             // Create new parent user in public.users (no school link yet)
             const userResult = await dbRun(
-                `INSERT INTO public.users (email, password, role, name, phone, is_active)
-                 VALUES ($1, $2, $3, $4, $5, $6)
+                `INSERT INTO public.users (email, password, password_hash, role, name, phone, is_active)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)
                  RETURNING id`,
-                [email.toLowerCase(), hashedPassword, 'parent', name, phone, true]
+                [email.toLowerCase(), hashedPassword, hashedPassword, 'parent', name, phone, true]
             );
             userId = userResult.id;
         }
