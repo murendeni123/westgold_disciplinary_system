@@ -186,7 +186,7 @@ router.post('/onboard', authenticateToken, platformAdminOnly, async (req, res) =
             
             const userResult = await client.query(`
                 INSERT INTO public.users (
-                    email, password_hash, name, role, primary_school_id, is_active
+                    email, password, name, role, primary_school_id, is_active
                 ) VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING id
             `, [
@@ -733,7 +733,7 @@ router.post('/:id/add-admin', authenticateToken, platformAdminOnly, async (req, 
             // Create new user
             const hashedPassword = await hashPassword(password || 'ChangeMe123!');
             const userResult = await dbRun(`
-                INSERT INTO public.users (email, password_hash, name, role, primary_school_id, is_active)
+                INSERT INTO public.users (email, password, name, role, primary_school_id, is_active)
                 VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING id
             `, [email.toLowerCase(), hashedPassword, name, 'admin', id, true]);

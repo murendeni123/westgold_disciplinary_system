@@ -191,7 +191,26 @@ initDatabase()
         // Repair school schemas to ensure backward compatibility
         return repairAllSchoolSchemas();
     })
-    .then(() => {
+    .then(async () => {
+        // Run backfill migration: copy password_hash → password for admins
+        // created by onboarding before the column name was corrected.
+        try {
+            const fs = require('fs');
+            const path = require('path');
+            const { pool } = require('./database/db');
+            const migrationPath = path.join(__dirname, 'database/migrations/002_backfill_password_from_hash.sql');
+            if (fs.existsSync(migrationPath)) {
+                const sql = fs.readFileSync(migrationPath, 'utf8');
+                const result = await pool.query(sql);
+                const rowsFixed = result.rowCount || 0;
+                if (rowsFixed > 0) {
+                    console.log(`✅ Password backfill: fixed ${rowsFixed} user(s) missing password`);
+                }
+            }
+        } catch (err) {
+            console.warn('⚠️  Password backfill migration warning:', err.message);
+        }
+
         // Seed script is not needed for PostgreSQL - data should be managed through migrations
         console.log('PostgreSQL database ready - use migrations to seed data if needed');
         
