@@ -658,14 +658,27 @@ async function importStudentsWorkbook(req, workbook, options) {
               const ins = await withSavepoint(spName, () =>
                 client.query(
                   `INSERT INTO students (student_id, first_name, last_name, date_of_birth, class_id, grade_level, parent_link_code)
-                   VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+                   VALUES ($1,$2,$3,$4,$5,$6,$7)
+                   ON CONFLICT (student_id) DO UPDATE SET
+                     first_name = EXCLUDED.first_name,
+                     last_name  = EXCLUDED.last_name,
+                     date_of_birth = EXCLUDED.date_of_birth,
+                     class_id   = EXCLUDED.class_id,
+                     grade_level = EXCLUDED.grade_level
+                   RETURNING id, (xmax = 0) AS inserted`,
                   [studentId, firstName, lastName, dateOfBirth, classId, gradeLevel, parentLinkCode]
                 )
               );
               if (ins.ok) {
-                existingStudentMap.set(studentId, { id: ins.result.rows[0].id, student_id: studentId });
-                results.summary.created++;
-                batchDetails.push({ sheet: sheetName, row: rowNumber, studentId, name: `${firstName} ${lastName}`, action: 'created' });
+                const row = ins.result.rows[0];
+                existingStudentMap.set(studentId, { id: row.id, student_id: studentId });
+                if (row.inserted) {
+                  results.summary.created++;
+                  batchDetails.push({ sheet: sheetName, row: rowNumber, studentId, name: `${firstName} ${lastName}`, action: 'created' });
+                } else {
+                  results.summary.updated++;
+                  batchDetails.push({ sheet: sheetName, row: rowNumber, studentId, name: `${firstName} ${lastName}`, action: 'updated' });
+                }
               } else {
                 batchErrors.push({ sheet: sheetName, row: rowNumber, error: ins.error });
               }
