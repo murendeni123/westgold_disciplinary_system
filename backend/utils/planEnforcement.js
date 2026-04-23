@@ -14,8 +14,8 @@ const cache = require('./cache');
 // ============================================================================
 
 const FREE_PLAN_LIMITS = {
-  students:    200,
-  teachers:    5,
+  students:    300,
+  teachers:    7,
   admins:      1,
   gradeHeads:  1,
   parentsAllowed: false,
