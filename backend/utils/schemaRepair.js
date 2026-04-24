@@ -49,10 +49,32 @@ const repairSchema = async (schemaName) => {
         await client.query(`ALTER TABLE teachers ADD COLUMN IF NOT EXISTS is_grade_head BOOLEAN DEFAULT FALSE;`);
         await client.query(`ALTER TABLE teachers ADD COLUMN IF NOT EXISTS grade_head_for VARCHAR(10);`);
         await client.query(`ALTER TABLE teachers ADD COLUMN IF NOT EXISTS has_class BOOLEAN DEFAULT TRUE;`);
+        // Add name/email/is_admin to teachers (required by teacher create/update routes)
+        await client.query(`ALTER TABLE teachers ADD COLUMN IF NOT EXISTS name TEXT;`);
+        await client.query(`ALTER TABLE teachers ADD COLUMN IF NOT EXISTS email TEXT;`);
+        await client.query(`ALTER TABLE teachers ADD COLUMN IF NOT EXISTS is_admin BOOLEAN DEFAULT FALSE;`);
 
         // Add missing columns to behaviour_incidents
         await client.query(`ALTER TABLE behaviour_incidents ADD COLUMN IF NOT EXISTS incident_time TIME;`);
         await client.query(`ALTER TABLE behaviour_incidents ADD COLUMN IF NOT EXISTS time TIME;`);
+        await client.query(`ALTER TABLE behaviour_incidents ADD COLUMN IF NOT EXISTS date_occurred DATE;`);
+        await client.query(`ALTER TABLE behaviour_incidents ADD COLUMN IF NOT EXISTS date DATE;`);
+        await client.query(`ALTER TABLE behaviour_incidents ADD COLUMN IF NOT EXISTS resolved BOOLEAN DEFAULT FALSE;`);
+        await client.query(`ALTER TABLE behaviour_incidents ADD COLUMN IF NOT EXISTS action_taken TEXT;`);
+        await client.query(`ALTER TABLE behaviour_incidents ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP;`);
+
+        // Add missing columns to merits
+        await client.query(`ALTER TABLE merits ADD COLUMN IF NOT EXISTS date_awarded DATE;`);
+
+        // Add missing columns to attendance
+        await client.query(`ALTER TABLE attendance ADD COLUMN IF NOT EXISTS recorded_by INTEGER;`);
+
+        // Add alias columns to incident_types (severity/points = default_severity/default_points)
+        await client.query(`ALTER TABLE incident_types ADD COLUMN IF NOT EXISTS severity TEXT;`);
+        await client.query(`ALTER TABLE incident_types ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0;`);
+
+        // Add alias column to merit_types
+        await client.query(`ALTER TABLE merit_types ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 1;`);
         await client.query(`ALTER TABLE behaviour_incidents ADD COLUMN IF NOT EXISTS points_deducted INTEGER DEFAULT 0;`);
         
         // Sync time columns
@@ -61,6 +83,17 @@ const repairSchema = async (schemaName) => {
         
         // Sync points columns
         await client.query(`UPDATE behaviour_incidents SET points_deducted = points WHERE points_deducted = 0 AND points > 0;`);
+
+        // Backfill incident_types severity/points aliases from default_* columns
+        await client.query(`UPDATE incident_types SET severity = default_severity WHERE severity IS NULL AND default_severity IS NOT NULL;`);
+        await client.query(`UPDATE incident_types SET points = default_points WHERE points IS NULL OR points = 0 AND default_points > 0;`);
+
+        // Backfill merit_types points alias
+        await client.query(`UPDATE merit_types SET points = default_points WHERE points IS NULL OR points <= 0 AND default_points > 0;`);
+
+        // Backfill behaviour_incidents date/date_occurred from incident_date
+        await client.query(`UPDATE behaviour_incidents SET date = incident_date WHERE date IS NULL AND incident_date IS NOT NULL;`);
+        await client.query(`UPDATE behaviour_incidents SET date_occurred = incident_date WHERE date_occurred IS NULL AND incident_date IS NOT NULL;`);
         
         // Add missing columns to merits
         await client.query(`ALTER TABLE merits ADD COLUMN IF NOT EXISTS date DATE;`);
