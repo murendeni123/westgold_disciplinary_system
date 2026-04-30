@@ -45,18 +45,14 @@ const MySchedule: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="w-16 h-16 border-4 border-accent-green/30 border-t-accent-green rounded-full animate-spin" />
-      </div>
-    );
+    return <div className="flex justify-center items-center h-64">Loading...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">My Schedule</h1>
-        <p className="text-text-muted mt-2">View your daily timetable and off periods</p>
+        <h1 className="text-3xl font-bold text-gray-900">My Schedule</h1>
+        <p className="text-gray-600 mt-2">View your daily timetable and off periods</p>
       </div>
 
       <Card>
@@ -70,8 +66,8 @@ const MySchedule: React.FC = () => {
         </div>
 
         {schedule.length === 0 ? (
-          <div className="text-center py-12 text-text-muted">
-            <Calendar className="mx-auto mb-4 text-text-muted" size={48} />
+          <div className="text-center py-12 text-gray-500">
+            <Calendar className="mx-auto mb-4 text-gray-400" size={48} />
             <p>No schedule found for {days.find(d => d.value === selectedDay.toString())?.label}</p>
           </div>
         ) : (
@@ -79,47 +75,47 @@ const MySchedule: React.FC = () => {
             {schedule.map((item: any, index: number) => (
               <div
                 key={index}
-                className={`p-4 rounded-xl border-l-4 ${
+                className={`p-4 rounded-lg border-l-4 ${
                   item.is_break
-                    ? 'bg-border-line border-text-muted'
-                    : 'bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border-accent-green'
+                    ? 'bg-gray-50 border-gray-300'
+                    : 'bg-blue-50 border-blue-500'
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start space-x-4">
-                    <div className={`p-2 rounded-xl ${
-                      item.is_break ? 'bg-border-line' : 'bg-accent-green/20'
+                    <div className={`p-2 rounded-lg ${
+                      item.is_break ? 'bg-gray-200' : 'bg-blue-100'
                     }`}>
                       {item.is_break ? (
-                        <Coffee className={item.is_break ? 'text-text-muted' : 'text-accent-green'} size={24} />
+                        <Coffee className={item.is_break ? 'text-gray-600' : 'text-blue-600'} size={24} />
                       ) : (
-                        <BookOpen className="text-accent-green" size={24} />
+                        <BookOpen className="text-blue-600" size={24} />
                       )}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-2">
-                        <span className="font-semibold text-lg text-text-main">
+                        <span className="font-semibold text-lg text-gray-900">
                           Period {item.period_number}
                         </span>
                         {item.is_break && (
-                          <span className="px-2 py-1 bg-border-line text-text-muted rounded text-xs font-medium">
+                          <span className="px-2 py-1 bg-gray-200 text-gray-700 rounded text-xs font-medium">
                             Off Period
                           </span>
                         )}
                       </div>
                       {!item.is_break && (
                         <>
-                          <p className="text-text-main font-medium mb-1">
+                          <p className="text-gray-900 font-medium mb-1">
                             {item.subject || 'No Subject'}
                           </p>
                           {item.class_name && (
-                            <p className="text-sm text-text-muted mb-2">
+                            <p className="text-sm text-gray-600 mb-2">
                               Class: {item.class_name}
                             </p>
                           )}
                         </>
                       )}
-                      <div className="flex items-center space-x-4 text-sm text-text-muted">
+                      <div className="flex items-center space-x-4 text-sm text-gray-600">
                         {item.start_time && item.end_time && (
                           <div className="flex items-center space-x-1">
                             <Clock size={16} />
@@ -152,26 +148,26 @@ const MySchedule: React.FC = () => {
             return (
               <div
                 key={day.value}
-                className={`p-4 rounded-xl border-2 transition-all ${
+                className={`p-4 rounded-lg border-2 ${
                   Number(day.value) === selectedDay
-                    ? 'border-accent-green bg-gradient-to-r from-accent-green/10 to-accent-cyan/10'
-                    : 'border-border-line bg-card-bg hover:border-accent-green/50'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 bg-white'
                 }`}
               >
-                <h3 className="font-semibold text-text-main mb-2">{day.label}</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">{day.label}</h3>
                 <div className="space-y-1 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-text-muted">Lessons:</span>
-                    <span className="font-semibold text-accent-green">{lessonCount}</span>
+                    <span className="text-gray-600">Lessons:</span>
+                    <span className="font-semibold text-blue-600">{lessonCount}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-text-muted">Off:</span>
-                    <span className="font-semibold text-text-muted">{offPeriodCount}</span>
+                    <span className="text-gray-600">Off:</span>
+                    <span className="font-semibold text-gray-600">{offPeriodCount}</span>
                   </div>
                 </div>
                 <button
                   onClick={() => setSelectedDay(Number(day.value))}
-                  className="mt-3 w-full text-xs text-accent-green hover:text-accent-cyan font-medium transition-colors"
+                  className="mt-3 w-full text-xs text-blue-600 hover:text-blue-800 font-medium"
                 >
                   View Details →
                 </button>

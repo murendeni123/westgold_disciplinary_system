@@ -135,7 +135,7 @@ const TeacherPeriodTimetable: React.FC = () => {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-16 h-16 border-4 border-accent-green/30 border-t-accent-green rounded-full"
+          className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full"
         />
       </div>
     );
@@ -156,28 +156,28 @@ const TeacherPeriodTimetable: React.FC = () => {
         className="flex justify-between items-center"
       >
         <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">My Timetable</h1>
-          <p className="text-text-muted mt-2">
+          <h1 className="text-4xl font-bold text-gray-900">My Timetable</h1>
+          <p className="text-gray-500 mt-2">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
         <div className="flex space-x-3">
           <button
             onClick={() => setView('today')}
-            className={`px-4 py-2 rounded-xl font-medium transition-all ${
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               view === 'today'
-                ? 'bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg shadow-primary'
-                : 'bg-border-line text-text-muted hover:text-text-main'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             Today
           </button>
           <button
             onClick={() => setView('week')}
-            className={`px-4 py-2 rounded-xl font-medium transition-all ${
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               view === 'week'
-                ? 'bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg shadow-primary'
-                : 'bg-border-line text-text-muted hover:text-text-main'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             Week
@@ -191,7 +191,7 @@ const TeacherPeriodTimetable: React.FC = () => {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
-          className="bg-gradient-to-r from-accent-green to-accent-cyan rounded-2xl shadow-primary p-6 text-card-bg"
+          className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-xl p-6 text-white"
         >
           <div className="flex items-center justify-between">
             <div>
@@ -200,7 +200,7 @@ const TeacherPeriodTimetable: React.FC = () => {
                 <span className="text-sm font-medium opacity-90">Current Period</span>
               </div>
               <h2 className="text-3xl font-bold mb-2">{currentPeriod.period_name}</h2>
-              <div className="flex items-center space-x-4 text-card-bg/80">
+              <div className="flex items-center space-x-4 text-blue-100">
                 <span className="flex items-center">
                   <Users size={16} className="mr-1" />
                   {currentPeriod.class_name}
@@ -227,7 +227,7 @@ const TeacherPeriodTimetable: React.FC = () => {
               </div>
               <Button
                 onClick={() => handleOpenRegister(currentPeriod)}
-                className="bg-card-bg text-accent-green hover:bg-border-line rounded-xl"
+                className="bg-white text-blue-600 hover:bg-blue-50 rounded-lg"
               >
                 {currentPeriod.session_status === 'completed' ? 'View Register' : 'Mark Register'}
               </Button>
@@ -242,9 +242,9 @@ const TeacherPeriodTimetable: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-card-bg rounded-2xl shadow-card border border-border-line p-6"
+          className="bg-white rounded-2xl shadow-lg p-6"
         >
-          <h2 className="text-2xl font-bold text-text-main mb-4">Upcoming Periods</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Upcoming Periods</h2>
           <div className="space-y-3">
             {upcomingPeriods.map((period, index) => (
               <PeriodCard
@@ -264,9 +264,9 @@ const TeacherPeriodTimetable: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-card-bg rounded-2xl shadow-card border border-border-line p-6"
+          className="bg-white rounded-2xl shadow-lg p-6"
         >
-          <h2 className="text-2xl font-bold text-text-main mb-4">Past Periods</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Past Periods</h2>
           <div className="space-y-3">
             {pastPeriods.map((period, index) => (
               <PeriodCard
@@ -287,9 +287,9 @@ const TeacherPeriodTimetable: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-card-bg rounded-2xl shadow-card border border-border-line p-6"
+          className="bg-white rounded-2xl shadow-lg p-6"
         >
-          <h2 className="text-2xl font-bold text-text-main mb-6">Weekly Timetable</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Weekly Timetable</h2>
           <div className="space-y-3">
             {periods.map((period, index) => (
               <PeriodCard
@@ -308,11 +308,11 @@ const TeacherPeriodTimetable: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-card-bg rounded-2xl shadow-card border border-border-line p-12 text-center"
+          className="bg-white rounded-2xl shadow-lg p-12 text-center"
         >
-          <Calendar size={64} className="mx-auto mb-4 text-text-muted" />
-          <h3 className="text-xl font-semibold text-text-main mb-2">No Periods Scheduled</h3>
-          <p className="text-text-muted">
+          <Calendar size={64} className="mx-auto mb-4 text-gray-300" />
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">No Periods Scheduled</h3>
+          <p className="text-gray-500">
             {view === 'today' 
               ? "You don't have any periods scheduled for today"
               : "You don't have any periods scheduled this week"}
@@ -359,7 +359,7 @@ const PeriodCard: React.FC<PeriodCardProps> = ({ period, onOpen, delay = 0, isPa
       transition={{ delay }}
       whileHover={{ scale: 1.01 }}
       className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
-        isPast ? 'bg-border-line border-border-line' : 'border-border-line hover:border-accent-green/50 hover:shadow-md'
+        isPast ? 'bg-gray-50 border-gray-200' : 'border-gray-200 hover:border-blue-300 hover:shadow-md'
       }`}
       onClick={() => onOpen(period)}
     >
@@ -367,15 +367,15 @@ const PeriodCard: React.FC<PeriodCardProps> = ({ period, onOpen, delay = 0, isPa
         <div className="flex-1">
           <div className="flex items-center space-x-3 mb-2">
             <div className="text-center min-w-[60px]">
-              <div className="text-xs text-text-muted font-medium">Period {period.period_number}</div>
-              <div className="text-sm font-semibold text-text-main">
+              <div className="text-xs text-gray-500 font-medium">Period {period.period_number}</div>
+              <div className="text-sm font-semibold text-gray-900">
                 {period.start_time}
               </div>
             </div>
-            <div className="h-12 w-px bg-border-line" />
+            <div className="h-12 w-px bg-gray-300" />
             <div className="flex-1">
-              <h3 className="font-bold text-text-main">{period.period_name}</h3>
-              <div className="flex items-center space-x-3 text-sm text-text-muted mt-1">
+              <h3 className="font-bold text-gray-900">{period.period_name}</h3>
+              <div className="flex items-center space-x-3 text-sm text-gray-600 mt-1">
                 <span className="flex items-center">
                   <Users size={14} className="mr-1" />
                   {period.class_name}

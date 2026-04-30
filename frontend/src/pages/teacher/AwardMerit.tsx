@@ -77,7 +77,7 @@ const AwardMerit: React.FC = () => {
 
   const fetchClasses = async () => {
     try {
-      const response = await api.getClasses({ bypass_grade_filter: true });
+      const response = await api.getClasses();
       setClasses(response.data);
     } catch (error) {
       console.error('Error fetching classes:', error);
@@ -86,7 +86,7 @@ const AwardMerit: React.FC = () => {
 
   const fetchAllStudents = async () => {
     try {
-      const response = await api.getStudents({ bypass_grade_filter: true });
+      const response = await api.getStudents();
       setAllStudents(response.data || []);
     } catch (error) {
       console.error('Error fetching all students:', error);
@@ -167,7 +167,7 @@ const AwardMerit: React.FC = () => {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-16 h-16 border-4 border-accent-green/30 border-t-accent-green rounded-full"
+          className="w-16 h-16 border-4 border-green-200 border-t-green-600 rounded-full"
         />
       </div>
     );
@@ -187,14 +187,14 @@ const AwardMerit: React.FC = () => {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-card-bg rounded-2xl shadow-2xl max-w-md w-full border border-border-line overflow-hidden"
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-white/20 overflow-hidden"
           >
-            <div className="bg-gradient-to-r from-accent-green to-accent-cyan p-5 text-card-bg">
+            <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-5 text-white">
               <div className="flex items-center space-x-3">
                 <CheckCircle size={28} />
                 <div>
                   <h2 className="text-xl font-bold">Confirm Merit Award</h2>
-                  <p className="text-card-bg/80 text-sm">Please review before confirming</p>
+                  <p className="text-green-100 text-sm">Please review before confirming</p>
                 </div>
               </div>
             </div>
@@ -263,7 +263,7 @@ const AwardMerit: React.FC = () => {
                 whileTap={{ scale: 0.98 }}
                 onClick={handleConfirmSubmit}
                 disabled={loading}
-                className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg font-semibold shadow-primary hover:shadow-xl disabled:opacity-60"
+                className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold shadow-lg hover:shadow-xl disabled:opacity-60"
               >
                 <Award size={18} />
                 <span>{loading ? 'Awarding...' : 'Confirm Award'}</span>
@@ -296,15 +296,15 @@ const AwardMerit: React.FC = () => {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
               Award Merit
             </h1>
-            <p className="text-text-muted mt-2 text-lg">Recognize and reward positive student behavior</p>
+            <p className="text-gray-600 mt-2 text-lg">Recognize and reward positive student behavior</p>
           </div>
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="hidden md:flex items-center space-x-2 px-6 py-3 rounded-xl bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg shadow-primary"
+            className="hidden md:flex items-center space-x-2 px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg"
           >
             <Award size={20} />
             <span className="font-semibold">Merit Award</span>
@@ -317,7 +317,7 @@ const AwardMerit: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-8"
+        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-8"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -426,10 +426,10 @@ const AwardMerit: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="p-4 rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30"
+              className="p-4 rounded-xl bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200"
             >
-              <div className="text-sm text-text-main">
-                Selected: <span className="font-bold text-accent-green">{meritTypes.find(t => t.id === Number(formData.merit_type_id))?.name}</span>
+              <div className="text-sm text-gray-700">
+                Selected: <span className="font-bold text-green-600">{meritTypes.find(t => t.id === Number(formData.merit_type_id))?.name}</span>
               </div>
             </motion.div>
           )}
@@ -454,7 +454,7 @@ const AwardMerit: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.9 }}
-            className="flex justify-end space-x-4 pt-6 border-t border-border-line"
+            className="flex justify-end space-x-4 pt-6 border-t border-gray-200"
           >
             <Button
               type="button"
@@ -468,7 +468,7 @@ const AwardMerit: React.FC = () => {
               <Button
                 type="submit"
                 disabled={loading}
-                className="rounded-xl bg-gradient-to-r from-accent-green to-accent-cyan hover:from-accent-green/90 hover:to-accent-cyan/90 text-card-bg border-0 shadow-primary hover:shadow-xl"
+                className="rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 shadow-lg hover:shadow-xl"
               >
                 <Award size={20} className="mr-2" />
                 {loading ? 'Awarding...' : 'Award Merit'}

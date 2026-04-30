@@ -64,10 +64,10 @@ const TeacherProfile: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
           My Profile
         </h1>
-        <p className="text-text-muted mt-1 sm:mt-2 text-sm sm:text-base md:text-lg">View and manage your profile information</p>
+        <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base md:text-lg">View and manage your profile information</p>
       </motion.div>
 
       {/* Profile Information */}
@@ -75,16 +75,16 @@ const TeacherProfile: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="rounded-xl sm:rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-4 sm:p-6"
+        className="rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-4 sm:p-6"
       >
         <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-text-main">Profile Information</h2>
-          <User className="text-accent-green" size={24} />
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Profile Information</h2>
+          <User className="text-emerald-600" size={24} />
         </div>
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
           {/* Photo in top left corner */}
           <div className="flex-shrink-0">
-            <div className="w-24 h-24 sm:w-32 sm:h-32 border-2 border-border-line rounded-lg overflow-hidden bg-border-line flex items-center justify-center mx-auto sm:mx-0">
+            <div className="w-24 h-24 sm:w-32 sm:h-32 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center mx-auto sm:mx-0">
               {teacher?.photo_path ? (
                 <img
                   src={getPhotoUrl(teacher.photo_path) || ''}
@@ -141,35 +141,35 @@ const TeacherProfile: React.FC = () => {
 
           {/* Information on the right */}
           <div className="flex-1 space-y-3 sm:space-y-4">
-            <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
-              <p className="text-xs sm:text-sm text-text-muted mb-1">Name</p>
-              <p className="text-base sm:text-lg font-semibold text-accent-green break-words">{user?.name}</p>
+            <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+              <p className="text-xs sm:text-sm text-gray-600 mb-1">Name</p>
+              <p className="text-base sm:text-lg font-semibold text-emerald-700 break-words">{user?.name}</p>
             </div>
-            <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
-              <p className="text-xs sm:text-sm text-text-muted mb-1">Email</p>
-              <p className="text-base sm:text-lg font-semibold text-accent-green break-all">{user?.email}</p>
+            <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+              <p className="text-xs sm:text-sm text-gray-600 mb-1">Email</p>
+              <p className="text-base sm:text-lg font-semibold text-emerald-700 break-all">{user?.email}</p>
             </div>
-            <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
-              <p className="text-xs sm:text-sm text-text-muted mb-1">Role</p>
-              <p className="text-base sm:text-lg font-semibold text-accent-green capitalize">{user?.role}</p>
+            <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+              <p className="text-xs sm:text-sm text-gray-600 mb-1">Role</p>
+              <p className="text-base sm:text-lg font-semibold text-emerald-700 capitalize">{user?.role}</p>
             </div>
             {teacher && (
               <>
-                <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
-                  <p className="text-xs sm:text-sm text-text-muted mb-1">Employee ID</p>
-                  <p className="text-base sm:text-lg font-semibold text-accent-green">{teacher.employee_id}</p>
+                <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+                  <p className="text-xs sm:text-sm text-gray-600 mb-1">Employee ID</p>
+                  <p className="text-base sm:text-lg font-semibold text-emerald-700">{teacher.employee_id}</p>
                 </div>
-                <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
-                  <p className="text-xs sm:text-sm text-text-muted mb-1">Phone</p>
-                  <p className="text-base sm:text-lg font-semibold text-accent-green break-all">{teacher.phone || 'N/A'}</p>
+                <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+                  <p className="text-xs sm:text-sm text-gray-600 mb-1">Phone</p>
+                  <p className="text-base sm:text-lg font-semibold text-emerald-700 break-all">{teacher.phone || 'N/A'}</p>
                 </div>
                 {teacher.school_name && (
-                  <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-accent-cyan/10 to-accent-green/10 border border-accent-cyan/30">
+                  <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
                     <div className="flex items-center space-x-2 mb-1">
-                      <Building2 size={16} className="text-accent-cyan" />
-                      <p className="text-xs sm:text-sm text-text-muted">Assigned School</p>
+                      <Building2 size={16} className="text-blue-600" />
+                      <p className="text-xs sm:text-sm text-gray-600">Assigned School</p>
                     </div>
-                    <p className="text-base sm:text-lg font-semibold text-accent-cyan break-words">{teacher.school_name}</p>
+                    <p className="text-base sm:text-lg font-semibold text-blue-700 break-words">{teacher.school_name}</p>
                   </div>
                 )}
               </>

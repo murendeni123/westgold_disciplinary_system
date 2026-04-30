@@ -1,12 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer base {
   :root {
-    /* New Design System - Matching Frontend */
-    --primary-bg: #F2EBE2;
-    --bg-primary: #F2EBE2;
+    --bg-primary: #0B0F14;
     --bg-surface: #121821;
     --bg-border: #1E293B;
     --color-primary: #00E676;
@@ -14,16 +10,9 @@
     --text-primary: #E5E7EB;
     --text-muted: #9CA3AF;
     --color-success: #00E676;
-    --color-warning: #F59E0B;
-    --color-error: #EF4444;
+    --color-warning: #f59e0b;
+    --color-error: #ef4444;
     --color-info: #38BDF8;
-    
-    /* Card and accent colors */
-    --card-bg: #121821;
-    --border-line: #1E293B;
-    --accent-green: #00E676;
-    --accent-cyan: #38BDF8;
-    --text-main: #E5E7EB;
   }
 
   * {
@@ -35,8 +24,8 @@
   }
 
   body {
-    background-color: var(--primary-bg);
-    color: var(--text-main);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     font-family: system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

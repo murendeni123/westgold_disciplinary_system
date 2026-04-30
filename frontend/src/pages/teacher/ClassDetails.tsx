@@ -58,7 +58,7 @@ const ClassDetails: React.FC = () => {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-16 h-16 border-4 border-accent-green/30 border-t-accent-green rounded-full"
+          className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full"
         />
       </div>
     );
@@ -68,7 +68,7 @@ const ClassDetails: React.FC = () => {
     return (
       <div className="flex justify-center items-center h-96">
         <div className="text-center">
-          <p className="text-xl text-text-muted">Class not found</p>
+          <p className="text-xl text-gray-500">Class not found</p>
         </div>
       </div>
     );
@@ -94,10 +94,10 @@ const ClassDetails: React.FC = () => {
           </Button>
         </motion.div>
         <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
             {classData.class_name}
           </h1>
-          <p className="text-text-muted mt-2 text-lg">Class Details</p>
+          <p className="text-gray-600 mt-2 text-lg">Class Details</p>
         </div>
       </motion.div>
 
@@ -106,26 +106,26 @@ const ClassDetails: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
+        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-text-main">Class Information</h2>
-          <BookOpen className="text-accent-green" size={24} />
+          <h2 className="text-2xl font-bold text-gray-900">Class Information</h2>
+          <BookOpen className="text-emerald-600" size={24} />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="p-4 rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
-            <p className="text-sm text-text-muted mb-1">Grade Level</p>
-            <p className="text-lg font-semibold text-accent-green">{classData.grade_level || 'N/A'}</p>
+          <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+            <p className="text-sm text-gray-600 mb-1">Grade Level</p>
+            <p className="text-lg font-semibold text-emerald-700">{classData.grade_level || 'N/A'}</p>
           </div>
-          <div className="p-4 rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
-            <p className="text-sm text-text-muted mb-1">Academic Year</p>
-            <p className="text-lg font-semibold text-accent-green">{classData.academic_year}</p>
+          <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+            <p className="text-sm text-gray-600 mb-1">Academic Year</p>
+            <p className="text-lg font-semibold text-emerald-700">{classData.academic_year}</p>
           </div>
         </div>
         <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <Button
             onClick={() => navigate(`/teacher/attendance/daily?class=${id}`)}
-            className="rounded-xl bg-gradient-to-r from-accent-green to-accent-cyan hover:from-accent-green/90 hover:to-accent-cyan/90 text-card-bg border-0 shadow-primary hover:shadow-xl"
+            className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 shadow-lg hover:shadow-xl"
           >
             <Calendar size={20} className="mr-2" />
             Take Daily Attendance
@@ -138,13 +138,13 @@ const ClassDetails: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
+        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-text-main">
+          <h2 className="text-2xl font-bold text-gray-900">
             Students ({(classData.students || []).length})
           </h2>
-          <Users className="text-accent-green" size={24} />
+          <Users className="text-emerald-600" size={24} />
         </div>
         <Table
           columns={columns}

@@ -47,10 +47,10 @@ const ModernFilter: React.FC<ModernFilterProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
-      className={`relative overflow-hidden rounded-2xl bg-card-bg shadow-card border border-border-line ${className}`}
+      className={`relative overflow-hidden rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 ${className}`}
     >
       {/* Modern gradient accent bar */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent-green to-accent-cyan" />
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
       
       <div className="relative p-6 md:p-8">
         {/* Header */}
@@ -61,13 +61,13 @@ const ModernFilter: React.FC<ModernFilterProps> = ({
               transition={{ duration: 0.4, type: "spring" }}
               className="relative"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-accent-green to-accent-cyan rounded-2xl blur-lg opacity-50" />
-              <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-accent-green to-accent-cyan flex items-center justify-center shadow-primary">
-                <Filter className="text-card-bg" size={24} />
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl blur-lg opacity-50" />
+              <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-xl">
+                <Filter className="text-white" size={24} />
               </div>
             </motion.div>
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">
+              <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                 Filters
               </h2>
               <AnimatePresence mode="wait">
@@ -77,7 +77,7 @@ const ModernFilter: React.FC<ModernFilterProps> = ({
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="text-sm text-accent-green font-semibold mt-0.5"
+                    className="text-sm text-blue-600 font-semibold mt-0.5"
                   >
                     {activeFiltersCount} active filter{activeFiltersCount !== 1 ? 's' : ''}
                   </motion.p>
@@ -87,7 +87,7 @@ const ModernFilter: React.FC<ModernFilterProps> = ({
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="text-sm text-text-muted mt-0.5"
+                    className="text-sm text-gray-500 mt-0.5"
                   >
                     Select filters to refine results
                   </motion.p>
@@ -105,7 +105,7 @@ const ModernFilter: React.FC<ModernFilterProps> = ({
                 whileHover={{ scale: 1.05, y: -2 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={handleClearAll}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-pink-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 <RefreshCw size={16} />
                 <span className="hidden sm:inline">Clear All</span>
@@ -140,9 +140,9 @@ const ModernFilter: React.FC<ModernFilterProps> = ({
                     whileHover={{ scale: 1.05, y: -2 }}
                     className="group relative"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-accent-green to-accent-cyan rounded-xl blur opacity-50" />
-                    <div className="relative flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg text-sm font-semibold shadow-lg">
-                      <span className="text-card-bg/80 font-normal">{field.label}:</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl blur opacity-50" />
+                    <div className="relative flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm font-semibold shadow-lg">
+                      <span className="text-blue-100 font-normal">{field.label}:</span>
                       <span className="max-w-[150px] truncate">{displayValue}</span>
                       <motion.button
                         whileHover={{ scale: 1.2, rotate: 90 }}
@@ -171,7 +171,7 @@ const ModernFilter: React.FC<ModernFilterProps> = ({
               whileHover={{ y: -4 }}
               className="group relative"
             >
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-accent-green to-accent-cyan rounded-2xl opacity-0 group-hover:opacity-20 blur transition duration-300" />
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-20 blur transition duration-300" />
               {field.type === 'searchable-select' ? (
                 <div className="relative">
                   <SearchableSelect
@@ -188,23 +188,23 @@ const ModernFilter: React.FC<ModernFilterProps> = ({
               ) : field.type === 'select' ? (
                 <div className="relative">
                   <div className="relative">
-                    <label className="block text-sm font-semibold text-text-main mb-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
                       {field.label}
                     </label>
                     <select
                       value={values[field.name]}
                       onChange={(e) => onChange(field.name, e.target.value)}
-                      className="w-full px-4 py-3 bg-card-bg border border-border-line rounded-xl focus:outline-none focus:border-accent-green transition-all duration-200 appearance-none cursor-pointer text-text-main font-medium group-hover:border-accent-green/50"
+                      className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:bg-white transition-all duration-200 appearance-none cursor-pointer text-gray-700 font-medium group-hover:border-blue-300 group-hover:shadow-md"
                     >
-                      <option value="" className="bg-card-bg">{field.placeholder || `All ${field.label}`}</option>
+                      <option value="">{field.placeholder || `All ${field.label}`}</option>
                       {field.options?.map((option) => (
-                        <option key={option.value} value={option.value} className="bg-card-bg">
+                        <option key={option.value} value={option.value}>
                           {option.label}
                         </option>
                       ))}
                     </select>
                     <div className="absolute right-4 top-[42px] pointer-events-none">
-                      <svg className="w-5 h-5 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                       </svg>
                     </div>
@@ -217,7 +217,7 @@ const ModernFilter: React.FC<ModernFilterProps> = ({
                       whileHover={{ scale: 1.1, rotate: 90 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => onChange(field.name, '')}
-                      className="absolute top-10 right-12 p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors z-10"
+                      className="absolute top-10 right-12 p-1.5 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition-colors z-10 shadow-sm"
                     >
                       <X size={14} />
                     </motion.button>
@@ -225,7 +225,7 @@ const ModernFilter: React.FC<ModernFilterProps> = ({
                 </div>
               ) : (
                 <div className="relative">
-                  <label className="block text-sm font-semibold text-text-main mb-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
                     {field.label}
                   </label>
                   <input
@@ -233,7 +233,7 @@ const ModernFilter: React.FC<ModernFilterProps> = ({
                     value={values[field.name]}
                     onChange={(e) => onChange(field.name, e.target.value)}
                     placeholder={field.placeholder}
-                    className="w-full px-4 py-3 bg-card-bg border border-border-line rounded-xl focus:outline-none focus:border-accent-green transition-all duration-200 text-text-main placeholder-text-muted font-medium group-hover:border-accent-green/50"
+                    className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-blue-500 focus:bg-white transition-all duration-200 text-gray-700 font-medium group-hover:border-blue-300 group-hover:shadow-md"
                   />
                   {values[field.name] && (
                     <motion.button
@@ -243,7 +243,7 @@ const ModernFilter: React.FC<ModernFilterProps> = ({
                       whileHover={{ scale: 1.1, rotate: 90 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => onChange(field.name, '')}
-                      className="absolute top-10 right-3 p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 transition-colors z-10"
+                      className="absolute top-10 right-3 p-1.5 rounded-full bg-red-100 hover:bg-red-200 text-red-600 transition-colors z-10 shadow-sm"
                     >
                       <X size={14} />
                     </motion.button>
@@ -259,9 +259,9 @@ const ModernFilter: React.FC<ModernFilterProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="mt-8 pt-6 border-t border-border-line"
+          className="mt-8 pt-6 border-t border-gray-100"
         >
-          <div className="flex items-center justify-center gap-2 text-sm text-text-muted">
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
             <motion.span
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
@@ -274,8 +274,8 @@ const ModernFilter: React.FC<ModernFilterProps> = ({
       </div>
 
       {/* Decorative elements */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-accent-green/5 to-accent-cyan/5 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-accent-cyan/5 to-accent-green/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-400/5 to-purple-400/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-pink-400/5 to-orange-400/5 rounded-full blur-3xl pointer-events-none" />
     </motion.div>
   );
 };

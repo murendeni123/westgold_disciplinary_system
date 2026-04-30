@@ -240,7 +240,7 @@ const PeriodRegister: React.FC = () => {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-16 h-16 border-4 border-accent-green/30 border-t-accent-green rounded-full"
+          className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full"
         />
       </div>
     );
@@ -249,8 +249,8 @@ const PeriodRegister: React.FC = () => {
   if (!session) {
     return (
       <div className="text-center py-12">
-        <AlertCircle size={48} className="mx-auto mb-4 text-text-muted" />
-        <p className="text-text-muted">Session not found</p>
+        <AlertCircle size={48} className="mx-auto mb-4 text-gray-300" />
+        <p className="text-gray-500">Session not found</p>
         <Button onClick={() => navigate('/teacher/period-attendance')} className="mt-4">
           Back to Timetable
         </Button>
@@ -269,19 +269,19 @@ const PeriodRegister: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-card-bg rounded-2xl shadow-card border border-border-line p-6"
+        className="bg-white rounded-2xl shadow-lg p-6"
       >
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-4">
             <button
               onClick={() => navigate('/teacher/period-attendance')}
-              className="p-2 hover:bg-border-line rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <ArrowLeft size={24} className="text-text-main" />
+              <ArrowLeft size={24} />
             </button>
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">{session.period_name}</h1>
-              <div className="flex items-center space-x-4 mt-2 text-text-muted">
+              <h1 className="text-3xl font-bold text-gray-900">{session.period_name}</h1>
+              <div className="flex items-center space-x-4 mt-2 text-gray-600">
                 <span className="flex items-center">
                   <Users size={16} className="mr-1" />
                   {session.class_name}
@@ -301,7 +301,7 @@ const PeriodRegister: React.FC = () => {
           </div>
 
           {session.status === 'locked' && (
-            <div className="flex items-center px-4 py-2 bg-border-line text-text-muted rounded-lg">
+            <div className="flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-lg">
               <Lock size={18} className="mr-2" />
               Register Locked
             </div>
@@ -310,13 +310,13 @@ const PeriodRegister: React.FC = () => {
 
         {/* Progress Bar */}
         <div className="mt-6">
-          <div className="flex justify-between text-sm text-text-muted mb-2">
+          <div className="flex justify-between text-sm text-gray-600 mb-2">
             <span>Progress: {markedCount} / {students.length} marked</span>
             <span>{presentCount} present</span>
           </div>
-          <div className="w-full bg-border-line rounded-full h-2">
+          <div className="w-full bg-gray-200 rounded-full h-2">
             <div
-              className="bg-gradient-to-r from-accent-green to-accent-cyan h-2 rounded-full transition-all duration-300"
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${students.length > 0 ? (markedCount / students.length) * 100 : 0}%` }}
             />
           </div>
@@ -328,7 +328,7 @@ const PeriodRegister: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-card-bg rounded-2xl shadow-card border border-border-line p-6"
+        className="bg-white rounded-2xl shadow-lg p-6"
       >
         <div className="flex items-center justify-between">
           <div className="flex-1 mr-4">
@@ -337,7 +337,7 @@ const PeriodRegister: React.FC = () => {
               placeholder="Search students..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-border-line rounded-xl bg-card-bg text-text-main focus:ring-2 focus:ring-accent-green/50 focus:border-accent-green transition-all"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <div className="flex space-x-3">
@@ -353,7 +353,7 @@ const PeriodRegister: React.FC = () => {
             <Button
               onClick={handleCompleteRegister}
               disabled={session.status === 'locked' || saving}
-              className="rounded-xl bg-gradient-to-r from-accent-green to-accent-cyan hover:from-accent-green/90 hover:to-accent-cyan/90 text-card-bg shadow-primary"
+              className="rounded-lg bg-green-600 hover:bg-green-700 text-white"
             >
               <Save size={18} className="mr-2" />
               Complete Register
@@ -367,9 +367,9 @@ const PeriodRegister: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-card-bg rounded-2xl shadow-card border border-border-line p-6"
+        className="bg-white rounded-2xl shadow-lg p-6"
       >
-        <h2 className="text-2xl font-bold text-text-main mb-6">Students ({filteredStudents.length})</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">Students ({filteredStudents.length})</h2>
 
         <div className="space-y-3">
           {filteredStudents.map((student, index) => {
@@ -385,17 +385,17 @@ const PeriodRegister: React.FC = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.02 }}
                 className={`p-4 border-2 rounded-xl ${
-                  dismissed ? 'bg-border-line border-border-line' : 'border-border-line hover:border-accent-green/50'
+                  dismissed ? 'bg-gray-50 border-gray-300' : 'border-gray-200'
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-text-main">
+                        <h3 className="font-semibold text-gray-900">
                           {student.first_name} {student.last_name}
                         </h3>
-                        <p className="text-sm text-text-muted">ID: {student.student_id}</p>
+                        <p className="text-sm text-gray-500">ID: {student.student_id}</p>
                       </div>
                       <div className={`px-3 py-1 rounded-full border-2 flex items-center space-x-2 ${getStatusColor(status)}`}>
                         {getStatusIcon(status)}
@@ -404,14 +404,14 @@ const PeriodRegister: React.FC = () => {
                     </div>
 
                     {dismissed && dismissal && (
-                      <div className="mt-2 p-2 bg-border-line rounded-lg text-sm text-text-muted">
+                      <div className="mt-2 p-2 bg-gray-100 rounded-lg text-sm text-gray-700">
                         <Lock size={14} className="inline mr-1" />
                         Dismissed at {new Date(dismissal.dismissed_at).toLocaleTimeString()} - {dismissal.dismissal_reason}
                       </div>
                     )}
 
                     {notes && (
-                      <div className="mt-2 text-sm text-text-muted italic">
+                      <div className="mt-2 text-sm text-gray-600 italic">
                         Note: {notes}
                       </div>
                     )}
@@ -468,8 +468,8 @@ const PeriodRegister: React.FC = () => {
         </div>
 
         {filteredStudents.length === 0 && (
-          <div className="text-center py-12 text-text-muted">
-            <Users size={48} className="mx-auto mb-4 text-text-muted" />
+          <div className="text-center py-12 text-gray-500">
+            <Users size={48} className="mx-auto mb-4 text-gray-300" />
             <p>No students found</p>
           </div>
         )}

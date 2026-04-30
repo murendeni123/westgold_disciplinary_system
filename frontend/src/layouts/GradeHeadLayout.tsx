@@ -192,15 +192,7 @@ const GradeHeadLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen bg-[#F2EBE2] overflow-hidden relative">
-      {/* Premium Gradient Background Layer */}
-      <div className="fixed inset-0 bg-gradient-to-br from-cyan-400/10 via-slate-800/20 to-[#121821]/60 pointer-events-none" />
-      
-      {/* Radial Glow Effect — subtle cyan glow in top-left corner */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none hidden lg:block">
-        <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-cyan-400/10 blur-3xl rounded-full" />
-        <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-accent-cyan/8 rounded-full filter blur-3xl" />
-      </div>
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
 
       {/* Mobile backdrop */}
       {sidebarOpen && isMobile && (
@@ -216,7 +208,7 @@ const GradeHeadLayout: React.FC = () => {
       <aside
         style={!isMobile ? { width: sidebarOpen ? 260 : 64, transition: 'width 0.2s ease' } : {}}
         className={`
-          bg-card-bg text-text-main shadow-card flex flex-col overflow-hidden flex-shrink-0 border-r border-border-line
+          bg-gradient-to-b from-indigo-900 via-indigo-800 to-purple-900 text-white shadow-2xl flex flex-col overflow-hidden flex-shrink-0
           fixed top-0 left-0 h-full z-50 w-72
           transform transition-transform duration-200 ease-out
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -224,21 +216,21 @@ const GradeHeadLayout: React.FC = () => {
         `}
       >
         {/* Sidebar Header */}
-        <div className="p-3 border-b border-border-line flex items-center justify-between min-h-[60px] flex-shrink-0">
+        <div className="p-3 border-b border-white/10 flex items-center justify-between min-h-[60px] flex-shrink-0">
           {(sidebarOpen || isMobile) && (
             <div className="flex items-center space-x-2 overflow-hidden">
-              <div className="w-8 h-8 bg-gradient-to-br from-accent-green to-accent-cyan rounded-lg flex items-center justify-center flex-shrink-0">
-                <Shield size={16} className="text-card-bg" />
+              <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Shield size={16} className="text-white" />
               </div>
               <div className="overflow-hidden">
-                <p className="text-sm font-bold truncate text-text-main">Grade Head</p>
-                <p className="text-xs text-accent-green truncate">Grade {user?.gradeHeadFor}</p>
+                <p className="text-sm font-bold truncate">Grade Head</p>
+                <p className="text-xs text-amber-300 truncate">Grade {user?.gradeHeadFor}</p>
               </div>
             </div>
           )}
           <button
             onClick={() => isMobile ? setSidebarOpen(false) : setSidebarOpen(!sidebarOpen)}
-            className="p-1.5 hover:bg-border-line rounded-lg transition-colors flex-shrink-0 min-w-[36px] min-h-[36px] flex items-center justify-center text-text-main"
+            className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0 min-w-[36px] min-h-[36px] flex items-center justify-center"
             aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
           >
             {isMobile ? <X size={18} /> : <Menu size={18} />}
@@ -247,14 +239,14 @@ const GradeHeadLayout: React.FC = () => {
 
         {/* User Info */}
         {(sidebarOpen || isMobile) && (
-          <div className="px-3 py-2.5 border-b border-border-line flex-shrink-0">
+          <div className="px-3 py-2.5 border-b border-white/10 flex-shrink-0">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-accent-green to-accent-cyan rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 text-card-bg">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
                 {user?.name?.charAt(0)?.toUpperCase() || 'G'}
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-semibold truncate text-text-main">{user?.name}</p>
-                <p className="text-xs text-text-muted truncate">{user?.email}</p>
+                <p className="text-sm font-semibold truncate">{user?.name}</p>
+                <p className="text-xs text-indigo-300 truncate">{user?.email}</p>
               </div>
             </div>
           </div>
@@ -266,7 +258,7 @@ const GradeHeadLayout: React.FC = () => {
           {user?.hasClass && (
             <div className="mb-1">
               {(sidebarOpen || isMobile) && (
-                <p className="px-2 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-accent-green select-none">
+                <p className="px-2 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-indigo-400 select-none">
                   My Teaching
                 </p>
               )}
@@ -278,7 +270,7 @@ const GradeHeadLayout: React.FC = () => {
                     onClick={handleNavClick}
                     className={({ isActive }) =>
                       `flex items-center px-2 py-2 rounded-lg transition-colors min-h-[44px] ${
-                        isActive ? 'bg-accent-green/20 text-accent-green' : 'text-text-muted hover:bg-border-line hover:text-text-main'
+                        isActive ? 'bg-amber-500/30 text-amber-200' : 'text-indigo-200 hover:bg-white/10 hover:text-white'
                       } ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`
                     }
                   >
@@ -287,14 +279,14 @@ const GradeHeadLayout: React.FC = () => {
                   </NavLink>
                 ))}
               </div>
-              {(sidebarOpen || isMobile) && <div className="mt-2 border-t border-border-line" />}
+              {(sidebarOpen || isMobile) && <div className="mt-2 border-t border-white/10" />}
             </div>
           )}
 
           {/* Grade Management section */}
           <div className="space-y-0.5 mt-1">
             {(sidebarOpen || isMobile) && (
-              <p className="px-2 pt-1 pb-1 text-[10px] font-bold uppercase tracking-widest text-accent-cyan select-none">
+              <p className="px-2 pt-1 pb-1 text-[10px] font-bold uppercase tracking-widest text-indigo-400 select-none">
                 Grade Management
               </p>
             )}
@@ -307,7 +299,7 @@ const GradeHeadLayout: React.FC = () => {
                     <button
                       onClick={() => (sidebarOpen || isMobile) && toggleSubMenu(item.name)}
                       className={`w-full flex items-center px-2 py-2 rounded-lg transition-colors text-left min-h-[44px] ${
-                        hasActiveChild ? 'bg-accent-green/15 text-accent-green' : 'text-text-muted hover:bg-border-line hover:text-text-main'
+                        hasActiveChild ? 'bg-white/15 text-white' : 'text-indigo-200 hover:bg-white/10 hover:text-white'
                       } ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`}
                     >
                       <item.icon size={18} className="flex-shrink-0" />
@@ -327,7 +319,7 @@ const GradeHeadLayout: React.FC = () => {
                             onClick={handleNavClick}
                             className={({ isActive }) =>
                               `flex items-center space-x-2 px-2 py-1.5 rounded-lg transition-colors text-sm min-h-[40px] ${
-                                isActive ? 'bg-accent-green/20 text-accent-green font-medium' : 'text-text-muted hover:bg-border-line hover:text-text-main'
+                                isActive ? 'bg-white/20 text-white font-medium' : 'text-indigo-300 hover:bg-white/10 hover:text-white'
                               }`
                             }
                           >
@@ -348,7 +340,7 @@ const GradeHeadLayout: React.FC = () => {
                   onClick={handleNavClick}
                   className={({ isActive }) =>
                     `flex items-center px-2 py-2 rounded-lg transition-colors min-h-[44px] ${
-                      isActive ? 'bg-accent-green/20 text-accent-green' : 'text-text-muted hover:bg-border-line hover:text-text-main'
+                      isActive ? 'bg-white/20 text-white' : 'text-indigo-200 hover:bg-white/10 hover:text-white'
                     } ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`
                   }
                 >
@@ -361,10 +353,10 @@ const GradeHeadLayout: React.FC = () => {
         </nav>
 
         {/* Logout */}
-        <div className="p-2 border-t border-border-line flex-shrink-0">
+        <div className="p-2 border-t border-white/10 flex-shrink-0">
           <button
             onClick={handleLogout}
-            className={`flex items-center px-2 py-2 rounded-lg text-red-400 hover:bg-red-500/20 hover:text-red-300 transition-colors w-full min-h-[44px] ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`}
+            className={`flex items-center px-2 py-2 rounded-lg text-red-300 hover:bg-red-500/20 hover:text-red-100 transition-colors w-full min-h-[44px] ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`}
           >
             <LogOut size={18} className="flex-shrink-0" />
             {(sidebarOpen || isMobile) && <span className="ml-2.5 text-sm font-medium">Logout</span>}
@@ -376,19 +368,19 @@ const GradeHeadLayout: React.FC = () => {
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
         {/* Header */}
-        <header className="bg-card-bg border-b border-border-line px-4 py-3 flex items-center gap-3 flex-shrink-0 shadow-card">
+        <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-shrink-0 shadow-sm">
 
           {/* Hamburger — mobile only */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden p-2 rounded-lg hover:bg-border-line transition-colors flex-shrink-0"
+            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors flex-shrink-0"
             aria-label="Open menu"
           >
-            <Menu size={20} className="text-text-main" />
+            <Menu size={20} className="text-gray-600" />
           </button>
 
           {/* Grade badge */}
-          <div className="bg-accent-green/10 text-accent-green border border-accent-green/20 px-3 py-1 rounded-full text-xs font-semibold flex items-center space-x-1.5 flex-shrink-0">
+          <div className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-semibold flex items-center space-x-1.5 flex-shrink-0">
             <Shield size={12} />
             <span>Grade {user?.gradeHeadFor} Head</span>
           </div>
@@ -396,46 +388,46 @@ const GradeHeadLayout: React.FC = () => {
           {/* Search bar — desktop only inline, mobile as toggle */}
           <div className="hidden md:flex relative flex-1 max-w-md" ref={searchRef}>
             <div className="relative w-full">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search any student across all grades..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
-                className="w-full pl-9 pr-4 py-2 text-sm border border-border-line rounded-xl bg-border-line/50 text-text-main placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent-green focus:bg-card-bg transition-all"
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:bg-white transition-all"
               />
               {searchLoading && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-accent-green border-t-transparent rounded-full animate-spin" />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
               )}
             </div>
             {/* Desktop search results */}
             {showSearchResults && searchResults.length > 0 && (
-              <div className="absolute top-full mt-1 left-0 right-0 bg-card-bg rounded-xl shadow-card border border-border-line z-50 overflow-hidden">
-                <div className="px-3 py-2 border-b border-border-line text-xs text-text-muted font-medium">
+              <div className="absolute top-full mt-1 left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
+                <div className="px-3 py-2 border-b border-gray-100 text-xs text-gray-500 font-medium">
                   {searchResults.length} student{searchResults.length !== 1 ? 's' : ''} found
                 </div>
                 {searchResults.map((student: any) => (
                   <button
                     key={student.id}
                     onClick={() => { navigate(`/grade-head/students/${student.id}`); setSearchQuery(''); setShowSearchResults(false); }}
-                    className="w-full flex items-center space-x-3 px-3 py-2.5 hover:bg-border-line transition-colors text-left"
+                    className="w-full flex items-center space-x-3 px-3 py-2.5 hover:bg-indigo-50 transition-colors text-left"
                   >
-                    <div className="w-8 h-8 bg-accent-green/10 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-semibold text-accent-green">
+                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-semibold text-indigo-600">
                         {student.first_name?.charAt(0)}{student.last_name?.charAt(0)}
                       </span>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-text-main">{student.first_name} {student.last_name}</p>
-                      <p className="text-xs text-text-muted">{student.class_name || 'No class'} {student.grade_level ? `• Grade ${student.grade_level}` : ''}</p>
+                      <p className="text-sm font-medium text-gray-900">{student.first_name} {student.last_name}</p>
+                      <p className="text-xs text-gray-500">{student.class_name || 'No class'} {student.grade_level ? `• Grade ${student.grade_level}` : ''}</p>
                     </div>
                   </button>
                 ))}
               </div>
             )}
             {showSearchResults && searchQuery && searchResults.length === 0 && !searchLoading && (
-              <div className="absolute top-full mt-1 left-0 right-0 bg-card-bg rounded-xl shadow-card border border-border-line z-50 p-4 text-center text-sm text-text-muted">
+              <div className="absolute top-full mt-1 left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-200 z-50 p-4 text-center text-sm text-gray-500">
                 No students found for "{searchQuery}"
               </div>
             )}
@@ -444,56 +436,56 @@ const GradeHeadLayout: React.FC = () => {
           {/* Mobile search toggle */}
           <button
             onClick={() => setSearchOpen(!searchOpen)}
-            className="md:hidden ml-auto p-2 rounded-lg hover:bg-border-line transition-colors"
+            className="md:hidden ml-auto p-2 rounded-lg hover:bg-gray-100 transition-colors"
             aria-label="Search"
           >
-            {searchOpen ? <X size={20} className="text-text-main" /> : <Search size={20} className="text-text-main" />}
+            {searchOpen ? <X size={20} className="text-gray-600" /> : <Search size={20} className="text-gray-600" />}
           </button>
 
-          <span className="hidden lg:block text-sm text-text-muted ml-auto">{user?.name}</span>
+          <span className="hidden lg:block text-sm text-gray-500 ml-auto">{user?.name}</span>
         </header>
 
         {/* Mobile search bar */}
         {searchOpen && (
-          <div className="md:hidden px-4 py-2 bg-card-bg border-b border-border-line" ref={searchRef}>
+          <div className="md:hidden px-4 py-2 bg-white border-b border-gray-200" ref={searchRef}>
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search students..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
-                className="w-full pl-9 pr-4 py-2 text-sm border border-border-line rounded-xl bg-border-line/50 text-text-main placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent-green focus:bg-card-bg"
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:bg-white"
                 autoFocus
               />
               {searchLoading && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-accent-green border-t-transparent rounded-full animate-spin" />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
               )}
             </div>
             {showSearchResults && searchResults.length > 0 && (
-              <div className="mt-1 bg-card-bg rounded-xl shadow-card border border-border-line overflow-hidden">
+              <div className="mt-1 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden">
                 {searchResults.map((student: any) => (
                   <button
                     key={student.id}
                     onClick={() => { navigate(`/grade-head/students/${student.id}`); setSearchQuery(''); setShowSearchResults(false); setSearchOpen(false); }}
-                    className="w-full flex items-center space-x-3 px-3 py-2.5 hover:bg-border-line transition-colors text-left"
+                    className="w-full flex items-center space-x-3 px-3 py-2.5 hover:bg-indigo-50 transition-colors text-left"
                   >
-                    <div className="w-8 h-8 bg-accent-green/10 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-semibold text-accent-green">
+                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-semibold text-indigo-600">
                         {student.first_name?.charAt(0)}{student.last_name?.charAt(0)}
                       </span>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-text-main">{student.first_name} {student.last_name}</p>
-                      <p className="text-xs text-text-muted">{student.class_name || 'No class'}</p>
+                      <p className="text-sm font-medium text-gray-900">{student.first_name} {student.last_name}</p>
+                      <p className="text-xs text-gray-500">{student.class_name || 'No class'}</p>
                     </div>
                   </button>
                 ))}
               </div>
             )}
             {showSearchResults && searchQuery && searchResults.length === 0 && !searchLoading && (
-              <p className="mt-2 text-center text-sm text-text-muted">No students found for "{searchQuery}"</p>
+              <p className="mt-2 text-center text-sm text-gray-500">No students found for "{searchQuery}"</p>
             )}
           </div>
         )}

@@ -179,7 +179,7 @@ const ViewDetentions: React.FC = () => {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-16 h-16 border-4 border-accent-green/30 border-t-accent-green rounded-full"
+          className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full"
         />
       </div>
     );
@@ -200,10 +200,10 @@ const ViewDetentions: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
           Student Detentions
         </h1>
-        <p className="text-text-muted mt-2 text-lg">View detention assignments for your students</p>
+        <p className="text-gray-600 mt-2 text-lg">View detention assignments for your students</p>
       </motion.div>
 
       {/* Filters Card */}
@@ -211,11 +211,11 @@ const ViewDetentions: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
+        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-text-main">Filters</h2>
-          <Sparkles className="text-accent-green" size={24} />
+          <h2 className="text-2xl font-bold text-gray-900">Filters</h2>
+          <Sparkles className="text-orange-600" size={24} />
         </div>
         <Select
           label="Student"
@@ -244,16 +244,16 @@ const ViewDetentions: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + index * 0.1 }}
                 whileHover={{ y: -5, scale: 1.02 }}
-                className="group relative overflow-hidden rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6 cursor-pointer"
+                className="group relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6 cursor-pointer"
               >
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.color} shadow-lg`}>
-                      <Icon className="text-card-bg" size={24} />
+                      <Icon className="text-white" size={24} />
                     </div>
                   </div>
-                  <h3 className="text-sm font-medium text-text-muted mb-1">{stat.title}</h3>
-                  <p className="text-3xl font-bold text-text-main">{stat.value}</p>
+                  <h3 className="text-sm font-medium text-gray-600 mb-1">{stat.title}</h3>
+                  <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
                 </div>
               </motion.div>
             );
@@ -269,11 +269,11 @@ const ViewDetentions: React.FC = () => {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
-              className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
+              className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-text-main">Detention Frequency Over Time</h2>
-                <TrendingUp className="text-accent-green" size={24} />
+                <h2 className="text-2xl font-bold text-gray-900">Detention Frequency Over Time</h2>
+                <TrendingUp className="text-orange-600" size={24} />
               </div>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chartData}>
@@ -306,11 +306,11 @@ const ViewDetentions: React.FC = () => {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.5 }}
-              className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
+              className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-text-main">Attendance at Detentions</h2>
-                <Gavel className="text-accent-green" size={24} />
+                <h2 className="text-2xl font-bold text-gray-900">Attendance at Detentions</h2>
+                <Gavel className="text-orange-600" size={24} />
               </div>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -348,10 +348,10 @@ const ViewDetentions: React.FC = () => {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.6 }}
-          className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-12"
+          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-12"
         >
-          <div className="text-center py-12 text-text-muted">
-            <AlertTriangle className="mx-auto mb-4 text-text-muted" size={48} />
+          <div className="text-center py-12 text-gray-500">
+            <AlertTriangle className="mx-auto mb-4 text-gray-400" size={48} />
             <p className="text-lg">Please select a student to view their detentions</p>
           </div>
         </motion.div>
@@ -360,10 +360,10 @@ const ViewDetentions: React.FC = () => {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.6 }}
-          className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-12"
+          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-12"
         >
-          <div className="text-center py-12 text-text-muted">
-            <AlertTriangle className="mx-auto mb-4 text-text-muted" size={48} />
+          <div className="text-center py-12 text-gray-500">
+            <AlertTriangle className="mx-auto mb-4 text-gray-400" size={48} />
             <p className="text-lg">No detention assignments found for this student</p>
           </div>
         </motion.div>
@@ -372,11 +372,11 @@ const ViewDetentions: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
+          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
         >
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-text-main">Detention Records ({detentions.length})</h2>
-            <Gavel className="text-accent-green" size={24} />
+            <h2 className="text-2xl font-bold text-gray-900">Detention Records ({detentions.length})</h2>
+            <Gavel className="text-orange-600" size={24} />
           </div>
           <Table
             columns={columns}

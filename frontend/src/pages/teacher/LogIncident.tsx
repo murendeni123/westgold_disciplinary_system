@@ -87,7 +87,7 @@ const LogIncident: React.FC = () => {
 
   const fetchClasses = async () => {
     try {
-      const response = await api.getClasses({ bypass_grade_filter: true });
+      const response = await api.getClasses();
       setClasses(response.data);
     } catch (error) {
       console.error('Error fetching classes:', error);
@@ -96,7 +96,7 @@ const LogIncident: React.FC = () => {
 
   const fetchAllStudents = async () => {
     try {
-      const response = await api.getStudents({ bypass_grade_filter: true });
+      const response = await api.getStudents();
       setAllStudents(response.data || []);
     } catch (error) {
       console.error('Error fetching all students:', error);
@@ -214,15 +214,15 @@ const LogIncident: React.FC = () => {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
               Log Incident
             </h1>
-            <p className="text-text-muted mt-2 text-lg">Record a behaviour incident</p>
+            <p className="text-gray-600 mt-2 text-lg">Record a behaviour incident</p>
           </div>
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="hidden md:flex items-center space-x-2 px-6 py-3 rounded-xl bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg shadow-primary"
+            className="hidden md:flex items-center space-x-2 px-6 py-3 rounded-xl bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg"
           >
             <AlertTriangle size={20} />
             <span className="font-semibold">Incident Report</span>
@@ -235,7 +235,7 @@ const LogIncident: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-8"
+        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-8"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -341,10 +341,10 @@ const LogIncident: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="p-4 rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30"
+              className="p-4 rounded-xl bg-gradient-to-r from-red-50 to-pink-50 border border-red-200"
             >
-              <div className="text-sm text-text-main">
-                Selected: <span className="font-bold text-accent-green">{formData.incident_type}</span>
+              <div className="text-sm text-gray-700">
+                Selected: <span className="font-bold text-red-600">{formData.incident_type}</span>
               </div>
             </motion.div>
           )}
@@ -410,10 +410,10 @@ const LogIncident: React.FC = () => {
             className="mt-2"
           >
             <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-text-main">
+              <h3 className="text-sm font-semibold text-gray-800">
                 Consequences (optional)
               </h3>
-              <span className="text-xs text-text-muted">
+              <span className="text-xs text-gray-500">
                 Choose one or more actions you are applying
               </span>
             </div>
@@ -425,13 +425,13 @@ const LogIncident: React.FC = () => {
                     key={label}
                     className={`flex items-start space-x-2 rounded-xl border px-3 py-2 text-sm cursor-pointer transition-colors ${
                       checked
-                        ? 'bg-accent-green/10 border-accent-green/30 text-text-main'
-                        : 'bg-card-bg border-border-line hover:border-accent-green/30'
+                        ? 'bg-red-50 border-red-300 text-red-800'
+                        : 'bg-white border-gray-200 hover:border-red-200'
                     }`}
                   >
                     <input
                       type="checkbox"
-                      className="mt-1 h-4 w-4 rounded border-border-line text-accent-green focus:ring-accent-green"
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
                       checked={checked}
                       onChange={(e) => {
                         if (e.target.checked) {
@@ -456,7 +456,7 @@ const LogIncident: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.1 }}
-            className="flex justify-end space-x-4 pt-6 border-t border-border-line"
+            className="flex justify-end space-x-4 pt-6 border-t border-gray-200"
           >
             <Button
               type="button"
@@ -470,7 +470,7 @@ const LogIncident: React.FC = () => {
               <Button
                 type="submit"
                 disabled={loading}
-                className="rounded-xl bg-gradient-to-r from-accent-green to-accent-cyan hover:from-accent-green/90 hover:to-accent-cyan/90 text-card-bg border-0 shadow-primary hover:shadow-xl"
+                className="rounded-xl bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white border-0 shadow-lg hover:shadow-xl"
               >
                 <Save size={20} className="mr-2" />
                 {loading ? 'Saving...' : 'Log Incident'}

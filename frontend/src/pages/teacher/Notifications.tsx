@@ -77,7 +77,7 @@ const Notifications: React.FC = () => {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-16 h-16 border-4 border-accent-green/30 border-t-accent-green rounded-full"
+          className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full"
         />
       </div>
     );
@@ -95,15 +95,15 @@ const Notifications: React.FC = () => {
         className="flex items-center justify-between"
       >
         <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
             Notifications
           </h1>
-          <p className="text-text-muted mt-2 text-lg">View and manage your notifications</p>
+          <p className="text-gray-600 mt-2 text-lg">View and manage your notifications</p>
         </div>
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button
             onClick={handleMarkAllRead}
-            className="rounded-xl bg-gradient-to-r from-accent-green to-accent-cyan hover:from-accent-green/90 hover:to-accent-cyan/90 text-card-bg border-0 shadow-primary hover:shadow-xl"
+            className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 shadow-lg hover:shadow-xl"
           >
             <Check size={20} className="mr-2" />
             Mark All Read
@@ -116,11 +116,11 @@ const Notifications: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
+        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-text-main">Filters</h2>
-          <Filter className="text-accent-green" size={24} />
+          <h2 className="text-2xl font-bold text-gray-900">Filters</h2>
+          <Filter className="text-emerald-600" size={24} />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Select
@@ -173,39 +173,39 @@ const Notifications: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line overflow-hidden"
+        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 overflow-hidden"
       >
         {notifications.length === 0 ? (
-          <div className="p-8 text-center text-text-muted">
-            <Bell size={48} className="mx-auto mb-4 text-text-muted" />
+          <div className="p-8 text-center text-gray-500">
+            <Bell size={48} className="mx-auto mb-4 text-gray-400" />
             <p>No notifications found</p>
           </div>
         ) : (
-          <div className="divide-y divide-border-line">
+          <div className="divide-y divide-gray-200">
             {notifications.map((notification, index) => (
               <motion.div
                 key={notification.id}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 + index * 0.05 }}
-                className={`p-4 hover:bg-gradient-to-r hover:from-accent-green/5 hover:to-accent-cyan/5 transition-colors ${
-                  !notification.is_read ? 'bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border-l-4 border-accent-green' : ''
+                className={`p-4 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50 transition-colors ${
+                  !notification.is_read ? 'bg-gradient-to-r from-blue-50 to-indigo-50' : ''
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
-                      <h3 className="font-semibold text-text-main">
+                      <h3 className="font-semibold text-gray-900">
                         {notification.title}
                       </h3>
                       {!notification.is_read && (
-                        <span className="px-2 py-1 text-xs font-medium bg-accent-green text-card-bg rounded-full">
+                        <span className="px-2 py-1 text-xs font-medium bg-blue-600 text-white rounded-full">
                           New
                         </span>
                       )}
                     </div>
-                    <p className="text-text-muted mt-1">{notification.message}</p>
-                    <p className="text-sm text-text-muted/70 mt-2">
+                    <p className="text-gray-600 mt-1">{notification.message}</p>
+                    <p className="text-sm text-gray-500 mt-2">
                       {new Date(notification.created_at).toLocaleString()}
                     </p>
                   </div>

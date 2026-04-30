@@ -158,11 +158,11 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
     <div
       ref={dropdownRef}
       style={dropdownStyle}
-      className="bg-card-bg border border-accent-green/50 rounded-xl shadow-2xl overflow-hidden"
+      className="bg-white border-2 border-blue-500 rounded-xl shadow-2xl overflow-hidden"
     >
-      <div className="p-3 border-b border-border-line bg-gradient-to-r from-accent-green/10 to-accent-cyan/10">
+      <div className="p-3 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
         <div className="relative">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-accent-green" />
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500" />
           <input
             ref={inputRef}
             type="text"
@@ -170,20 +170,20 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
             onChange={(e) => { setSearchTerm(e.target.value); setFocusedIndex(-1); }}
             onKeyDown={handleKeyDown}
             placeholder="Type to search..."
-            className="w-full pl-10 pr-4 py-2.5 bg-card-bg border border-border-line rounded-lg focus:outline-none focus:border-accent-green font-medium text-text-main placeholder-text-muted transition-all duration-200"
+            className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 font-medium text-gray-700 transition-all duration-200"
           />
         </div>
       </div>
       <ul
         ref={listRef}
         style={{ maxHeight: '192px' }}
-        className="overflow-y-auto scrollbar-thin scrollbar-thumb-accent-green/30 scrollbar-track-border-line"
+        className="overflow-y-auto scrollbar-thin scrollbar-thumb-blue-300 scrollbar-track-gray-100"
         onKeyDown={handleKeyDown}
       >
         {filteredOptions.length === 0 ? (
-          <li className="px-4 py-4 text-sm text-text-muted text-center">
+          <li className="px-4 py-4 text-sm text-gray-500 text-center">
             <div className="flex flex-col items-center">
-              <Search size={32} className="text-text-muted/50 mb-2" />
+              <Search size={32} className="text-gray-300 mb-2" />
               <span className="font-medium">No options found</span>
             </div>
           </li>
@@ -194,10 +194,10 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
               onMouseDown={(e) => { e.preventDefault(); handleSelect(option.value); }}
               className={`px-4 py-2.5 cursor-pointer transition-all duration-150 font-medium ${
                 value === option.value
-                  ? 'bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg'
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
                   : focusedIndex === index
-                  ? 'bg-accent-green/20 text-text-main'
-                  : 'hover:bg-border-line text-text-main'
+                  ? 'bg-blue-100 text-gray-700'
+                  : 'hover:bg-blue-50 text-gray-700'
               }`}
             >
               {option.label}
@@ -211,7 +211,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       {label && (
-        <label className="block text-sm font-semibold text-text-main mb-2">
+        <label className="block text-sm font-semibold text-gray-700 mb-2">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
@@ -222,6 +222,9 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
         onClick={() => {
           if (disabled) return;
           if (!isOpen) {
+            // Calculate position first — React 18 batches this setState with
+            // setIsOpen(true) below into a single render, so the portal renders
+            // at the correct fixed position immediately with no layout shift.
             updatePosition();
             setIsOpen(true);
           } else {
@@ -231,28 +234,28 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({
           }
         }}
         disabled={disabled}
-        className={`w-full px-4 py-3 text-left bg-card-bg border border-border-line rounded-xl
-          focus:outline-none focus:border-accent-green focus:ring-2 focus:ring-accent-green/20
-          disabled:bg-border-line disabled:cursor-not-allowed
+        className={`w-full px-4 py-3 text-left bg-gray-50 border-2 border-gray-200 rounded-xl
+          focus:outline-none focus:border-blue-500 focus:bg-white
+          disabled:bg-gray-100 disabled:cursor-not-allowed
           flex items-center justify-between
           transition-all duration-200 font-medium
-          hover:border-accent-green/50
-          ${isOpen ? 'border-accent-green ring-2 ring-accent-green/20' : ''}`}
+          hover:border-blue-300 hover:shadow-md
+          ${isOpen ? 'border-blue-500 bg-white shadow-md' : ''}`}
       >
-        <span className={selectedOption ? 'text-text-main' : 'text-text-muted'}>
+        <span className={selectedOption ? 'text-gray-700' : 'text-gray-500'}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <div className="flex items-center space-x-2">
           {showClear && value && (
             <X
               size={16}
-              className="text-text-muted hover:text-red-500 transition-colors"
+              className="text-gray-400 hover:text-red-500 transition-colors"
               onClick={handleClear}
             />
           )}
           <ChevronDown
             size={20}
-            className={`text-text-muted transition-transform duration-200 ${isOpen ? 'rotate-180 text-accent-green' : ''}`}
+            className={`text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
           />
         </div>
       </button>
