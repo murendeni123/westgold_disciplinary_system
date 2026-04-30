@@ -92,9 +92,15 @@ const ModernParentLayout: React.FC = () => {
   }, [customizations?.dashboard_background_path, getImageUrl]);
 
   return (
-    <div className="flex h-screen relative">
-      {/* Animated Background */}
-      <AnimatedBackground />
+    <div className="flex h-screen relative bg-[#F2EBE2] overflow-hidden">
+      {/* Premium Gradient Background Layer */}
+      <div className="fixed inset-0 bg-gradient-to-br from-cyan-400/10 via-slate-800/20 to-[#121821]/60 pointer-events-none" />
+      
+      {/* Radial Glow Effect — subtle cyan glow in top-left corner */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none hidden lg:block">
+        <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-cyan-400/10 blur-3xl rounded-full" />
+        <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-accent-cyan/8 rounded-full filter blur-3xl" />
+      </div>
       
       <TokenExpirationWarning />
       <ModernSidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
@@ -103,18 +109,13 @@ const ModernParentLayout: React.FC = () => {
         {/* Premium Header - Aligned with Sidebar */}
         <header className="relative overflow-hidden z-50">
           {/* Gradient Background matching sidebar */}
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-700" />
+          <div className="absolute inset-0 bg-gradient-to-r from-accent-green to-accent-cyan" />
           
           {/* Pattern Overlay */}
-          <div 
-            className="absolute inset-0 opacity-10"
-            style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E")`,
-            }}
-          />
+          <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml,%3Csvg width=%2240%22 height=%2240%22 viewBox=%220 0 40 40%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cg fill=%22%23121821%22 fill-opacity=%221%22 fill-rule=%22evenodd%22%3E%3Cpath d=%22M0 40L40 0H20L0 20M40 40V20L20 40%22/%3E%3C/g%3E%3C/svg%3E')]" />
 
-          {/* Static orb — no infinite animation to avoid GPU overhead */}
-          <div className="absolute top-0 right-20 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
+          {/* Static orb */}
+          <div className="absolute top-0 right-20 w-32 h-32 bg-card-bg/10 rounded-full blur-2xl" />
 
           {/* Header Content */}
           <div className="relative z-50 flex items-center justify-between px-6 py-4 gap-4">
@@ -122,7 +123,7 @@ const ModernParentLayout: React.FC = () => {
             <div className="flex items-center space-x-4">
               <motion.button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="lg:hidden w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                className="lg:hidden w-10 h-10 bg-card-bg/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-card-bg hover:bg-card-bg/30 transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -131,12 +132,12 @@ const ModernParentLayout: React.FC = () => {
               
               <div className="hidden md:flex items-center space-x-3">
                 <div className="flex items-center space-x-2">
-                  <Sparkles size={20} className="text-yellow-300" />
-                  <h1 className="text-xl font-bold text-white tracking-tight">
+                  <Sparkles size={20} className="text-card-bg/80" />
+                  <h1 className="text-xl font-bold text-card-bg tracking-tight">
                     Parent Portal
                   </h1>
                 </div>
-                <span className="px-2 py-1 bg-white/20 backdrop-blur-sm rounded-lg text-xs text-white/80 font-medium">
+                <span className="px-2 py-1 bg-card-bg/20 backdrop-blur-sm rounded-lg text-xs text-card-bg/80 font-medium">
                   Dashboard
                 </span>
               </div>
@@ -156,8 +157,8 @@ const ModernParentLayout: React.FC = () => {
               <NotificationBell />
 
               <motion.div 
-                className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-white font-bold cursor-pointer border-2 border-white/30"
-                whileHover={{ scale: 1.05, borderColor: 'rgba(255,255,255,0.5)' }}
+                className="w-10 h-10 bg-card-bg/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-card-bg font-bold cursor-pointer border-2 border-card-bg/30"
+                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
                 {user?.name?.charAt(0).toUpperCase() || 'P'}

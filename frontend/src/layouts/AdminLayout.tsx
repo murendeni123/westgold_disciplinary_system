@@ -30,12 +30,14 @@ const AdminLayout: React.FC = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 relative overflow-hidden">
-      {/* Static Background Elements — hidden on mobile to avoid GPU stress */}
+    <div className="min-h-screen bg-[#F2EBE2] relative overflow-hidden">
+      {/* Premium Gradient Background Layer */}
+      <div className="fixed inset-0 bg-gradient-to-br from-cyan-400/10 via-slate-800/20 to-[#121821]/60 pointer-events-none" />
+      
+      {/* Radial Glow Effect — subtle cyan glow in top-left corner */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none hidden lg:block">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-amber-300 rounded-full mix-blend-multiply filter blur-xl opacity-20" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-orange-300 rounded-full mix-blend-multiply filter blur-xl opacity-20" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-red-300 rounded-full mix-blend-multiply filter blur-xl opacity-20" />
+        <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-cyan-400/10 blur-3xl rounded-full" />
+        <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-accent-cyan/8 rounded-full filter blur-3xl" />
       </div>
 
       <TokenExpirationWarning />
@@ -43,27 +45,27 @@ const AdminLayout: React.FC = () => {
       
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-80 relative z-10">
         {/* Modern Header */}
-        <header className="backdrop-blur-xl bg-white/80 shadow-lg sticky top-0 z-30 border-b border-white/20">
+        <header className="backdrop-blur-xl bg-card-bg/90 shadow-card sticky top-0 z-30 border-b border-border-line">
           <div className="flex items-center justify-between px-4 py-4 lg:px-8">
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="lg:hidden p-2 rounded-xl hover:bg-white/50 transition-all duration-200"
+                className="lg:hidden p-2 rounded-xl hover:bg-border-line transition-all duration-200 text-text-main"
               >
                 {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
               <div className="flex items-center space-x-3">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-amber-600 to-orange-600 rounded-xl blur opacity-50"></div>
-                  <div className="relative bg-gradient-to-r from-amber-600 to-orange-600 p-2 rounded-xl">
-                    <Shield className="text-white" size={24} />
+                  <div className="absolute inset-0 bg-gradient-to-r from-accent-green to-accent-cyan rounded-xl blur opacity-50"></div>
+                  <div className="relative bg-gradient-to-r from-accent-green to-accent-cyan p-2 rounded-xl">
+                    <Shield className="text-card-bg" size={24} />
                   </div>
                 </div>
                 <div>
-                  <h1 className="font-bold text-xl bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+                  <h1 className="font-bold text-xl bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">
                     Admin Portal
                   </h1>
-                  <p className="text-xs text-gray-500">Manage your school efficiently</p>
+                  <p className="text-xs text-text-muted">Manage your school efficiently</p>
                 </div>
               </div>
             </div>
@@ -71,7 +73,7 @@ const AdminLayout: React.FC = () => {
               {/* Search icon — mobile only */}
               <button
                 onClick={() => setSearchOpen(!searchOpen)}
-                className="md:hidden p-2 rounded-xl hover:bg-white/50 transition-all duration-200"
+                className="md:hidden p-2 rounded-xl hover:bg-border-line transition-all duration-200 text-text-main"
                 aria-label="Search students"
               >
                 {searchOpen ? <X size={22} /> : <Search size={22} />}
@@ -87,7 +89,7 @@ const AdminLayout: React.FC = () => {
 
         {/* Mobile search bar */}
         {searchOpen && (
-          <div className="md:hidden px-4 pb-3 bg-white/90 border-b border-gray-100 z-20">
+          <div className="md:hidden px-4 pb-3 bg-card-bg/90 border-b border-border-line z-20">
             <QuickStudentSearch />
           </div>
         )}

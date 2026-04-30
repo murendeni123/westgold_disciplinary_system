@@ -204,7 +204,7 @@ const GuidedIntervention: React.FC = () => {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full"
+          className="w-16 h-16 border-4 border-accent-green/30 border-t-accent-green rounded-full"
         />
       </div>
     );
@@ -219,26 +219,26 @@ const GuidedIntervention: React.FC = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-            <Lightbulb className="text-white" size={24} />
+        <h1 className="text-3xl font-bold text-text-main flex items-center space-x-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-accent-green to-accent-cyan rounded-xl flex items-center justify-center shadow-primary">
+            <Lightbulb className="text-card-bg" size={24} />
           </div>
           <span>Guided Intervention</span>
         </h1>
-        <p className="text-gray-600 mt-2">2-step evidence-based intervention planning</p>
+        <p className="text-text-muted mt-2">2-step evidence-based intervention planning</p>
       </motion.div>
 
       {/* Progress Steps */}
       <div className="flex items-center justify-center space-x-4 mb-8">
-        <div className={`flex items-center space-x-2 ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
+        <div className={`flex items-center space-x-2 ${currentStep >= 1 ? 'text-accent-green' : 'text-text-muted'}`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 1 ? 'bg-accent-green text-card-bg' : 'bg-border-line'}`}>
             1
           </div>
           <span className="font-medium">Behaviour Category</span>
         </div>
-        <ArrowRight className="text-gray-400" size={20} />
-        <div className={`flex items-center space-x-2 ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
+        <ArrowRight className="text-text-muted" size={20} />
+        <div className={`flex items-center space-x-2 ${currentStep >= 2 ? 'text-accent-green' : 'text-text-muted'}`}>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 2 ? 'bg-accent-green text-card-bg' : 'bg-border-line'}`}>
             2
           </div>
           <span className="font-medium">Intervention Strategies</span>
@@ -249,9 +249,9 @@ const GuidedIntervention: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+        className="bg-card-bg rounded-2xl p-6 shadow-card border border-border-line"
       >
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Select Student</h2>
+        <h2 className="text-xl font-bold text-text-main mb-4">Select Student</h2>
         <SearchableSelect
           label="Student"
           value={formData.student_id}
@@ -278,9 +278,9 @@ const GuidedIntervention: React.FC = () => {
             exit={{ opacity: 0, x: 20 }}
             className="space-y-6"
           >
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Step 1: Select Behaviour Category</h2>
-              <p className="text-gray-600 mb-6">Choose the primary behaviour concern</p>
+            <div className="bg-card-bg rounded-2xl p-6 shadow-card border border-border-line">
+              <h2 className="text-2xl font-bold text-text-main mb-2">Step 1: Select Behaviour Category</h2>
+              <p className="text-text-muted mb-6">Choose the primary behaviour concern</p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {categories.map((category) => (
@@ -291,8 +291,8 @@ const GuidedIntervention: React.FC = () => {
                     onClick={() => handleCategorySelect(category.value)}
                     className={`p-6 rounded-xl border-2 text-left transition-all ${
                       formData.behaviour_category === category.value
-                        ? 'border-blue-500 bg-blue-50 shadow-lg'
-                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                        ? 'border-accent-green bg-accent-green/10 shadow-lg'
+                        : 'border-border-line hover:border-accent-green/50 hover:bg-border-line'
                     }`}
                   >
                     <div className="flex items-start space-x-4">
@@ -302,7 +302,7 @@ const GuidedIntervention: React.FC = () => {
                         <p className="text-sm text-gray-600">{category.description}</p>
                       </div>
                       {formData.behaviour_category === category.value && (
-                        <CheckCircle className="text-blue-600" size={24} />
+                        <CheckCircle className="text-accent-green" size={24} />
                       )}
                     </div>
                   </motion.button>
@@ -322,9 +322,9 @@ const GuidedIntervention: React.FC = () => {
             className="space-y-6"
           >
             {/* Context Panel */}
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
-                <FileText size={20} />
+            <div className="bg-card-bg rounded-2xl p-6 shadow-card border border-border-line">
+              <h2 className="text-xl font-bold text-text-main mb-4 flex items-center space-x-2">
+                <FileText size={20} className="text-accent-green" />
                 <span>Context & Details</span>
               </h2>
               
@@ -425,14 +425,14 @@ const GuidedIntervention: React.FC = () => {
             </div>
 
             {/* Suggested Interventions */}
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div className="bg-card-bg rounded-2xl p-6 shadow-card border border-border-line">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
-                  <Target size={20} />
+                <h2 className="text-xl font-bold text-text-main flex items-center space-x-2">
+                  <Target size={20} className="text-accent-green" />
                   <span>Suggested Interventions</span>
                 </h2>
-                <div className="text-sm text-gray-600">
-                  Selected: <span className="font-bold text-blue-600">{formData.selected_strategies.length}</span>
+                <div className="text-sm text-text-muted">
+                  Selected: <span className="font-bold text-accent-green">{formData.selected_strategies.length}</span>
                 </div>
               </div>
 
@@ -487,16 +487,16 @@ const GuidedIntervention: React.FC = () => {
                       whileHover={{ scale: 1.01 }}
                       className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
                         isSelected
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-blue-300'
-                      } ${isUntried ? 'ring-2 ring-green-200' : ''}`}
+                          ? 'border-accent-green bg-accent-green/10'
+                          : 'border-border-line hover:border-accent-green/50'
+                      } ${isUntried ? 'ring-2 ring-accent-cyan/30' : ''}`}
                       onClick={(e) => toggleStrategy(strategyId, e)}
                     >
                       <div className="flex items-start space-x-3">
                         <div className={`mt-1 w-5 h-5 rounded border-2 flex items-center justify-center ${
-                          isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300'
+                          isSelected ? 'bg-accent-green border-accent-green' : 'border-border-line'
                         }`}>
-                          {isSelected && <CheckCircle className="text-white" size={16} />}
+                          {isSelected && <CheckCircle className="text-card-bg" size={16} />}
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center space-x-2">
@@ -527,9 +527,9 @@ const GuidedIntervention: React.FC = () => {
             </div>
 
             {/* Review Plan */}
-            <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center space-x-2">
-                <Calendar size={20} />
+            <div className="bg-card-bg rounded-2xl p-6 shadow-card border border-border-line">
+              <h2 className="text-xl font-bold text-text-main mb-4 flex items-center space-x-2">
+                <Calendar size={20} className="text-accent-green" />
                 <span>Review Plan</span>
               </h2>
 
@@ -574,7 +574,7 @@ const GuidedIntervention: React.FC = () => {
               <Button
                 onClick={handleSubmit}
                 disabled={submitting || formData.selected_strategies.length === 0}
-                className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                className="flex items-center space-x-2 bg-gradient-to-r from-accent-green to-accent-cyan hover:from-accent-green/90 hover:to-accent-cyan/90 text-card-bg shadow-primary"
               >
                 {submitting ? (
                   <>

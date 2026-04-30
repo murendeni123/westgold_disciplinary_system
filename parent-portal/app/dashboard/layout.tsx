@@ -13,15 +13,15 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-[#F2EBE2]">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
       <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         {/* Mobile Header */}
-        <header className="h-16 bg-background-surface border-b border-background-border flex items-center px-6 lg:hidden">
+        <header className="h-16 bg-[#121821] border-b border-[#1E293B] flex items-center px-6 lg:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-2 rounded-xl hover:bg-background-border"
+            className="p-2 rounded-xl hover:bg-[#1E293B] text-[#E5E7EB]"
           >
             <Menu size={24} />
           </button>

@@ -324,7 +324,7 @@ const MyDetentions: React.FC = () => {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full"
+          className="w-16 h-16 border-4 border-accent-green/30 border-t-accent-green rounded-full"
         />
       </div>
     );
@@ -346,10 +346,10 @@ const MyDetentions: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">
           My Detentions
         </h1>
-        <p className="text-gray-600 mt-2 text-lg">View and manage detention sessions you're assigned to</p>
+        <p className="text-text-muted mt-2 text-lg">View and manage detention sessions you're assigned to</p>
       </motion.div>
 
       {/* Summary Stats */}
@@ -364,16 +364,16 @@ const MyDetentions: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 + index * 0.1 }}
                 whileHover={{ y: -5, scale: 1.02 }}
-                className="group relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6 cursor-pointer"
+                className="group relative overflow-hidden rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6 cursor-pointer"
               >
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.color} shadow-lg`}>
-                      <Icon className="text-white" size={24} />
+                      <Icon className="text-card-bg" size={24} />
                     </div>
                   </div>
-                  <h3 className="text-sm font-medium text-gray-600 mb-1">{stat.title}</h3>
-                  <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                  <h3 className="text-sm font-medium text-text-muted mb-1">{stat.title}</h3>
+                  <p className="text-3xl font-bold text-text-main">{stat.value}</p>
                 </div>
               </motion.div>
             );
@@ -389,11 +389,11 @@ const MyDetentions: React.FC = () => {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
-              className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+              className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Detention Frequency (Last 14 Days)</h2>
-                <TrendingUp className="text-emerald-600" size={24} />
+                <h2 className="text-2xl font-bold text-text-main">Detention Frequency (Last 14 Days)</h2>
+                <TrendingUp className="text-accent-green" size={24} />
               </div>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chartData}>
@@ -413,11 +413,11 @@ const MyDetentions: React.FC = () => {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 }}
-              className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+              className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Student Attendance at Detentions</h2>
-                <Users className="text-emerald-600" size={24} />
+                <h2 className="text-2xl font-bold text-text-main">Student Attendance at Detentions</h2>
+                <Users className="text-accent-green" size={24} />
               </div>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -448,21 +448,21 @@ const MyDetentions: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-12 text-center"
+          className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-12 text-center"
         >
-          <AlertTriangle className="mx-auto mb-4 text-gray-400" size={48} />
-          <p className="text-gray-500 text-lg">You are not assigned to any detention sessions</p>
+          <AlertTriangle className="mx-auto mb-4 text-text-muted" size={48} />
+          <p className="text-text-muted text-lg">You are not assigned to any detention sessions</p>
         </motion.div>
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+          className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
         >
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">Detention Sessions ({filteredDetentions.length})</h2>
-            <AlertTriangle className="text-emerald-600" size={24} />
+            <h2 className="text-2xl font-bold text-text-main">Detention Sessions ({filteredDetentions.length})</h2>
+            <AlertTriangle className="text-accent-green" size={24} />
           </div>
 
           {/* Filter tabs */}
@@ -477,8 +477,8 @@ const MyDetentions: React.FC = () => {
                 onClick={() => setActiveFilter(tab.key)}
                 className={`flex items-center gap-1 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
                   activeFilter === tab.key
-                    ? 'bg-emerald-600 text-white shadow'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    ? 'bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg shadow-primary'
+                    : 'bg-border-line text-text-muted hover:text-text-main'
                 }`}
               >
                 {tab.key === 'completed' && <Lock size={12} />}
@@ -516,8 +516,8 @@ const MyDetentions: React.FC = () => {
         {/* Loading spinner shown while fetching fresh session data */}
         {loadingModal && !selectedDetention && (
           <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-12 h-12 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mb-4" />
-            <p className="text-gray-500 text-sm font-medium">Loading session details…</p>
+            <div className="w-12 h-12 border-4 border-accent-green/30 border-t-accent-green rounded-full animate-spin mb-4" />
+            <p className="text-text-muted text-sm font-medium">Loading session details…</p>
           </div>
         )}
         {selectedDetention && (
@@ -536,7 +536,7 @@ const MyDetentions: React.FC = () => {
             )}
 
             {/* Header Card with Gradient */}
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl p-6 text-white">
+            <div className="bg-gradient-to-r from-accent-green to-accent-cyan rounded-xl p-6 text-card-bg">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-2xl font-bold">
                   {new Date(selectedDetention.detention_date).toLocaleDateString('en-US', { 
@@ -557,15 +557,15 @@ const MyDetentions: React.FC = () => {
               </div>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
-                  <p className="text-emerald-100 text-xs mb-1">Time</p>
+                  <p className="text-card-bg/80 text-xs mb-1">Time</p>
                   <p className="font-bold text-lg">{selectedDetention.detention_time || 'N/A'}</p>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
-                  <p className="text-emerald-100 text-xs mb-1">Duration</p>
+                  <p className="text-card-bg/80 text-xs mb-1">Duration</p>
                   <p className="font-bold text-lg">{selectedDetention.duration || 60} min</p>
                 </div>
                 <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
-                  <p className="text-emerald-100 text-xs mb-1">Students</p>
+                  <p className="text-card-bg/80 text-xs mb-1">Students</p>
                   <p className="font-bold text-lg">{selectedDetention.assignments?.length || 0}</p>
                 </div>
               </div>
@@ -575,8 +575,8 @@ const MyDetentions: React.FC = () => {
             {selectedDetention.assignments && selectedDetention.assignments.length > 0 ? (
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-bold text-gray-900 flex items-center">
-                    <Users size={20} className="mr-2 text-emerald-600" />
+                  <h3 className="text-lg font-bold text-text-main flex items-center">
+                    <Users size={20} className="mr-2 text-accent-green" />
                     Student Attendance
                     {selectedDetention.status === 'completed' && (
                       <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
@@ -698,7 +698,7 @@ const MyDetentions: React.FC = () => {
                 <Button 
                   onClick={handleMarkAttendance} 
                   disabled={saving}
-                  className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-6"
+                  className="bg-gradient-to-r from-accent-green to-accent-cyan hover:from-accent-green/90 hover:to-accent-cyan/90 text-card-bg px-6 shadow-primary"
                 >
                   <CheckCircle size={20} className="mr-2" />
                   {saving ? 'Saving...' : 'Save Attendance'}

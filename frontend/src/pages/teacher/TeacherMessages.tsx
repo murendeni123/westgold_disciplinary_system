@@ -81,7 +81,7 @@ const TeacherMessages: React.FC = () => {
       key: 'is_read',
       label: 'Status',
       render: (value: number) => (
-        <span className={value ? 'text-gray-500' : 'text-blue-600 font-semibold'}>
+        <span className={value ? 'text-text-muted' : 'text-accent-green font-semibold'}>
           {value ? 'Read' : 'Unread'}
         </span>
       ),
@@ -90,15 +90,19 @@ const TeacherMessages: React.FC = () => {
   ];
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="w-16 h-16 border-4 border-accent-green/30 border-t-accent-green rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-          <p className="text-gray-600 mt-2">Communicate with parents and admin</p>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">Messages</h1>
+          <p className="text-text-muted mt-2">Communicate with parents and admin</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>
           <Plus size={20} className="mr-2" />
@@ -110,20 +114,20 @@ const TeacherMessages: React.FC = () => {
         <div className="flex space-x-4 mb-4">
           <button
             onClick={() => setMessageType('received')}
-            className={`px-4 py-2 rounded-lg font-medium ${
+            className={`px-4 py-2 rounded-xl font-medium transition-all ${
               messageType === 'received'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700'
+                ? 'bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg shadow-primary'
+                : 'bg-border-line text-text-muted hover:text-text-main'
             }`}
           >
             Received
           </button>
           <button
             onClick={() => setMessageType('sent')}
-            className={`px-4 py-2 rounded-lg font-medium ${
+            className={`px-4 py-2 rounded-xl font-medium transition-all ${
               messageType === 'sent'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700'
+                ? 'bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg shadow-primary'
+                : 'bg-border-line text-text-muted hover:text-text-main'
             }`}
           >
             Sent

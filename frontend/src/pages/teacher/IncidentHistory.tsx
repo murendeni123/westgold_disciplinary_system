@@ -202,7 +202,7 @@ const IncidentHistory: React.FC = () => {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full"
+          className="w-16 h-16 border-4 border-accent-green/30 border-t-accent-green rounded-full"
         />
       </div>
     );
@@ -227,15 +227,15 @@ const IncidentHistory: React.FC = () => {
         className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4"
       >
         <div>
-          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">
             Incident History
           </h1>
-          <p className="text-gray-600 mt-2">View all incidents you've logged</p>
+          <p className="text-text-muted mt-2">View all incidents you've logged</p>
         </div>
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button
             onClick={() => navigate('/teacher/behaviour/log')}
-            className="rounded-xl bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white border-0 shadow-lg hover:shadow-xl"
+            className="rounded-xl bg-gradient-to-r from-accent-green to-accent-cyan hover:from-accent-green/90 hover:to-accent-cyan/90 text-card-bg border-0 shadow-primary hover:shadow-xl"
           >
             <Plus size={20} className="mr-2" />
             Log New Incident
@@ -248,13 +248,13 @@ const IncidentHistory: React.FC = () => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-4 sm:p-6"
+        className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-4 sm:p-6"
       >
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl">
-            <Filter className="text-white" size={18} />
+          <div className="p-2 bg-gradient-to-r from-accent-green to-accent-cyan rounded-xl">
+            <Filter className="text-card-bg" size={18} />
           </div>
-          <h2 className="text-lg font-bold text-gray-900">Filter by Student</h2>
+          <h2 className="text-lg font-bold text-text-main">Filter by Student</h2>
           {selectedStudentId && (
             <button
               onClick={() => setSelectedStudentId('')}
@@ -296,16 +296,16 @@ const IncidentHistory: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ y: -5, scale: 1.02 }}
-                className="group relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6 cursor-pointer"
+                className="group relative overflow-hidden rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6 cursor-pointer"
               >
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.color} shadow-lg`}>
-                      <Icon className="text-white" size={24} />
+                      <Icon className="text-card-bg" size={24} />
                     </div>
                   </div>
-                  <h3 className="text-sm font-medium text-gray-600 mb-1">{stat.title}</h3>
-                  <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                  <h3 className="text-sm font-medium text-text-muted mb-1">{stat.title}</h3>
+                  <p className="text-3xl font-bold text-text-main">{stat.value}</p>
                 </div>
               </motion.div>
             );
@@ -320,11 +320,11 @@ const IncidentHistory: React.FC = () => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 }}
-            className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+            className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Incident Trends (Last 14 Days)</h2>
-              <TrendingUp className="text-red-600" size={24} />
+              <h2 className="text-2xl font-bold text-text-main">Incident Trends (Last 14 Days)</h2>
+              <TrendingUp className="text-accent-green" size={24} />
             </div>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={trendData}>
@@ -357,11 +357,11 @@ const IncidentHistory: React.FC = () => {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.5 }}
-            className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+            className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Incidents by Severity</h2>
-              <AlertTriangle className="text-red-600" size={24} />
+              <h2 className="text-2xl font-bold text-text-main">Incidents by Severity</h2>
+              <AlertTriangle className="text-accent-green" size={24} />
             </div>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -398,13 +398,13 @@ const IncidentHistory: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
-        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+        className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">
+          <h2 className="text-2xl font-bold text-text-main">
             Incident Records ({filteredIncidents.length}{selectedStudentId ? ` filtered` : ''})
           </h2>
-          <AlertTriangle className="text-red-600" size={24} />
+          <AlertTriangle className="text-accent-green" size={24} />
         </div>
         <Table columns={columns} data={filteredIncidents} />
       </motion.div>
@@ -424,11 +424,11 @@ const IncidentHistory: React.FC = () => {
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             onClick={(e) => e.stopPropagation()}
-            className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/20"
+            className="bg-card-bg backdrop-blur-xl rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-border-line"
           >
             <div className="p-8">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">Incident Details</h2>
+                <h2 className="text-3xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">Incident Details</h2>
                 <motion.button
                   whileHover={{ scale: 1.1, rotate: 90 }}
                   whileTap={{ scale: 0.9 }}
@@ -512,7 +512,7 @@ const IncidentHistory: React.FC = () => {
                   </div>
                 )}
 
-                <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+                <div className="flex justify-end space-x-4 pt-6 border-t border-border-line">
                   {selectedIncident.status === 'pending' && (
                     <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                       <Button

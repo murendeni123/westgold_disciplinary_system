@@ -5,24 +5,23 @@ interface CardProps {
   className?: string;
   title?: string;
   onClick?: () => void;
+  variant?: 'default' | 'dark' | 'glass';
 }
 
-const Card: React.FC<CardProps> = ({ children, className = '', title, onClick }) => {
+const Card: React.FC<CardProps> = ({ children, className = '', title, onClick, variant = 'default' }) => {
+  const variantClasses = {
+    default: 'bg-card-bg border-border-line text-text-main',
+    dark: 'bg-card-bg border-border-line text-text-main',
+    glass: 'bg-card-bg/80 backdrop-blur-xl border-border-line text-text-main',
+  };
+
   return (
     <div 
-      className={`card ${className} ${onClick ? 'cursor-pointer' : ''}`}
+      className={`rounded-2xl border p-6 shadow-card transition-all duration-200 ${variantClasses[variant]} ${onClick ? 'cursor-pointer hover:shadow-card-hover hover:border-accent-green/30' : ''} ${className}`}
       onClick={onClick}
-      style={{
-        borderRadius: 'var(--card-border-radius, 12px)',
-        backgroundColor: 'white',
-        color: 'var(--text-primary-color, #111827)',
-      }}
     >
       {title && (
-        <h3 
-          className="text-lg font-semibold mb-4"
-          style={{ color: 'var(--text-primary-color, #111827)' }}
-        >
+        <h3 className="text-lg font-semibold mb-4 text-text-main">
           {title}
         </h3>
       )}

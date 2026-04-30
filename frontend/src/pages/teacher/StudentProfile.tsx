@@ -229,7 +229,7 @@ const StudentProfile: React.FC = () => {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full"
+          className="w-16 h-16 border-4 border-accent-green/30 border-t-accent-green rounded-full"
         />
       </div>
     );
@@ -239,7 +239,7 @@ const StudentProfile: React.FC = () => {
     return (
       <div className="flex justify-center items-center h-96">
         <div className="text-center">
-          <p className="text-xl text-gray-500">Student not found</p>
+          <p className="text-xl text-text-muted">Student not found</p>
         </div>
       </div>
     );
@@ -267,10 +267,10 @@ const StudentProfile: React.FC = () => {
           </Button>
         </motion.div>
         <div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">
             {student.first_name} {student.last_name}
           </h1>
-          <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base md:text-lg">Student Profile</p>
+          <p className="text-text-muted mt-1 sm:mt-2 text-sm sm:text-base md:text-lg">Student Profile</p>
         </div>
       </motion.div>
 
@@ -280,11 +280,11 @@ const StudentProfile: React.FC = () => {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
-          className="rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-4 sm:p-6"
+          className="rounded-xl sm:rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-4 sm:p-6"
         >
           <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Basic Information</h2>
-            <User className="text-emerald-600" size={24} />
+            <h2 className="text-xl sm:text-2xl font-bold text-text-main">Basic Information</h2>
+            <User className="text-accent-green" size={24} />
           </div>
           <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
             {/* Photo in top left corner */}
@@ -346,27 +346,27 @@ const StudentProfile: React.FC = () => {
 
             {/* Information on the right */}
             <div className="flex-1 space-y-3 sm:space-y-4">
-              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-                <p className="text-xs sm:text-sm text-gray-600 mb-1">Student ID</p>
-                <p className="text-base sm:text-lg font-semibold text-emerald-700">{student.student_id}</p>
+              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
+                <p className="text-xs sm:text-sm text-text-muted mb-1">Student ID</p>
+                <p className="text-base sm:text-lg font-semibold text-accent-green">{student.student_id}</p>
               </div>
-              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-                <p className="text-xs sm:text-sm text-gray-600 mb-1">Full Name</p>
-                <p className="text-base sm:text-lg font-semibold text-emerald-700 break-words">
+              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
+                <p className="text-xs sm:text-sm text-text-muted mb-1">Full Name</p>
+                <p className="text-base sm:text-lg font-semibold text-accent-green break-words">
                   {student.first_name} {student.last_name}
                 </p>
               </div>
-              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-                <p className="text-xs sm:text-sm text-gray-600 mb-1">Date of Birth</p>
-                <p className="text-base sm:text-lg font-semibold text-emerald-700">{student.date_of_birth || 'N/A'}</p>
+              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
+                <p className="text-xs sm:text-sm text-text-muted mb-1">Date of Birth</p>
+                <p className="text-base sm:text-lg font-semibold text-accent-green">{student.date_of_birth || 'N/A'}</p>
               </div>
-              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-                <p className="text-xs sm:text-sm text-gray-600 mb-1">Grade Level</p>
-                <p className="text-base sm:text-lg font-semibold text-emerald-700">{student.grade_level || 'Not assigned'}</p>
+              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
+                <p className="text-xs sm:text-sm text-text-muted mb-1">Grade Level</p>
+                <p className="text-base sm:text-lg font-semibold text-accent-green">{student.grade_level || 'Not assigned'}</p>
               </div>
-              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-                <p className="text-xs sm:text-sm text-gray-600 mb-1">Class</p>
-                <p className="text-base sm:text-lg font-semibold text-emerald-700">{student.class_name || 'Not assigned'}</p>
+              <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
+                <p className="text-xs sm:text-sm text-text-muted mb-1">Class</p>
+                <p className="text-base sm:text-lg font-semibold text-accent-green">{student.class_name || 'Not assigned'}</p>
               </div>
             </div>
           </div>
@@ -377,25 +377,25 @@ const StudentProfile: React.FC = () => {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
-          className="rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-4 sm:p-6"
+          className="rounded-xl sm:rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-4 sm:p-6"
         >
           <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Parent Information</h2>
-            <User className="text-emerald-600" size={24} />
+            <h2 className="text-xl sm:text-2xl font-bold text-text-main">Parent Information</h2>
+            <User className="text-accent-green" size={24} />
           </div>
           <div className="space-y-3 sm:space-y-4">
-            <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-              <p className="text-xs sm:text-sm text-gray-600 mb-1">Parent Name</p>
-              <p className="text-base sm:text-lg font-semibold text-emerald-700 break-words">{student.parent_name || 'Not linked'}</p>
+            <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
+              <p className="text-xs sm:text-sm text-text-muted mb-1">Parent Name</p>
+              <p className="text-base sm:text-lg font-semibold text-accent-green break-words">{student.parent_name || 'Not linked'}</p>
             </div>
-            <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-              <p className="text-xs sm:text-sm text-gray-600 mb-1">Parent Email</p>
-              <p className="text-base sm:text-lg font-semibold text-emerald-700 break-words">{student.parent_email || 'N/A'}</p>
+            <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
+              <p className="text-xs sm:text-sm text-text-muted mb-1">Parent Email</p>
+              <p className="text-base sm:text-lg font-semibold text-accent-green break-words">{student.parent_email || 'N/A'}</p>
             </div>
-            <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
-              <p className="text-xs sm:text-sm text-gray-600 mb-2">Parent Link Code</p>
+            <div className="p-2.5 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-r from-accent-cyan/10 to-accent-green/10 border border-accent-cyan/30">
+              <p className="text-xs sm:text-sm text-text-muted mb-2">Parent Link Code</p>
               <div className="flex items-center gap-2 mb-2">
-                <p className="text-base sm:text-lg font-mono font-bold text-blue-700 break-all flex-1">
+                <p className="text-base sm:text-lg font-mono font-bold text-accent-cyan break-all flex-1">
                   {student.parent_link_code || 'Not generated'}
                 </p>
               </div>
@@ -446,11 +446,11 @@ const StudentProfile: React.FC = () => {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4 }}
-          className="rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-4 sm:p-6"
+          className="rounded-xl sm:rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-4 sm:p-6"
         >
           <div className="flex items-center justify-between mb-4 sm:mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Quick Stats</h2>
-            <TrendingUp className="text-emerald-600" size={24} />
+            <h2 className="text-xl sm:text-2xl font-bold text-text-main">Quick Stats</h2>
+            <TrendingUp className="text-accent-green" size={24} />
           </div>
           {stats ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
@@ -485,7 +485,7 @@ const StudentProfile: React.FC = () => {
               </motion.div>
             </div>
           ) : (
-            <div className="text-center py-4 text-gray-500">Loading stats...</div>
+            <div className="text-center py-4 text-text-muted">Loading stats...</div>
           )}
         </motion.div>
 
@@ -495,16 +495,16 @@ const StudentProfile: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-4 sm:p-6 col-span-1 lg:col-span-2"
+            className="rounded-xl sm:rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-4 sm:p-6 col-span-1 lg:col-span-2"
           >
             <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Student Analytics</h2>
-              <TrendingUp className="text-emerald-600" size={24} />
+              <h2 className="text-xl sm:text-2xl font-bold text-text-main">Student Analytics</h2>
+              <TrendingUp className="text-accent-green" size={24} />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {stats.attendanceTrend && stats.attendanceTrend.length > 0 && (
                 <div>
-                  <h4 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">Attendance Trend</h4>
+                  <h4 className="text-xs sm:text-sm font-semibold text-text-main mb-2">Attendance Trend</h4>
                   <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={stats.attendanceTrend}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -531,7 +531,7 @@ const StudentProfile: React.FC = () => {
               )}
               {stats.behaviorTrend && stats.behaviorTrend.length > 0 && (
                 <div>
-                  <h4 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">Behavior Trend</h4>
+                  <h4 className="text-xs sm:text-sm font-semibold text-text-main mb-2">Behavior Trend</h4>
                   <ResponsiveContainer width="100%" height={200}>
                     <BarChart data={stats.behaviorTrend}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />

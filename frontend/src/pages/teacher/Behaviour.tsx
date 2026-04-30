@@ -21,13 +21,13 @@ const Behaviour: React.FC = () => {
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
-              <AlertTriangle className="text-white" size={24} />
+          <h1 className="text-3xl font-bold text-text-main flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-accent-green to-accent-cyan rounded-xl flex items-center justify-center shadow-primary">
+              <AlertTriangle className="text-card-bg" size={24} />
             </div>
             <span>Behaviour Management</span>
           </h1>
-          <p className="text-gray-500 mt-1">Log incidents and view behaviour history</p>
+          <p className="text-text-muted mt-1">Log incidents and view behaviour history</p>
         </div>
       </motion.div>
 
@@ -36,7 +36,7 @@ const Behaviour: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="bg-white rounded-2xl p-2 shadow-lg border border-gray-100"
+        className="bg-card-bg rounded-2xl p-2 shadow-card border border-border-line"
       >
         <div className="flex gap-2">
           {tabs.map((tab) => (
@@ -47,8 +47,8 @@ const Behaviour: React.FC = () => {
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 flex items-center justify-center space-x-2 px-3 sm:px-6 py-3 rounded-xl font-medium transition-all text-sm sm:text-base ${
                 activeTab === tab.id
-                  ? 'bg-gradient-to-r from-red-500 to-orange-600 text-white shadow-lg'
-                  : 'text-gray-600 hover:bg-gray-100'
+                  ? 'bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg shadow-primary'
+                  : 'text-text-muted hover:bg-border-line hover:text-text-main'
               }`}
             >
               <tab.icon size={16} />

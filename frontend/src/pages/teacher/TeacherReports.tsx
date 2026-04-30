@@ -355,7 +355,7 @@ const TeacherReports: React.FC = () => {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full"
+          className="w-16 h-16 border-4 border-accent-green/30 border-t-accent-green rounded-full"
         />
       </div>
     );
@@ -364,9 +364,9 @@ const TeacherReports: React.FC = () => {
   if (!loading && myClasses.length === 0) {
     return (
       <div className="text-center py-12">
-        <FileText size={64} className="mx-auto mb-4 text-gray-300" />
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">No Class Assigned</h3>
-        <p className="text-gray-500">You don't have a class assigned yet. Please contact your administrator.</p>
+        <FileText size={64} className="mx-auto mb-4 text-text-muted" />
+        <h3 className="text-xl font-semibold text-text-main mb-2">No Class Assigned</h3>
+        <p className="text-text-muted">You don't have a class assigned yet. Please contact your administrator.</p>
       </div>
     );
   }
@@ -377,12 +377,12 @@ const TeacherReports: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-emerald-600 to-teal-600 rounded-2xl p-8 text-white shadow-xl"
+        className="bg-gradient-to-r from-accent-green to-accent-cyan rounded-2xl p-8 text-card-bg shadow-primary"
       >
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Class Reports</h1>
-            <p className="text-emerald-100 mt-2">
+            <p className="text-card-bg/80 mt-2">
               {selectedClass ? `${selectedClass.class_name} — Grade ${selectedClass.grade_level}` : 'Select a class'}
             </p>
           </div>
@@ -423,17 +423,17 @@ const TeacherReports: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05 }}
-        className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden"
+        className="bg-card-bg rounded-2xl shadow-card border border-border-line overflow-hidden"
       >
         {/* Panel Header */}
-        <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-border-line to-card-bg border-b border-border-line">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-              <Filter size={16} className="text-emerald-600" />
+            <div className="w-8 h-8 bg-accent-green/20 rounded-lg flex items-center justify-center">
+              <Filter size={16} className="text-accent-green" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">Filter & Export Reports</h3>
-              <p className="text-xs text-gray-400">Select filters then export to Excel</p>
+              <h3 className="font-semibold text-text-main">Filter & Export Reports</h3>
+              <p className="text-xs text-text-muted">Select filters then export to Excel</p>
             </div>
           </div>
         </div>
@@ -449,7 +449,7 @@ const TeacherReports: React.FC = () => {
                   <select
                     value={selectedClassId}
                     onChange={(e) => { setSelectedClassId(e.target.value); }}
-                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 appearance-none cursor-pointer"
+                    className="w-full px-3 py-2.5 bg-card-bg border border-border-line rounded-xl text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-accent-green/50 appearance-none cursor-pointer"
                   >
                     {myClasses.map((c) => (
                       <option key={c.id} value={String(c.id)}>{c.class_name} — Grade {c.grade_level}</option>
@@ -466,7 +466,7 @@ const TeacherReports: React.FC = () => {
                   <input
                     type="date" value={dateFrom}
                     onChange={(e) => setDateFrom(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full pl-9 pr-3 py-2.5 bg-card-bg border border-border-line rounded-xl text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-accent-green/50"
                   />
                 </div>
               </div>
@@ -479,7 +479,7 @@ const TeacherReports: React.FC = () => {
                   <input
                     type="date" value={dateTo}
                     onChange={(e) => setDateTo(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full pl-9 pr-3 py-2.5 bg-card-bg border border-border-line rounded-xl text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-accent-green/50"
                   />
                 </div>
               </div>
@@ -491,7 +491,7 @@ const TeacherReports: React.FC = () => {
               whileTap={{ scale: 0.97 }}
               onClick={exportClassReport}
               disabled={loading || students.length === 0}
-              className="flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed font-semibold whitespace-nowrap min-w-[220px]"
+              className="flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg rounded-xl shadow-primary hover:shadow-xl transition-all disabled:opacity-40 disabled:cursor-not-allowed font-semibold whitespace-nowrap min-w-[220px]"
             >
               <Download size={18} />
               <span>Export Class to Excel</span>
@@ -501,7 +501,7 @@ const TeacherReports: React.FC = () => {
           {/* ── Active filter badge ────────────────────────────────────── */}
           <div className="flex items-center space-x-2 flex-wrap bg-gray-50 rounded-xl px-4 py-2.5">
             <span className="text-xs text-gray-400 font-medium">Exporting:</span>
-            <span className="inline-flex items-center px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-full">
+            <span className="inline-flex items-center px-3 py-1 bg-accent-green/20 text-accent-green text-xs font-semibold rounded-full">
               {selectedClass?.class_name || 'No class'}
             </span>
             <span className="text-xs text-gray-500">
@@ -603,12 +603,12 @@ const TeacherReports: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
-            className="rounded-2xl bg-white shadow-lg border border-gray-100 p-5"
+            className="rounded-2xl bg-card-bg shadow-card border border-border-line p-5"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-500 text-xs font-medium">{stat.label}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
+                <p className="text-text-muted text-xs font-medium">{stat.label}</p>
+                <p className="text-2xl font-bold text-text-main mt-1">{stat.value}</p>
               </div>
               <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.color}`}>
                 <stat.icon className="text-white" size={20} />
@@ -623,13 +623,13 @@ const TeacherReports: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-white shadow-lg border border-gray-100 overflow-hidden"
+        className="rounded-2xl bg-card-bg shadow-card border border-border-line overflow-hidden"
       >
-        <div className="p-5 border-b border-gray-100">
+        <div className="p-5 border-b border-border-line">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">Student Reports</h2>
-              <p className="text-gray-400 text-xs mt-0.5">Click Export on any student row for their full report</p>
+              <h2 className="text-lg font-bold text-text-main">Student Reports</h2>
+              <p className="text-text-muted text-xs mt-0.5">Click Export on any student row for their full report</p>
             </div>
             <div className="relative w-full sm:w-72">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -638,7 +638,7 @@ const TeacherReports: React.FC = () => {
                 placeholder="Filter students..."
                 value={studentFilter}
                 onChange={(e) => setStudentFilter(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full pl-9 pr-4 py-2 bg-card-bg border border-border-line rounded-xl text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-accent-green/50"
               />
             </div>
           </div>
@@ -683,13 +683,13 @@ const TeacherReports: React.FC = () => {
                     >
                       <td className="px-6 py-3">
                         <div className="flex items-center space-x-3">
-                          <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-lg flex items-center justify-center text-white text-xs font-bold">
+                          <div className="w-9 h-9 bg-gradient-to-br from-accent-green to-accent-cyan rounded-lg flex items-center justify-center text-card-bg text-xs font-bold">
                             {student.first_name?.charAt(0)}{student.last_name?.charAt(0)}
                           </div>
-                          <span className="font-medium text-gray-900 text-sm">{student.first_name} {student.last_name}</span>
+                          <span className="font-medium text-text-main text-sm">{student.first_name} {student.last_name}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-3 text-gray-500 text-sm">{student.student_id || student.id}</td>
+                      <td className="px-6 py-3 text-text-muted text-sm">{student.student_id || student.id}</td>
                       <td className="px-6 py-3 text-center">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${sInc.length > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>
                           {sInc.length}
@@ -717,7 +717,7 @@ const TeacherReports: React.FC = () => {
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => exportStudentReport(student)}
-                          className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-lg text-xs font-medium shadow hover:shadow-md transition-all"
+                          className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg rounded-lg text-xs font-medium shadow-primary hover:shadow-md transition-all"
                         >
                           <Download size={14} />
                           <span>Export</span>

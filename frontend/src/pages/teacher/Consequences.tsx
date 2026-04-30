@@ -196,7 +196,7 @@ const TeacherConsequences: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="animate-spin text-emerald-600" size={48} />
+        <Loader2 className="animate-spin text-accent-green" size={48} />
       </div>
     );
   }
@@ -210,13 +210,13 @@ const TeacherConsequences: React.FC = () => {
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
-              <Shield className="text-white" size={24} />
+          <h1 className="text-3xl font-bold text-text-main flex items-center space-x-3">
+            <div className="w-12 h-12 bg-gradient-to-br from-accent-green to-accent-cyan rounded-xl flex items-center justify-center shadow-primary">
+              <Shield className="text-card-bg" size={24} />
             </div>
             <span>Consequence Management</span>
           </h1>
-          <p className="text-gray-500 mt-1">Assign and manage verbal and written warnings</p>
+          <p className="text-text-muted mt-1">Assign and manage verbal and written warnings</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}
@@ -225,7 +225,7 @@ const TeacherConsequences: React.FC = () => {
             setSearchTerm('');
             setShowModal(true);
           }}
-          className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all"
+          className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg rounded-xl font-medium shadow-primary hover:shadow-xl transition-all"
         >
           <AlertTriangle size={20} />
           <span>Assign Consequence</span>
@@ -258,7 +258,7 @@ const TeacherConsequences: React.FC = () => {
             <p className="text-white/80 text-sm">Total assigned</p>
           </div>
 
-          <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-6 shadow-lg text-white">
+          <div className="bg-gradient-to-br from-accent-green to-accent-cyan rounded-2xl p-6 shadow-primary text-card-bg">
             <div className="flex items-center justify-between mb-4">
               <BarChart3 size={24} />
               <span className="text-3xl font-bold">{stats.total_consequences || 0}</span>
@@ -282,13 +282,13 @@ const TeacherConsequences: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-emerald-50 border border-emerald-200 rounded-xl p-4"
+        className="bg-accent-green/10 border border-accent-green/30 rounded-xl p-4"
       >
         <div className="flex items-start space-x-3">
-          <AlertCircle className="text-emerald-600 flex-shrink-0 mt-0.5" size={20} />
+          <AlertCircle className="text-accent-green flex-shrink-0 mt-0.5" size={20} />
           <div className="flex-1">
-            <h3 className="font-semibold text-emerald-900 mb-1">Teacher Permissions</h3>
-            <p className="text-sm text-emerald-700">
+            <h3 className="font-semibold text-accent-green mb-1">Teacher Permissions</h3>
+            <p className="text-sm text-text-main">
               As a teacher, you can assign <strong>Verbal Warnings</strong> and <strong>Written Warnings</strong> to students. 
               Suspensions require administrator approval and can only be assigned by admins. You can also evaluate student behavior to see automated recommendations.
             </p>
@@ -301,15 +301,15 @@ const TeacherConsequences: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+        className="bg-card-bg rounded-2xl p-6 shadow-card border border-border-line"
       >
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Type</label>
+            <label className="block text-sm font-medium text-text-muted mb-2">Filter by Type</label>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-border-line rounded-lg text-text-main focus:ring-2 focus:ring-accent-green/50 focus:border-transparent"
             >
               <option value="all">All Consequences</option>
               <option value="verbal_warning">Verbal Warnings</option>
@@ -324,9 +324,9 @@ const TeacherConsequences: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6"
+        className="bg-card-bg rounded-2xl shadow-card border border-border-line p-6"
       >
-        <h2 className="text-xl font-bold text-gray-900 mb-4">All Consequence Assignments</h2>
+        <h2 className="text-xl font-bold text-text-main mb-4">All Consequence Assignments</h2>
         
         {filteredAssignments.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-xl">
@@ -408,7 +408,7 @@ const TeacherConsequences: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
               className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
             >
-              <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-white">
+              <div className="bg-gradient-to-r from-accent-green to-accent-cyan p-6 text-card-bg">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-2xl font-bold">Assign Consequence</h2>
@@ -473,8 +473,8 @@ const TeacherConsequences: React.FC = () => {
                         })}
                         className={`p-4 border-2 rounded-xl cursor-pointer transition-all ${
                           formData.consequence_type === consequence.consequence_type
-                            ? 'border-emerald-500 bg-emerald-50'
-                            : 'border-gray-200 hover:border-emerald-300'
+                            ? 'border-accent-green bg-accent-green/10'
+                            : 'border-border-line hover:border-accent-green/50'
                         }`}
                       >
                         <div className="flex items-center space-x-3">
@@ -484,7 +484,7 @@ const TeacherConsequences: React.FC = () => {
                             <p className="text-xs text-gray-600 mt-1">{consequence.description}</p>
                           </div>
                           {formData.consequence_type === consequence.consequence_type && (
-                            <CheckCircle className="text-emerald-500" size={20} />
+                            <CheckCircle className="text-accent-green" size={20} />
                           )}
                         </div>
                       </motion.div>
@@ -503,7 +503,7 @@ const TeacherConsequences: React.FC = () => {
                     value={formData.reason}
                     onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                     placeholder="e.g., Repeated disruption in class"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-border-line rounded-lg text-text-main focus:ring-2 focus:ring-accent-green/50 focus:border-transparent"
                     required
                   />
                 </div>
@@ -539,7 +539,7 @@ const TeacherConsequences: React.FC = () => {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     disabled={submitting}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg rounded-xl font-medium shadow-primary hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
                     {submitting ? (
                       <>

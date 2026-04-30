@@ -23,6 +23,7 @@ const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
 
 const allowedOriginPatterns = [
   /^http:\/\/localhost:\d+$/,
+  /^http:\/\/127\.0\.0\.1:\d+$/,
   /^http:\/\/192\.168\.\d+\.\d+:\d+$/,
   /^https:\/\/.*\.vercel\.app$/,
   /^https:\/\/.*\.onrender\.com$/,

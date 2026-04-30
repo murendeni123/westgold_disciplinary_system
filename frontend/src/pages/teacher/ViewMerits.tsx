@@ -140,7 +140,7 @@ const ViewMerits: React.FC = () => {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full"
+          className="w-16 h-16 border-4 border-accent-green/30 border-t-accent-green rounded-full"
         />
       </div>
     );
@@ -160,10 +160,10 @@ const ViewMerits: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">
           Student Merits
         </h1>
-        <p className="text-gray-600 mt-2 text-lg">View merits awarded to your students</p>
+        <p className="text-text-muted mt-2 text-lg">View merits awarded to your students</p>
       </motion.div>
 
       {/* Summary Cards */}
@@ -178,16 +178,16 @@ const ViewMerits: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ y: -5, scale: 1.02 }}
-                className="group relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6 cursor-pointer"
+                className="group relative overflow-hidden rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6 cursor-pointer"
               >
                 <div className="relative z-10">
                   <div className="flex items-center justify-between mb-4">
                     <div className={`p-3 rounded-xl bg-gradient-to-r ${stat.color} shadow-lg`}>
-                      <Icon className="text-white" size={24} />
+                      <Icon className="text-card-bg" size={24} />
                     </div>
                   </div>
-                  <h3 className="text-sm font-medium text-gray-600 mb-1">{stat.title}</h3>
-                  <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                  <h3 className="text-sm font-medium text-text-muted mb-1">{stat.title}</h3>
+                  <p className="text-3xl font-bold text-text-main">{stat.value}</p>
                 </div>
               </motion.div>
             );
@@ -241,10 +241,10 @@ const ViewMerits: React.FC = () => {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.4 }}
-          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-12"
+          className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-12"
         >
-          <div className="text-center py-12 text-gray-500">
-            <Award className="mx-auto mb-4 text-gray-400" size={48} />
+          <div className="text-center py-12 text-text-muted">
+            <Award className="mx-auto mb-4 text-text-muted" size={48} />
             <p className="text-lg">Please select a student to view their merits</p>
           </div>
         </motion.div>
@@ -257,11 +257,11 @@ const ViewMerits: React.FC = () => {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
-                className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+                className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
               >
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Merit Trends Over Time</h2>
-                  <TrendingUp className="text-green-600" size={24} />
+                  <h2 className="text-2xl font-bold text-text-main">Merit Trends Over Time</h2>
+                  <TrendingUp className="text-accent-green" size={24} />
                 </div>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={chartData}>
@@ -298,11 +298,11 @@ const ViewMerits: React.FC = () => {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.5 }}
-                  className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+                  className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
                 >
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900">Merit Type Breakdown</h2>
-                    <Award className="text-green-600" size={24} />
+                    <h2 className="text-2xl font-bold text-text-main">Merit Type Breakdown</h2>
+                    <Award className="text-accent-green" size={24} />
                   </div>
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
@@ -340,10 +340,10 @@ const ViewMerits: React.FC = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6 }}
-              className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-12"
+              className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-12"
             >
-              <div className="text-center py-12 text-gray-500">
-                <Award className="mx-auto mb-4 text-gray-400" size={48} />
+              <div className="text-center py-12 text-text-muted">
+                <Award className="mx-auto mb-4 text-text-muted" size={48} />
                 <p className="text-lg">No merits found for the selected period</p>
               </div>
             </motion.div>
@@ -352,11 +352,11 @@ const ViewMerits: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+              className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Merit Records ({merits.length})</h2>
-                <Award className="text-green-600" size={24} />
+                <h2 className="text-2xl font-bold text-text-main">Merit Records ({merits.length})</h2>
+                <Award className="text-accent-green" size={24} />
               </div>
               <Table columns={columns} data={merits} />
             </motion.div>

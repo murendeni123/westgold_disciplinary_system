@@ -14,20 +14,22 @@ interface TableProps {
 
 const Table: React.FC<TableProps> = ({ columns, data, onRowClick }) => {
   return (
-    <div className="table-container overflow-x-auto -mx-1 px-1">
-      <p className="text-xs text-gray-400 mb-2 sm:hidden">← Scroll to see more →</p>
-      <table className="table min-w-full">
-        <thead>
+    <div className="overflow-x-auto rounded-xl border border-border-line">
+      <p className="text-xs text-text-muted px-4 py-2 sm:hidden bg-card-bg/50">← Scroll to see more →</p>
+      <table className="min-w-full">
+        <thead className="bg-border-line">
           <tr>
             {columns.map((column) => (
-              <th key={column.key}>{column.label}</th>
+              <th key={column.key} className="px-4 py-3 text-left text-xs font-semibold text-text-muted uppercase tracking-wider">
+                {column.label}
+              </th>
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="bg-card-bg divide-y divide-border-line">
           {data.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="text-center py-8 text-gray-500">
+              <td colSpan={columns.length} className="text-center py-8 text-text-muted">
                 No data available
               </td>
             </tr>
@@ -36,10 +38,10 @@ const Table: React.FC<TableProps> = ({ columns, data, onRowClick }) => {
               <tr
                 key={index}
                 onClick={() => onRowClick?.(row)}
-                className={onRowClick ? 'cursor-pointer' : ''}
+                className={`transition-colors duration-150 ${onRowClick ? 'cursor-pointer hover:bg-border-line/50' : ''}`}
               >
                 {columns.map((column) => (
-                  <td key={column.key}>
+                  <td key={column.key} className="px-4 py-3 text-sm text-text-main whitespace-nowrap">
                     {column.render
                       ? column.render(row[column.key], row)
                       : row[column.key]}

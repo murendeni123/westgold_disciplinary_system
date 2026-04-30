@@ -37,7 +37,7 @@ const MyClasses: React.FC = () => {
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-          className="w-16 h-16 border-4 border-emerald-200 border-t-emerald-600 rounded-full"
+          className="w-16 h-16 border-4 border-accent-green/30 border-t-accent-green rounded-full"
         />
       </div>
     );
@@ -56,15 +56,15 @@ const MyClasses: React.FC = () => {
       >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">
               My Classes
             </h1>
-            <p className="text-gray-600 mt-2 text-lg">View and manage your assigned classes</p>
+            <p className="text-text-muted mt-2 text-lg">View and manage your assigned classes</p>
           </div>
           <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="hidden md:flex items-center space-x-2 px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg cursor-pointer"
+            className="hidden md:flex items-center space-x-2 px-6 py-3 rounded-xl bg-gradient-to-r from-accent-green to-accent-cyan text-card-bg shadow-primary cursor-pointer"
           >
             <BookOpen size={20} />
             <span className="font-semibold">{classes.length} Classes</span>
@@ -79,7 +79,7 @@ const MyClasses: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           whileHover={{ y: -5 }}
-          className="rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 p-6 text-white shadow-xl"
+          className="rounded-2xl bg-gradient-to-br from-accent-green to-accent-cyan p-6 text-card-bg shadow-card"
         >
           <div className="flex items-center justify-between mb-4">
             <BookOpen size={32} />
@@ -94,7 +94,7 @@ const MyClasses: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           whileHover={{ y: -5 }}
-          className="rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 p-6 text-white shadow-xl"
+          className="rounded-2xl bg-gradient-to-br from-accent-cyan to-accent-green p-6 text-card-bg shadow-card"
         >
           <div className="flex items-center justify-between mb-4">
             <Users size={32} />
@@ -109,7 +109,7 @@ const MyClasses: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           whileHover={{ y: -5 }}
-          className="rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 p-6 text-white shadow-xl"
+          className="rounded-2xl bg-gradient-to-br from-accent-green to-emerald-500 p-6 text-card-bg shadow-card"
         >
           <div className="flex items-center justify-between mb-4">
             <GraduationCap size={32} />
@@ -126,11 +126,11 @@ const MyClasses: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-12 text-center"
+          className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-12 text-center"
         >
-          <BookOpen className="mx-auto mb-4 text-gray-400" size={64} />
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">No Classes Assigned</h3>
-          <p className="text-gray-600">You don't have any classes assigned yet. Contact your administrator.</p>
+          <BookOpen className="mx-auto mb-4 text-text-muted" size={64} />
+          <h3 className="text-2xl font-bold text-text-main mb-2">No Classes Assigned</h3>
+          <p className="text-text-muted">You don't have any classes assigned yet. Contact your administrator.</p>
         </motion.div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -142,50 +142,50 @@ const MyClasses: React.FC = () => {
               transition={{ delay: 0.4 + index * 0.1 }}
               whileHover={{ y: -8, scale: 1.02 }}
               onClick={() => navigate(`/teacher/classes/${classItem.id}`)}
-              className="group relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6 cursor-pointer transition-all duration-300"
+              className="group relative overflow-hidden rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6 cursor-pointer transition-all duration-300"
             >
               {/* Gradient Background on Hover */}
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 bg-gradient-to-br from-accent-green/10 to-accent-cyan/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               
               <div className="relative z-10">
                 {/* Header */}
                 <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 shadow-lg">
-                    <BookOpen className="text-white" size={24} />
+                  <div className="p-3 rounded-xl bg-gradient-to-r from-accent-green to-accent-cyan shadow-primary">
+                    <BookOpen className="text-card-bg" size={24} />
                   </div>
                   <motion.div
                     className="opacity-0 group-hover:opacity-100 transition-opacity"
                     whileHover={{ scale: 1.1 }}
                   >
-                    <ArrowRight className="text-emerald-600" size={24} />
+                    <ArrowRight className="text-accent-green" size={24} />
                   </motion.div>
                 </div>
 
                 {/* Class Info */}
-                <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-emerald-600 transition-colors">
+                <h3 className="text-xl font-bold text-text-main mb-2 group-hover:text-accent-green transition-colors">
                   {classItem.class_name}
                 </h3>
                 
                 <div className="space-y-2 mb-4">
-                  <div className="flex items-center space-x-2 text-gray-600">
-                    <GraduationCap size={16} className="text-emerald-600" />
+                  <div className="flex items-center space-x-2 text-text-muted">
+                    <GraduationCap size={16} className="text-accent-green" />
                     <span className="text-sm font-medium">Grade {classItem.grade_level}</span>
                   </div>
-                  <div className="flex items-center space-x-2 text-gray-600">
-                    <Users size={16} className="text-purple-600" />
+                  <div className="flex items-center space-x-2 text-text-muted">
+                    <Users size={16} className="text-accent-cyan" />
                     <span className="text-sm font-medium">{classItem.student_count || 0} Students</span>
                   </div>
-                  <div className="flex items-center space-x-2 text-gray-600">
-                    <Calendar size={16} className="text-blue-600" />
+                  <div className="flex items-center space-x-2 text-text-muted">
+                    <Calendar size={16} className="text-accent-cyan" />
                     <span className="text-sm font-medium">{classItem.academic_year}</span>
                   </div>
                 </div>
 
                 {/* Footer */}
-                <div className="pt-4 border-t border-gray-200">
+                <div className="pt-4 border-t border-border-line">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 font-medium">View Details</span>
-                    <div className="flex items-center space-x-1 text-emerald-600">
+                    <span className="text-xs text-text-muted font-medium">View Details</span>
+                    <div className="flex items-center space-x-1 text-accent-green">
                       <span className="text-xs font-semibold">Open</span>
                       <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                     </div>

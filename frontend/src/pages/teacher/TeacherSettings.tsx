@@ -100,10 +100,10 @@ const TeacherSettings: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-accent-green to-accent-cyan bg-clip-text text-transparent">
           Settings
         </h1>
-        <p className="text-gray-600 mt-2 text-lg">Manage your account settings and preferences</p>
+        <p className="text-text-muted mt-2 text-lg">Manage your account settings and preferences</p>
       </motion.div>
 
       {/* Tabs */}
@@ -111,9 +111,9 @@ const TeacherSettings: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
+        className="rounded-2xl bg-card-bg backdrop-blur-xl shadow-card border border-border-line p-6"
       >
-        <div className="border-b border-gray-200 mb-6">
+        <div className="border-b border-border-line mb-6">
           <nav className="-mb-px flex space-x-8">
             {[
               { id: 'profile', label: 'Profile', icon: User },
@@ -129,8 +129,8 @@ const TeacherSettings: React.FC = () => {
                   whileTap={{ scale: 0.95 }}
                   className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === tab.id
-                      ? 'border-emerald-500 text-emerald-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-accent-green text-accent-green'
+                      : 'border-transparent text-text-muted hover:text-text-main hover:border-border-line'
                   }`}
                 >
                   <Icon className="inline-block w-4 h-4 mr-2" />
@@ -149,8 +149,8 @@ const TeacherSettings: React.FC = () => {
             transition={{ delay: 0.3 }}
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Profile Information</h2>
-              <User className="text-emerald-600" size={24} />
+              <h2 className="text-2xl font-bold text-text-main">Profile Information</h2>
+              <User className="text-accent-green" size={24} />
             </div>
             <form onSubmit={handleProfileUpdate} className="space-y-6">
               <Input
@@ -179,31 +179,31 @@ const TeacherSettings: React.FC = () => {
                 className="rounded-xl"
               />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-                  <p className="text-sm text-gray-600 mb-1">Role</p>
-                  <p className="text-lg font-semibold capitalize text-emerald-700">{user?.role}</p>
+                <div className="p-4 rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
+                  <p className="text-sm text-text-muted mb-1">Role</p>
+                  <p className="text-lg font-semibold capitalize text-accent-green">{user?.role}</p>
                 </div>
                 {user?.teacher?.employee_id && (
-                  <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
-                    <p className="text-sm text-gray-600 mb-1">Employee ID</p>
-                    <p className="text-lg font-semibold text-emerald-700">{user.teacher.employee_id}</p>
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-accent-green/10 to-accent-cyan/10 border border-accent-green/30">
+                    <p className="text-sm text-text-muted mb-1">Employee ID</p>
+                    <p className="text-lg font-semibold text-accent-green">{user.teacher.employee_id}</p>
                   </div>
                 )}
               </div>
               {teacherData?.school_name && (
-                <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+                <div className="p-4 rounded-xl bg-gradient-to-r from-accent-cyan/10 to-accent-green/10 border border-accent-cyan/30">
                   <div className="flex items-center space-x-2 mb-1">
-                    <Building2 size={16} className="text-blue-600" />
-                    <p className="text-sm text-gray-600">Assigned School</p>
+                    <Building2 size={16} className="text-accent-cyan" />
+                    <p className="text-sm text-text-muted">Assigned School</p>
                   </div>
-                  <p className="text-lg font-semibold text-blue-700">{teacherData.school_name}</p>
+                  <p className="text-lg font-semibold text-accent-cyan">{teacherData.school_name}</p>
                 </div>
               )}
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
                   type="submit"
                   disabled={updatingProfile}
-                  className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 shadow-lg hover:shadow-xl"
+                  className="rounded-xl bg-gradient-to-r from-accent-green to-accent-cyan hover:from-accent-green/90 hover:to-accent-cyan/90 text-card-bg border-0 shadow-primary hover:shadow-xl"
                 >
                   <Save className="w-4 h-4 mr-2" />
                   {updatingProfile ? 'Updating...' : 'Update Profile'}
@@ -235,8 +235,8 @@ const TeacherSettings: React.FC = () => {
             transition={{ delay: 0.3 }}
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Preferences</h2>
-              <Bell className="text-emerald-600" size={24} />
+              <h2 className="text-2xl font-bold text-text-main">Preferences</h2>
+              <Bell className="text-accent-green" size={24} />
             </div>
             <UserPreferencesPanel onSaved={() => success('Preferences saved!')} />
           </motion.div>
