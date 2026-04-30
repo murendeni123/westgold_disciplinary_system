@@ -87,7 +87,7 @@ const LogIncident: React.FC = () => {
 
   const fetchClasses = async () => {
     try {
-      const response = await api.getClasses();
+      const response = await api.getClasses({ bypass_grade_filter: true });
       setClasses(response.data);
     } catch (error) {
       console.error('Error fetching classes:', error);
@@ -96,7 +96,7 @@ const LogIncident: React.FC = () => {
 
   const fetchAllStudents = async () => {
     try {
-      const response = await api.getStudents();
+      const response = await api.getStudents({ bypass_grade_filter: true });
       setAllStudents(response.data || []);
     } catch (error) {
       console.error('Error fetching all students:', error);
