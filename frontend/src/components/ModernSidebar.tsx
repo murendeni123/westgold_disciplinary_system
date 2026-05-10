@@ -1,15 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
-import { api } from '../services/api';
 import {
   LayoutDashboard,
   Users,
-  Link as LinkIcon,
-  Building2,
-  Calendar,
   AlertTriangle,
   Award,
   Settings,
@@ -31,83 +27,18 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
   const { user, logout } = useAuth();
   const { customizations, getImageUrl } = useSchoolTheme();
 
-  // Track parent setup status
-  const [hasLinkedSchool, setHasLinkedSchool] = useState(false);
-  const [hasLinkedChild, setHasLinkedChild] = useState(false);
-  const [setupChecked, setSetupChecked] = useState(false);
-
-  // Check if parent has completed setup (linked school and child)
-  useEffect(() => {
-    const checkParentSetup = async () => {
-      if (user?.role !== 'parent') {
-        setSetupChecked(true);
-        return;
-      }
-
-      try {
-        // Check for linked school - simply trust user.school_id
-        setHasLinkedSchool(!!user.school_id);
-
-        // Check for children - we can infer from the children page data
-        // For now, check if user has children property or fetch from API
-        if (user.children && user.children.length > 0) {
-          setHasLinkedChild(true);
-        } else {
-          // Try to fetch children count from students endpoint
-          try {
-            const childrenRes = await api.getStudents();
-            // Filter for students linked to this parent
-            const myChildren = childrenRes.data?.filter?.((s: any) => s.parent_id === user.id) || [];
-            setHasLinkedChild(myChildren.length > 0);
-          } catch {
-            // If we can't fetch, assume no children yet
-            setHasLinkedChild(false);
-          }
-        }
-      } catch (error) {
-        console.error('Error checking parent setup:', error);
-      } finally {
-        setSetupChecked(true);
-      }
-    };
-
-    checkParentSetup();
-  }, [user]);
-
-  // Build parent menu dynamically based on setup status
-  const getParentMenu = () => {
-    const baseMenu = [
-      { path: '/parent', label: 'Dashboard', icon: LayoutDashboard },
-    ];
-
-    // Only show Link School if parent hasn't linked a school yet
-    if (!hasLinkedSchool && setupChecked) {
-      baseMenu.push({ path: '/parent/link-school', label: 'Link School', icon: Building2 });
-    }
-
-    // Only show Link Child if parent has a school but no children yet
-    if (hasLinkedSchool && !hasLinkedChild && setupChecked) {
-      baseMenu.push({ path: '/parent/link-child', label: 'Link Child', icon: LinkIcon });
-    }
-
-    // Always show these menu items (they were always visible before)
-    baseMenu.push(
-      { path: '/parent/children', label: 'My Children', icon: Users },
-      { path: '/parent/behaviour', label: 'Behaviour', icon: AlertTriangle },
-      { path: '/parent/merits', label: 'Merits', icon: Award },
-      { path: '/parent/detentions', label: 'Detentions', icon: AlertTriangle },
-      { path: '/parent/interventions', label: 'Interventions', icon: AlertTriangle },
-      { path: '/parent/consequences', label: 'Consequences', icon: AlertTriangle },
-      { path: '/parent/notifications', label: 'Notifications', icon: Bell },
-    );
-
-    // Always show Settings (where they can link more schools/children)
-    baseMenu.push({ path: '/parent/settings', label: 'Settings', icon: Settings });
-
-    return baseMenu;
-  };
-
-  const parentMenu = getParentMenu();
+  // Static parent menu — Link School / Link Child available via Settings → School & Children
+  const parentMenu = [
+    { path: '/parent',              label: 'Dashboard',     icon: LayoutDashboard },
+    { path: '/parent/children',     label: 'My Children',   icon: Users },
+    { path: '/parent/behaviour',    label: 'Behaviour',     icon: AlertTriangle },
+    { path: '/parent/merits',       label: 'Merits',        icon: Award },
+    { path: '/parent/detentions',   label: 'Detentions',    icon: AlertTriangle },
+    { path: '/parent/interventions',label: 'Interventions', icon: AlertTriangle },
+    { path: '/parent/consequences', label: 'Consequences',  icon: AlertTriangle },
+    { path: '/parent/notifications',label: 'Notifications', icon: Bell },
+    { path: '/parent/settings',     label: 'Settings',      icon: Settings },
+  ];
 
   const isActive = (path: string) => {
     if (path === '/parent') {

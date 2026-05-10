@@ -74,27 +74,46 @@ const ModernSettings: React.FC = () => {
   useEffect(() => {
     const fetchSchoolData = async () => {
       if (activeTab !== 'school' || user?.role !== 'parent') return;
-      
-      setLoadingSchoolData(true);
-      try {
-        // Fetch linked schools
-        const schoolsRes = await api.getLinkedSchools();
-        setLinkedSchools(schoolsRes.data || []);
 
-        // Use children from auth context first (already loaded), fall back to API
-        if (user?.children && user.children.length > 0) {
-          setLinkedChildren(user.children);
+      setLoadingSchoolData(true);
+
+      // 1. Children: always load from auth context first (populated by login / /auth/me)
+      if (user?.children && user.children.length > 0) {
+        setLinkedChildren(user.children);
+      } else {
+        try {
+          const studentsRes = await api.getStudents();
+          setLinkedChildren(studentsRes.data || []);
+        } catch {
+          setLinkedChildren([]);
+        }
+      }
+
+      // 2. Schools: fetch from API, fall back to auth context when API returns empty
+      try {
+        const schoolsRes = await api.getLinkedSchools();
+        const fromApi: any[] = schoolsRes.data || [];
+
+        if (fromApi.length > 0) {
+          setLinkedSchools(fromApi);
         } else {
-          try {
-            // Backend already filters students by parent_id for parent role
-            const studentsRes = await api.getStudents();
-            setLinkedChildren(studentsRes.data || []);
-          } catch {
-            setLinkedChildren([]);
+          // API returned empty — build from auth context (schoolId + schoolName from JWT)
+          const ctxSchoolId = (user as any)?.schoolId || user?.school_id || (user as any)?.primary_school_id;
+          const ctxSchoolName = (user as any)?.schoolName;
+          if (ctxSchoolId) {
+            setLinkedSchools([{ id: ctxSchoolId, name: ctxSchoolName || 'Linked School', status: 'active' }]);
+          } else {
+            setLinkedSchools([]);
           }
         }
       } catch (error) {
-        console.error('Error fetching school data:', error);
+        console.error('Error fetching linked schools:', error);
+        // Still show context-based school on error
+        const ctxSchoolId = (user as any)?.schoolId || user?.school_id || (user as any)?.primary_school_id;
+        const ctxSchoolName = (user as any)?.schoolName;
+        if (ctxSchoolId) {
+          setLinkedSchools([{ id: ctxSchoolId, name: ctxSchoolName || 'Linked School', status: 'active' }]);
+        }
       } finally {
         setLoadingSchoolData(false);
       }

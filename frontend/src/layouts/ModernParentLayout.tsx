@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ModernSidebar from '../components/ModernSidebar';
 import QuickStudentSearch from '../components/QuickStudentSearch';
@@ -12,58 +12,12 @@ import { Menu, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
-import { api } from '../services/api';
 
 const ModernParentLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const { customizations, getImageUrl } = useSchoolTheme();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [setupChecked, setSetupChecked] = useState(false);
-  const [hasLinkedSchool, setHasLinkedSchool] = useState(false);
-  const [hasLinkedChild, setHasLinkedChild] = useState(false);
-
-  // Check setup status only on mount, not on every route change
-  useEffect(() => {
-    if (user && !setupChecked) {
-      checkSetupStatus();
-    }
-  }, [user]);
-
-  const checkSetupStatus = async () => {
-    if (!user) return;
-
-    try {
-      // Check if parent has linked a school — cover all field variants from /auth/me
-      // (school_id from db row, schoolId from computed, primary_school_id from db)
-      const hasSchool = !!(user.school_id || (user as any).schoolId || (user as any).primary_school_id);
-      setHasLinkedSchool(hasSchool);
-
-      // Check if parent has linked children from user data (no API call needed)
-      const hasChildren = !!(user?.children && user.children.length > 0);
-      setHasLinkedChild(hasChildren);
-
-      setSetupChecked(true);
-
-      // Define allowed paths during setup
-      const setupPaths = ['/parent/link-school', '/parent/link-child', '/parent/settings', '/parent/onboarding'];
-      const currentPath = location.pathname;
-
-      // If not on a setup path, enforce setup completion
-      if (!setupPaths.includes(currentPath)) {
-        if (!hasSchool) {
-          navigate('/parent/link-school', { replace: true });
-        } else if (!hasChildren) {
-          navigate('/parent/link-child', { replace: true });
-        }
-      }
-    } catch (error) {
-      console.error('Error checking setup status:', error);
-      setSetupChecked(true);
-    }
-  };
 
   useEffect(() => {
     const handleResize = () => {
