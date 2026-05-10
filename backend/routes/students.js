@@ -60,8 +60,21 @@ router.get('/', authenticateToken, async (req, res) => {
             console.log('📚 Students API - Filtering by class_id:', req.query.class_id);
         }
 
+        // Search filter — applied when search or q param is provided
+        const searchTerm = req.query.search || req.query.q;
+        if (searchTerm) {
+            conditions.push(`(
+                s.first_name ILIKE $${paramIndex}
+                OR s.last_name ILIKE $${paramIndex}
+                OR (s.first_name || ' ' || s.last_name) ILIKE $${paramIndex}
+                OR s.student_id ILIKE $${paramIndex}
+            )`);
+            params.push(`%${searchTerm}%`);
+            paramIndex++;
+        }
+
         // Grade head filtering: default to assigned grade unless bypass or search provided
-        const hasSearch = req.query.search || req.query.q || req.query.bypass_grade_filter;
+        const hasSearch = searchTerm || req.query.bypass_grade_filter;
         if (req.user.isGradeHead && req.user.gradeHeadFor && !hasSearch && req.user.role !== 'admin') {
             conditions.push(`c.grade_level = $${paramIndex++}`);
             params.push(req.user.gradeHeadFor);
@@ -203,7 +216,11 @@ router.post('/:id/photo', authenticateToken, upload.single('photo'), async (req,
 });
 
 // Create student
-router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
+router.post('/', authenticateToken, (req, res, next) => {
+    if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+    if (req.user.role !== 'admin' && !req.user.isGradeHead) return res.status(403).json({ error: 'Insufficient permissions' });
+    next();
+}, async (req, res) => {
     try {
         const { student_id, first_name, last_name, date_of_birth, class_id, parent_id } = req.body;
         const schema = getSchema(req);
@@ -246,7 +263,11 @@ router.post('/', authenticateToken, requireRole('admin'), async (req, res) => {
 });
 
 // Update student
-router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+router.put('/:id', authenticateToken, (req, res, next) => {
+    if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+    if (req.user.role !== 'admin' && !req.user.isGradeHead) return res.status(403).json({ error: 'Insufficient permissions' });
+    next();
+}, async (req, res) => {
     try {
         const { first_name, last_name, date_of_birth, class_id, parent_id } = req.body;
         const schema = getSchema(req);
@@ -276,7 +297,11 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
 });
 
 // Delete student (soft delete)
-router.delete('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+router.delete('/:id', authenticateToken, (req, res, next) => {
+    if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+    if (req.user.role !== 'admin' && !req.user.isGradeHead) return res.status(403).json({ error: 'Insufficient permissions' });
+    next();
+}, async (req, res) => {
     try {
         const schema = getSchema(req);
 

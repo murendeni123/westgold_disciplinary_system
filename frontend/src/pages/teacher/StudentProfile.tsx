@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../../services/api';
 import Button from '../../components/Button';
 import Card from '../../components/Card';
@@ -15,6 +15,8 @@ import { getPhotoUrl, handlePhotoError } from '../../utils/photoUrl';
 const StudentProfile: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const portalBase = location.pathname.startsWith('/grade-head') ? '/grade-head' : '/teacher';
   const { success, error, ToastContainer } = useToast();
   const [student, setStudent] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
@@ -557,37 +559,39 @@ const StudentProfile: React.FC = () => {
 
         <Card title="Quick Actions">
           <div className="space-y-2 sm:space-y-3">
-            <Button
-              className="w-full min-h-[44px]"
-              onClick={() => navigate(`/teacher/attendance/daily?student=${id}`)}
-            >
-              Take Attendance
-            </Button>
+            {portalBase === '/teacher' && (
+              <Button
+                className="w-full min-h-[44px]"
+                onClick={() => navigate(`/teacher/attendance/daily?student=${id}`)}
+              >
+                Take Attendance
+              </Button>
+            )}
             <Button
               className="w-full min-h-[44px]"
               variant="secondary"
-              onClick={() => navigate(`/teacher/behaviour/log?student=${id}`)}
+              onClick={() => navigate(`${portalBase}/behaviour/log?student=${id}`)}
             >
               Log Incident
             </Button>
             <Button
               className="w-full min-h-[44px]"
               variant="secondary"
-              onClick={() => navigate(`/teacher/merits/award?student=${id}`)}
+              onClick={() => navigate(`${portalBase}/merits/award?student=${id}`)}
             >
               Award Merit
             </Button>
             <Button
               className="w-full min-h-[44px]"
               variant="secondary"
-              onClick={() => navigate(`/teacher/merits/view?student=${id}`)}
+              onClick={() => navigate(portalBase === '/grade-head' ? `/grade-head/merits` : `/teacher/merits/view?student=${id}`)}
             >
               View Merits
             </Button>
             <Button
               className="w-full min-h-[44px]"
               variant="secondary"
-              onClick={() => navigate(`/teacher/detentions/view?student=${id}`)}
+              onClick={() => navigate(portalBase === '/grade-head' ? `/grade-head/detention-sessions` : `/teacher/detentions/view?student=${id}`)}
             >
               View Detentions
             </Button>
