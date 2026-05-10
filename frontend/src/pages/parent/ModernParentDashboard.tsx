@@ -48,22 +48,24 @@ const ModernParentDashboard: React.FC = () => {
   }, [user]);
 
   const checkSetupStatus = async () => {
+    // Use user context immediately as reliable source (from JWT / /auth/me)
+    const hasSchoolFromContext = !!(
+      (user as any)?.schoolId || user?.school_id || (user as any)?.primary_school_id
+    );
+    const hasChildrenFromContext = !!(user?.children && user.children.length > 0);
+
+    setHasLinkedSchool(hasSchoolFromContext);
+    setHasLinkedChild(hasChildrenFromContext);
+    setSetupChecked(true);
+
+    // Also verify via API and update if different
     try {
-      // Check if parent has linked a school
       const schoolsResponse = await api.getLinkedSchools();
-      const hasSchool = schoolsResponse.data && schoolsResponse.data.length > 0;
-      setHasLinkedSchool(hasSchool);
-
-      // Check if parent has linked children
-      const hasChildren = !!(user?.children && user.children.length > 0);
-      setHasLinkedChild(hasChildren);
-
-      setSetupChecked(true);
-      
-      // Note: Redirect logic is now handled in ModernParentLayout
+      const hasSchool = !!(schoolsResponse.data && schoolsResponse.data.length > 0);
+      setHasLinkedSchool(hasSchool || hasSchoolFromContext);
     } catch (error) {
-      console.error('Error checking setup status:', error);
-      setSetupChecked(true);
+      console.error('Error fetching linked schools:', error);
+      // Keep context-based value on error
     }
   };
 

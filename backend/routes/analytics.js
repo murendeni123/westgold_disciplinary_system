@@ -1,6 +1,7 @@
 const express = require('express');
 const { schemaGet, schemaAll, getSchema } = require('../utils/schemaHelper');
 const { authenticateToken } = require('../middleware/auth');
+const { dbAll } = require('../database/db');
 
 const router = express.Router();
 
@@ -497,24 +498,55 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 todayAttendance: todayAttendance || { total: 0, present: 0 }
             };
         } else if (role === 'parent') {
-            const myChildren = await schemaGet(req, 'SELECT COUNT(*) as count FROM students WHERE parent_id = $1', [req.user.id]);
-            const childrenIncidents = await schemaGet(req, `
-                SELECT COUNT(*) as count 
-                FROM behaviour_incidents bi
-                INNER JOIN students s ON bi.student_id = s.id
-                WHERE s.parent_id = $1
-            `, [req.user.id]);
-            const childrenMerits = await schemaGet(req, `
-                SELECT COUNT(*) as count 
-                FROM merits m
-                INNER JOIN students s ON m.student_id = s.id
-                WHERE s.parent_id = $1
-            `, [req.user.id]);
+            // Get all schemas this parent is linked to for accurate cross-school counts
+            const linkedSchools = await dbAll(
+                `SELECT DISTINCT s.schema_name
+                 FROM public.schools s
+                 JOIN public.user_schools us ON s.id = us.school_id
+                 WHERE us.user_id = $1 AND s.status = 'active'
+                 UNION
+                 SELECT s.schema_name
+                 FROM public.schools s
+                 JOIN public.users u ON s.id = u.primary_school_id
+                 WHERE u.id = $1 AND s.status = 'active'`,
+                [req.user.id]
+            );
+
+            let totalChildren = 0, totalIncidents = 0, totalMerits = 0;
+
+            // Fall back to current schema if no linked schools found
+            const schemas = linkedSchools.length > 0
+                ? linkedSchools.map(r => r.schema_name).filter(Boolean)
+                : (schema ? [schema] : []);
+
+            for (const s of schemas) {
+                try {
+                    const { dbGet: pg } = require('../database/db');
+                    const c = await pg(
+                        'SELECT COUNT(*) as count FROM students WHERE parent_id = $1', [req.user.id], s
+                    );
+                    const i = await pg(
+                        `SELECT COUNT(*) as count FROM behaviour_incidents bi
+                         INNER JOIN students st ON bi.student_id = st.id
+                         WHERE st.parent_id = $1`, [req.user.id], s
+                    );
+                    const m = await pg(
+                        `SELECT COUNT(*) as count FROM merits me
+                         INNER JOIN students st ON me.student_id = st.id
+                         WHERE st.parent_id = $1`, [req.user.id], s
+                    );
+                    totalChildren += parseInt(c?.count) || 0;
+                    totalIncidents += parseInt(i?.count) || 0;
+                    totalMerits += parseInt(m?.count) || 0;
+                } catch (e) {
+                    console.log(`Parent stats error for schema ${s}:`, e.message);
+                }
+            }
 
             stats = {
-                myChildren: parseInt(myChildren?.count) || 0,
-                childrenIncidents: parseInt(childrenIncidents?.count) || 0,
-                childrenMerits: parseInt(childrenMerits?.count) || 0
+                myChildren: totalChildren,
+                childrenIncidents: totalIncidents,
+                childrenMerits: totalMerits
             };
         }
 

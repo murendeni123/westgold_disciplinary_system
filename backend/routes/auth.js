@@ -1063,15 +1063,34 @@ router.post('/supabase-sync', async (req, res) => {
                 userInfo.teacher = teacherResult.rows[0];
             }
 
-            if (user.role === 'parent' && schemaName) {
-                const childrenResult = await pool.query(
-                    `SELECT s.*, c.class_name 
-                     FROM ${schemaName}.students s 
-                     LEFT JOIN ${schemaName}.classes c ON s.class_id = c.id 
-                     WHERE s.parent_id = $1`,
+            if (user.role === 'parent') {
+                // Fetch children from ALL linked schools
+                const allSchemasResult = await pool.query(
+                    `SELECT DISTINCT s.schema_name FROM public.schools s
+                     JOIN public.user_schools us ON s.id = us.school_id
+                     WHERE us.user_id = $1 AND s.status = 'active'
+                     UNION
+                     SELECT s.schema_name FROM public.schools s
+                     JOIN public.users u ON s.id = u.primary_school_id
+                     WHERE u.id = $1 AND s.status = 'active'`,
                     [user.id]
                 );
-                userInfo.children = childrenResult.rows;
+                let allChildren = [];
+                for (const row of allSchemasResult.rows) {
+                    try {
+                        const cr = await pool.query(
+                            `SELECT s.*, c.class_name 
+                             FROM ${row.schema_name}.students s 
+                             LEFT JOIN ${row.schema_name}.classes c ON s.class_id = c.id 
+                             WHERE s.parent_id = $1`,
+                            [user.id]
+                        );
+                        allChildren = allChildren.concat(cr.rows);
+                    } catch (e) {
+                        console.log(`Supabase-sync children error for schema ${row.schema_name}:`, e.message);
+                    }
+                }
+                userInfo.children = allChildren;
             }
 
             console.log('Supabase sync successful, returning user:', userInfo.email, 'schema:', schemaName);
