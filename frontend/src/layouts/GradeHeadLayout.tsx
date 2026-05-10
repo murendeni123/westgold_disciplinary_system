@@ -45,6 +45,7 @@ const GradeHeadLayout: React.FC = () => {
   const [openSubMenus, setOpenSubMenus] = useState<string[]>(['Discipline', 'Behaviour']);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchTotalCount, setSearchTotalCount] = useState(0);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -133,6 +134,7 @@ const GradeHeadLayout: React.FC = () => {
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
+      setSearchTotalCount(0);
       setShowSearchResults(false);
       return;
     }
@@ -140,7 +142,9 @@ const GradeHeadLayout: React.FC = () => {
       setSearchLoading(true);
       try {
         const res = await api.getStudents({ search: searchQuery, bypass_grade_filter: true });
-        setSearchResults((res.data || []).slice(0, 8));
+        const all = res.data || [];
+        setSearchTotalCount(all.length);
+        setSearchResults(all.slice(0, 8));
         setShowSearchResults(true);
       } catch {
         setSearchResults([]);
@@ -405,7 +409,9 @@ const GradeHeadLayout: React.FC = () => {
             {showSearchResults && searchResults.length > 0 && (
               <div className="absolute top-full mt-1 left-0 right-0 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
                 <div className="px-3 py-2 border-b border-gray-100 text-xs text-gray-500 font-medium">
-                  {searchResults.length} student{searchResults.length !== 1 ? 's' : ''} found
+                  {searchTotalCount > 8
+                    ? `Showing 8 of ${searchTotalCount} students matching "${searchQuery}"`
+                    : `${searchTotalCount} student${searchTotalCount !== 1 ? 's' : ''} found for "${searchQuery}"`}
                 </div>
                 {searchResults.map((student: any) => (
                   <button
