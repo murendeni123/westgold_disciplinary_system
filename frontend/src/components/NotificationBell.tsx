@@ -4,6 +4,7 @@ import { Bell, X, Check, Trash2, CheckCheck } from 'lucide-react';
 import { api } from '../services/api';
 import { useSocket } from '../hooks/useSocket';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import NotificationDetailModal from './NotificationDetailModal';
 
 interface Notification {
@@ -25,8 +26,11 @@ const NotificationBell: React.FC = () => {
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const bellRef = useRef<HTMLButtonElement>(null);
   const socket = useSocket();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
 
   useEffect(() => {
     fetchNotifications();
@@ -80,6 +84,16 @@ const NotificationBell: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Calculate fixed position from bell button coords so it's never clipped by overflow-hidden parents
+  const openDropdown = () => {
+    if (bellRef.current) {
+      const rect = bellRef.current.getBoundingClientRect();
+      const rightFromEdge = window.innerWidth - rect.right;
+      setDropdownPos({ top: rect.bottom + 8, right: rightFromEdge });
+    }
+    setIsOpen(true);
   };
 
   const fetchUnreadCount = async () => {
@@ -181,7 +195,8 @@ const NotificationBell: React.FC = () => {
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
+        ref={bellRef}
+        onClick={() => isOpen ? setIsOpen(false) : openDropdown()}
         className="relative p-2 rounded-xl hover:bg-gray-100 transition-colors"
       >
         <Bell size={24} className="text-gray-700" />
@@ -196,7 +211,7 @@ const NotificationBell: React.FC = () => {
         )}
       </motion.button>
 
-      {/* Dropdown — fixed on mobile to avoid overflow, absolute on sm+ */}
+      {/* Dropdown — always fixed-positioned so parent overflow-hidden can't clip it */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -204,8 +219,8 @@ const NotificationBell: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed left-2 right-2 top-16 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
-            style={{ zIndex: 99999 }}
+            className="fixed w-[calc(100vw-16px)] sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden"
+            style={{ zIndex: 99999, top: dropdownPos.top, right: dropdownPos.right }}
           >
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-4 text-white">
@@ -326,7 +341,12 @@ const NotificationBell: React.FC = () => {
               <div className="border-t border-gray-200 p-3 bg-gray-50">
                 <button
                   onClick={() => {
-                    navigate('/notifications');
+                    // Navigate to role-appropriate notifications route
+                    const role = user?.role;
+                    if (role === 'parent') navigate('/parent/notifications');
+                    else if (role === 'teacher') navigate('/teacher/notifications');
+                    else if (role === 'grade_head') navigate('/grade-head/notifications');
+                    else navigate('/admin/notifications');
                     setIsOpen(false);
                   }}
                   className="w-full text-center text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
