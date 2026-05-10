@@ -91,7 +91,8 @@ const SchoolLogin: React.FC = () => {
       const role = user.role || 'admin';
       
       if (role === 'parent') {
-        const needsSchool = !user.school_id;
+        // Login API returns schoolId (camelCase), not school_id
+        const needsSchool = !user.schoolId && !user.school_id && !user.primary_school_id;
         const needsChildren = !user.children || user.children.length === 0;
         
         if (needsSchool || needsChildren) {

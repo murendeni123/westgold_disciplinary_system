@@ -21,8 +21,9 @@ const OnboardingGuard: React.FC<OnboardingGuardProps> = ({ children }) => {
       // Check if onboarding was already completed
       const onboardingCompleted = localStorage.getItem('parent_onboarding_completed') === 'true';
       
-      // Check actual data - user needs school AND children to be considered complete
-      const needsSchool = !user.school_id;
+      // Check actual data - cover all field name variants returned by /auth/me
+      // (school_id from db row, schoolId from computed, primary_school_id from db)
+      const needsSchool = !user.school_id && !(user as any).schoolId && !(user as any).primary_school_id;
       const needsChildren = !user.children || user.children.length === 0;
       
       // If parent has both school and children, automatically mark onboarding as complete

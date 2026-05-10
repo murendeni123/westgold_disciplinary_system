@@ -81,13 +81,17 @@ const ModernSettings: React.FC = () => {
         const schoolsRes = await api.getLinkedSchools();
         setLinkedSchools(schoolsRes.data || []);
 
-        // Fetch children (students linked to this parent)
-        try {
-          const studentsRes = await api.getStudents();
-          const myChildren = studentsRes.data?.filter?.((s: any) => s.parent_id === user.id) || [];
-          setLinkedChildren(myChildren);
-        } catch {
-          setLinkedChildren([]);
+        // Use children from auth context first (already loaded), fall back to API
+        if (user?.children && user.children.length > 0) {
+          setLinkedChildren(user.children);
+        } else {
+          try {
+            // Backend already filters students by parent_id for parent role
+            const studentsRes = await api.getStudents();
+            setLinkedChildren(studentsRes.data || []);
+          } catch {
+            setLinkedChildren([]);
+          }
         }
       } catch (error) {
         console.error('Error fetching school data:', error);
@@ -118,8 +122,9 @@ const ModernSettings: React.FC = () => {
     try {
       const response = await api.updateParentProfile(profileData);
       setProfileSuccess('Profile updated successfully!');
-      if (updateUser && response.data.user) {
-        updateUser(response.data.user);
+      // Backend returns the updated profile directly (not wrapped in {user: ...})
+      if (updateUser && response.data) {
+        updateUser({ ...user!, ...response.data });
       }
     } catch (error: any) {
       setProfileError(error.response?.data?.error || 'Error updating profile');

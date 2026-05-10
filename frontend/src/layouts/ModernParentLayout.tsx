@@ -36,8 +36,9 @@ const ModernParentLayout: React.FC = () => {
     if (!user) return;
 
     try {
-      // Check if parent has linked a school from user data (no API call needed)
-      const hasSchool = !!user.school_id;
+      // Check if parent has linked a school — cover all field variants from /auth/me
+      // (school_id from db row, schoolId from computed, primary_school_id from db)
+      const hasSchool = !!(user.school_id || (user as any).schoolId || (user as any).primary_school_id);
       setHasLinkedSchool(hasSchool);
 
       // Check if parent has linked children from user data (no API call needed)

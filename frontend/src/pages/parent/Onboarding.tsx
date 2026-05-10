@@ -42,13 +42,16 @@ const Onboarding: React.FC = () => {
   const [showChildSuccess, setShowChildSuccess] = useState(false);
   const [linkedChildName, setLinkedChildName] = useState('');
 
+  // Google profile completion modal
+  const [showGoogleProfileModal, setShowGoogleProfileModal] = useState(false);
+
   useEffect(() => {
     checkProgress();
   }, [user]);
 
   const checkProgress = async () => {
-    // Check if user has linked a school
-    if (user?.school_id) {
+    // Check if user has linked a school — cover all field variants from /auth/me
+    if (user?.school_id || (user as any)?.schoolId || (user as any)?.primary_school_id) {
       setHasSchool(true);
     }
     
@@ -493,7 +496,14 @@ const Onboarding: React.FC = () => {
       if (hasSchool && hasChild) {
         localStorage.setItem('parent_onboarding_completed', 'true');
       }
-      navigate('/parent');
+      // Show profile completion modal for Google users who haven't set their profile
+      const isGoogleUser = (user as any)?.auth_provider === 'google';
+      const profileSetupDismissed = localStorage.getItem('parent_profile_setup_dismissed') === 'true';
+      if (isGoogleUser && !profileSetupDismissed && !(user as any)?.phone) {
+        setShowGoogleProfileModal(true);
+      } else {
+        navigate('/parent');
+      }
     }
   };
 
@@ -707,6 +717,58 @@ const Onboarding: React.FC = () => {
                   >
                     You've successfully linked <strong>{linkedChildName}</strong> to your account.
                   </motion.p>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Google Profile Completion Modal */}
+        <AnimatePresence>
+          {showGoogleProfileModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 20 }}
+                className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full"
+              >
+                <div className="text-center">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full mb-4">
+                    <GraduationCap className="text-white" size={32} />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                    Complete Your Profile
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    Please complete your details for your profile so the school can contact you when needed.
+                  </p>
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => {
+                        localStorage.setItem('parent_profile_setup_dismissed', 'false');
+                        navigate('/parent/settings');
+                      }}
+                      className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold shadow-md hover:shadow-lg transition-all"
+                    >
+                      Complete Profile Now
+                    </button>
+                    <button
+                      onClick={() => {
+                        localStorage.setItem('parent_profile_setup_dismissed', 'true');
+                        setShowGoogleProfileModal(false);
+                        navigate('/parent');
+                      }}
+                      className="w-full px-6 py-3 border border-gray-200 text-gray-600 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+                    >
+                      Do It Later
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             </motion.div>

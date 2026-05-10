@@ -213,21 +213,27 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
             // Only one school - auto-select
             selectedSchool = userSchools[0];
         } else if (userSchools.length > 1) {
-            // Multiple schools - return list for selection
-            return res.json({
-                needsSchoolSelection: true,
-                schools: userSchools.map(s => ({
-                    id: s.id,
-                    name: s.name,
-                    code: s.code,
-                    subdomain: s.subdomain
-                })),
-                tempToken: jwt.sign(
-                    { userId: user.id, email: user.email, needsSchoolSelection: true },
-                    JWT_SECRET,
-                    { expiresIn: '5m' }
-                )
-            });
+            // Multiple schools — for parents, auto-select primary school (no picker).
+            // Parents manage additional schools via Settings → Link Another School.
+            if (user.role === 'parent') {
+                selectedSchool = userSchools.find(s => s.is_primary) || userSchools[0];
+            } else {
+                // Non-parents: show school picker as before
+                return res.json({
+                    needsSchoolSelection: true,
+                    schools: userSchools.map(s => ({
+                        id: s.id,
+                        name: s.name,
+                        code: s.code,
+                        subdomain: s.subdomain
+                    })),
+                    tempToken: jwt.sign(
+                        { userId: user.id, email: user.email, needsSchoolSelection: true },
+                        JWT_SECRET,
+                        { expiresIn: '5m' }
+                    )
+                });
+            }
         } else {
             // No schools - user not linked to any school
             return res.status(403).json({
@@ -283,15 +289,24 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
 
         try {
             if (user.role === 'parent') {
-                const children = await dbAll(
-                    `SELECT s.*, c.class_name 
-                     FROM students s 
-                     LEFT JOIN classes c ON s.class_id = c.id 
-                     WHERE s.parent_id = $1`,
-                    [user.id],
-                    selectedSchool.schema_name
-                );
-                userInfo.children = children;
+                // Fetch children from ALL linked schools so My Children is complete
+                let allChildren = [];
+                for (const school of userSchools) {
+                    try {
+                        const schoolChildren = await dbAll(
+                            `SELECT s.*, c.class_name 
+                             FROM students s 
+                             LEFT JOIN classes c ON s.class_id = c.id 
+                             WHERE s.parent_id = $1`,
+                            [user.id],
+                            school.schema_name
+                        );
+                        allChildren = allChildren.concat(schoolChildren);
+                    } catch (e) {
+                        console.log(`Could not fetch children from schema ${school.schema_name}:`, e.message);
+                    }
+                }
+                userInfo.children = allChildren;
             }
         } catch (error) {
             console.log('Could not fetch children data:', error.message);
@@ -511,27 +526,40 @@ router.get('/me', async (req, res) => {
             }
         }
 
-        if (user.role === 'parent' && schemaName) {
-            const children = await dbAll(
-                `SELECT s.*, c.class_name 
-                 FROM students s 
-                 LEFT JOIN classes c ON s.class_id = c.id 
-                 WHERE s.parent_id = $1`,
-                [user.id],
-                schemaName
-            );
-            userInfo.children = children;
-        }
-
         // Get all schools user has access to
         const userSchools = await dbAll(`
-            SELECT s.id, s.name, s.code, s.subdomain
+            SELECT s.id, s.name, s.code, s.subdomain, s.schema_name, us.is_primary
             FROM public.schools s
             JOIN public.user_schools us ON s.id = us.school_id
             WHERE us.user_id = $1 AND s.status = 'active'
+            ORDER BY us.is_primary DESC, s.name ASC
         `, [user.id]);
 
         userInfo.schools = userSchools;
+
+        if (user.role === 'parent') {
+            // Fetch children from ALL linked schools so My Children is complete
+            let allChildren = [];
+            const schemasToQuery = userSchools.length > 0
+                ? userSchools.map((s) => s.schema_name).filter(Boolean)
+                : (schemaName ? [schemaName] : []);
+            for (const schema of schemasToQuery) {
+                try {
+                    const schoolChildren = await dbAll(
+                        `SELECT s.*, c.class_name 
+                         FROM students s 
+                         LEFT JOIN classes c ON s.class_id = c.id 
+                         WHERE s.parent_id = $1`,
+                        [user.id],
+                        schema
+                    );
+                    allChildren = allChildren.concat(schoolChildren);
+                } catch (e) {
+                    console.log(`Could not fetch children from schema ${schema}:`, e.message);
+                }
+            }
+            userInfo.children = allChildren;
+        }
 
         res.json({ user: userInfo });
     } catch (error) {
