@@ -342,7 +342,7 @@ const NotificationBell: React.FC = () => {
                 <button
                   onClick={() => {
                     // Navigate to role-appropriate notifications route
-                    const role = user?.role;
+                    const role = user?.role as string | undefined;
                     if (role === 'parent') navigate('/parent/notifications');
                     else if (role === 'teacher') navigate('/teacher/notifications');
                     else if (role === 'grade_head') navigate('/grade-head/notifications');
