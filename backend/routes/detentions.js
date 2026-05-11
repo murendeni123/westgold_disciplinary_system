@@ -112,15 +112,46 @@ router.get('/', authenticateToken, async (req, res) => {
     const params = [];
     let paramIndex = 1;
 
-    // Grade head: see all detention sessions that have students from their grade
+    // Grade head: see sessions with students from their grade AND sessions where assigned as supervisor
     if (req.user.isGradeHead && req.user.gradeHeadFor) {
-      query += ` AND d.id IN (
+      const gradeTeacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
+      let coTeacherSessionIds = [];
+      if (gradeTeacher) {
+        try {
+          const coRows = await schemaAll(req,
+            'SELECT session_id FROM detention_session_teachers WHERE teacher_id = $1',
+            [gradeTeacher.id]
+          );
+          coTeacherSessionIds = (coRows || []).map(r => Number(r.session_id));
+        } catch { /* junction table may not exist yet */ }
+      }
+
+      const gradeConditions = [];
+      // 1. Sessions with students from their grade
+      gradeConditions.push(`d.id IN (
         SELECT DISTINCT da.detention_id FROM detention_assignments da
         INNER JOIN students s ON da.student_id = s.id
         LEFT JOIN classes c ON s.class_id = c.id
-        WHERE c.grade_level = $${paramIndex++}
-      )`;
+        WHERE c.grade_level = $${paramIndex}
+      )`);
       params.push(req.user.gradeHeadFor);
+      paramIndex++;
+
+      // 2. Sessions where they are the primary teacher on duty
+      if (gradeTeacher) {
+        gradeConditions.push(`d.teacher_on_duty_id = $${paramIndex}`);
+        params.push(gradeTeacher.id);
+        paramIndex++;
+      }
+
+      // 3. Sessions where they are a co-teacher
+      if (coTeacherSessionIds.length > 0) {
+        gradeConditions.push(`d.id = ANY($${paramIndex}::int[])`);
+        params.push(coTeacherSessionIds);
+        paramIndex++;
+      }
+
+      query += ` AND (${gradeConditions.join(' OR ')})`;
     } else if (req.user.role === 'teacher') {
       const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
       if (teacher) {

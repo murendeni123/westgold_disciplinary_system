@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../services/api';
+import NotificationBell from '../components/NotificationBell';
 import {
   LayoutDashboard,
   Users,
@@ -442,13 +443,17 @@ const GradeHeadLayout: React.FC = () => {
           {/* Mobile search toggle */}
           <button
             onClick={() => setSearchOpen(!searchOpen)}
-            className="md:hidden ml-auto p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
             aria-label="Search"
           >
             {searchOpen ? <X size={20} className="text-gray-600" /> : <Search size={20} className="text-gray-600" />}
           </button>
 
-          <span className="hidden lg:block text-sm text-gray-500 ml-auto">{user?.name}</span>
+          {/* Notification Bell */}
+          <div className="ml-auto flex items-center gap-2">
+            <NotificationBell />
+            <span className="hidden lg:block text-sm text-gray-500">{user?.name}</span>
+          </div>
         </header>
 
         {/* Mobile search bar */}

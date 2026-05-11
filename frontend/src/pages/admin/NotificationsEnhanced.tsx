@@ -17,7 +17,8 @@ import {
   Shield,
   X
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Notification {
   id: number;
@@ -32,6 +33,10 @@ interface Notification {
 
 const NotificationsEnhanced: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  const isGradeHead = location.pathname.startsWith('/grade-head') || !!(user as any)?.isGradeHead;
+  const portalBase = isGradeHead ? '/grade-head' : '/admin';
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,13 +140,13 @@ const NotificationsEnhanced: React.FC = () => {
     if (notification.related_type && notification.related_id) {
       switch (notification.related_type) {
         case 'incident':
-          navigate(`/admin/discipline`);
+          navigate(`${portalBase}/behaviour`);
           break;
         case 'merit':
-          navigate(`/admin/merits`);
+          navigate(`${portalBase}/merits`);
           break;
         case 'detention':
-          navigate(`/admin/detention-sessions`);
+          navigate(`${portalBase}/detention-sessions`);
           break;
         default:
           break;
