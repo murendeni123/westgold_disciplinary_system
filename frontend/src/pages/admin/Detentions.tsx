@@ -6,7 +6,7 @@ import Modal from '../../components/Modal';
 import Input from '../../components/Input';
 import Select from '../../components/Select';
 import { motion } from 'framer-motion';
-import { Plus, Edit, Trash2, Settings, Users, Eye, Download, AlertTriangle, Calendar, TrendingUp } from 'lucide-react';
+import { Plus, Edit, Trash2, Settings, Users, Eye, Download, AlertTriangle, Calendar, TrendingUp, UserPlus, Search } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from '../../hooks/useToast';
 
@@ -17,6 +17,14 @@ const Detentions: React.FC = () => {
   const [teachers, setTeachers] = useState<any[]>([]);
   const [selectedDetention, setSelectedDetention] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [assignSession, setAssignSession] = useState<any>(null);
+  const [qualifyingStudents, setQualifyingStudents] = useState<any[]>([]);
+  const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [assignedStudents, setAssignedStudents] = useState<any[]>([]);
+  const [assignSearch, setAssignSearch] = useState('');
+  const [assignTab, setAssignTab] = useState<'qualifying' | 'all'>('qualifying');
+  const [assigning, setAssigning] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
@@ -183,6 +191,41 @@ const Detentions: React.FC = () => {
     }
   };
 
+  const handleOpenAssignModal = async (session: any) => {
+    setAssignSession(session);
+    setAssignSearch('');
+    setAssignTab('qualifying');
+    setQualifyingStudents([]);
+    setAllStudents([]);
+    setAssignedStudents([]);
+    setIsAssignModalOpen(true);
+    const [qualRes, detRes, studRes] = await Promise.allSettled([
+      api.getQualifyingStudents(),
+      api.getDetention(session.id),
+      api.getStudents(),
+    ]);
+    setQualifyingStudents(qualRes.status === 'fulfilled' ? (qualRes.value.data || []) : []);
+    setAssignedStudents(detRes.status === 'fulfilled' ? (detRes.value.data?.assignments || []) : []);
+    setAllStudents(studRes.status === 'fulfilled' ? (studRes.value.data || []) : []);
+  };
+
+  const handleAssignStudent = async (studentId: number, studentName: string) => {
+    if (!assignSession) return;
+    setAssigning(studentId);
+    try {
+      await api.assignToDetention(assignSession.id, { student_id: studentId, reason: 'Manually assigned by admin' });
+      success(`${studentName} assigned to detention`);
+      const detRes = await api.getDetention(assignSession.id);
+      setAssignedStudents(detRes.data?.assignments || []);
+      setQualifyingStudents(prev => prev.filter((s: any) => s.id !== studentId));
+      fetchDetentions();
+    } catch (err: any) {
+      error(err.response?.data?.error || `Failed to assign ${studentName}`);
+    } finally {
+      setAssigning(null);
+    }
+  };
+
   const handleAutoAssign = async (detentionId: number) => {
     if (window.confirm('Auto-assign students based on detention rules?')) {
       try {
@@ -298,14 +341,11 @@ const Detentions: React.FC = () => {
             <Download size={18} />
           </button>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleAutoAssign(row.id);
-            }}
+            onClick={(e) => { e.stopPropagation(); handleOpenAssignModal(row); }}
             className="text-green-600 hover:text-green-800"
-            title="Auto-assign students"
+            title="Assign students"
           >
-            <Users size={18} />
+            <UserPlus size={18} />
           </button>
           <button
             onClick={(e) => {
@@ -769,6 +809,112 @@ const Detentions: React.FC = () => {
             <Button type="submit">Save</Button>
           </div>
         </form>
+      </Modal>
+      {/* Assign Students Modal */}
+      <Modal
+        isOpen={isAssignModalOpen}
+        onClose={() => { setIsAssignModalOpen(false); setAssignSession(null); }}
+        title={`Assign Students — ${assignSession?.detention_date || ''} ${assignSession?.detention_time ? String(assignSession.detention_time).slice(0, 5) : ''}`}
+        size="lg"
+      >
+        {assignSession && (
+          <div className="space-y-4">
+            {/* Currently assigned */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                <Users size={16} className="text-amber-600" />
+                Currently Assigned ({assignedStudents.length})
+              </h4>
+              {assignedStudents.length === 0 ? (
+                <p className="text-sm text-gray-400">No students assigned yet</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {assignedStudents.map((a: any) => (
+                    <span key={a.id} className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-medium">
+                      {a.student_name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-gray-200">
+              <button
+                onClick={() => setAssignTab('qualifying')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${assignTab === 'qualifying' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+              >
+                Qualifying Students ({qualifyingStudents.length})
+              </button>
+              <button
+                onClick={() => setAssignTab('all')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${assignTab === 'all' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+              >
+                All Students
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={assignSearch}
+                onChange={e => setAssignSearch(e.target.value)}
+                placeholder="Search by name..."
+                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+              />
+            </div>
+
+            {/* Student list */}
+            <div className="max-h-72 overflow-y-auto space-y-1">
+              {(assignTab === 'qualifying' ? qualifyingStudents : allStudents)
+                .filter((s: any) => !assignSearch || (s.student_name || s.name || '').toLowerCase().includes(assignSearch.toLowerCase()))
+                .filter((s: any) => !assignedStudents.some((a: any) => a.student_id === s.id))
+                .map((s: any) => (
+                  <div key={s.id} className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 border border-gray-100">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{s.student_name || s.name}</p>
+                      <p className="text-xs text-gray-400">{s.class_name || s.student_number || ''}{s.total_points ? ` · ${s.total_points} demerit pts` : ''}</p>
+                    </div>
+                    <button
+                      disabled={assigning === s.id}
+                      onClick={() => handleAssignStudent(s.id, s.student_name || s.name)}
+                      className="px-3 py-1 text-xs bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50 transition-colors"
+                    >
+                      {assigning === s.id ? 'Assigning…' : 'Assign'}
+                    </button>
+                  </div>
+                ))}
+              {(assignTab === 'qualifying' ? qualifyingStudents : allStudents)
+                .filter((s: any) => !assignSearch || (s.student_name || s.name || '').toLowerCase().includes(assignSearch.toLowerCase()))
+                .filter((s: any) => !assignedStudents.some((a: any) => a.student_id === s.id))
+                .length === 0 && (
+                <p className="text-center text-gray-400 py-6 text-sm">
+                  {assignTab === 'qualifying' ? 'No qualifying students found' : 'No students found'}
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-between pt-2">
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  await handleAutoAssign(assignSession.id);
+                  const detRes = await api.getDetention(assignSession.id);
+                  setAssignedStudents(detRes.data?.assignments || []);
+                  setQualifyingStudents([]);
+                }}
+              >
+                <Users size={16} className="mr-2" />
+                Auto-Assign All Qualifying
+              </Button>
+              <Button variant="secondary" onClick={() => { setIsAssignModalOpen(false); setAssignSession(null); }}>
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

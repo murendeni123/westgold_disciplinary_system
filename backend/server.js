@@ -152,7 +152,8 @@ app.use('/api/timetables', authenticateToken, setSchemaFromToken, enforceSchemaA
 app.use('/api/period-timetables', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/periodTimetables'));
 app.use('/api/subjects', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/subjects'));
 app.use('/api/period-register', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/periodRegister'));
-app.use('/api/detentions', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/detentions'));
+const { router: detentionsRouter, startDetentionAutoClose } = require('./routes/detentions');
+app.use('/api/detentions', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, detentionsRouter);
 app.use('/api/merits', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/merits'));
 app.use('/api/exports', authenticateToken, setSchemaFromToken, enforceSchemaAccess, strictLimiter, require('./routes/exports'));
 app.use('/api/bulk-import', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, strictLimiter, require('./routes/bulkImport'));
@@ -216,6 +217,9 @@ initDatabase()
         
         // Initialize billing scheduler
         billingScheduler.init();
+
+        // Start detention auto-close background job
+        startDetentionAutoClose();
     })
     .catch((err) => {
         console.error('Database initialization error:', err);

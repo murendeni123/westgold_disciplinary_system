@@ -657,7 +657,15 @@ const DisciplineCenter: React.FC = () => {
   };
 
   const filteredIncidents = applyFilters(incidents);
-  const filteredDetentions = applyFilters(detentions);
+  const filteredDetentions = detentions.filter((d: any) => {
+    const term = searchTerm.toLowerCase();
+    const matchesSearch = !term ||
+      (d.teacher_name || '').toLowerCase().includes(term) ||
+      (d.location || '').toLowerCase().includes(term) ||
+      (d.detention_date || '').includes(term);
+    const matchesStatus = statusFilter === 'all' || (d.status || '') === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
   const filteredInterventions = applyFilters(interventions);
   const filteredConsequences = applyFilters(consequences);
   const filteredMerits = applyFilters(merits);
