@@ -25,6 +25,12 @@ const Detentions: React.FC = () => {
   const [assignSearch, setAssignSearch] = useState('');
   const [assignTab, setAssignTab] = useState<'qualifying' | 'all'>('qualifying');
   const [assigning, setAssigning] = useState<number | null>(null);
+  const [allQualifyingStudents, setAllQualifyingStudents] = useState<any[]>([]);
+  const [queuedStudentsList, setQueuedStudentsList] = useState<any[]>([]);
+  const [isQualifyingPopupOpen, setIsQualifyingPopupOpen] = useState(false);
+  const [isQueuedPopupOpen, setIsQueuedPopupOpen] = useState(false);
+  const [qualifyingSearch, setQualifyingSearch] = useState('');
+  const [queuedSearch, setQueuedSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
@@ -52,7 +58,21 @@ const Detentions: React.FC = () => {
     fetchDetentions();
     fetchRules();
     fetchTeachers();
+    fetchQualifyingAndQueued();
   }, []);
+
+  const fetchQualifyingAndQueued = async () => {
+    try {
+      const [qualRes, queueRes] = await Promise.allSettled([
+        api.getQualifyingStudents(),
+        api.getDetentionQueue(),
+      ]);
+      if (qualRes.status === 'fulfilled') setAllQualifyingStudents(qualRes.value.data || []);
+      if (queueRes.status === 'fulfilled') setQueuedStudentsList(queueRes.value.data || []);
+    } catch (err) {
+      console.error('Error fetching qualifying/queued students:', err);
+    }
+  };
 
   const [chartData, setChartData] = useState<any[]>([]);
   const [statusData, setStatusData] = useState<any[]>([]);
@@ -342,10 +362,11 @@ const Detentions: React.FC = () => {
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); handleOpenAssignModal(row); }}
-            className="text-green-600 hover:text-green-800"
-            title="Assign students"
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-green-500 hover:bg-green-600 rounded-lg transition-colors"
+            title="Manually assign students"
           >
-            <UserPlus size={18} />
+            <UserPlus size={13} />
+            Assign Students
           </button>
           <button
             onClick={(e) => {
@@ -421,6 +442,81 @@ const Detentions: React.FC = () => {
           </motion.div>
         </div>
       </motion.div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Qualifying Students Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          onClick={() => { setQualifyingSearch(''); setIsQualifyingPopupOpen(true); }}
+          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-lg border border-amber-100 p-5 cursor-pointer hover:shadow-xl hover:border-amber-300 transition-all group"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center group-hover:bg-amber-200 transition-colors">
+              <AlertTriangle size={20} className="text-amber-600" />
+            </div>
+            <span className="text-xs text-amber-600 font-medium bg-amber-50 px-2 py-0.5 rounded-full">Click to view</span>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{allQualifyingStudents.length}</p>
+          <p className="text-sm text-gray-500 mt-1">Qualifying Students</p>
+          <p className="text-xs text-gray-400 mt-1">Eligible for detention</p>
+        </motion.div>
+
+        {/* Queued Students Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          onClick={() => { setQueuedSearch(''); setIsQueuedPopupOpen(true); }}
+          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-lg border border-blue-100 p-5 cursor-pointer hover:shadow-xl hover:border-blue-300 transition-all group"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+              <Users size={20} className="text-blue-600" />
+            </div>
+            <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded-full">Click to view</span>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{queuedStudentsList.length}</p>
+          <p className="text-sm text-gray-500 mt-1">Queued Students</p>
+          <p className="text-xs text-gray-400 mt-1">Awaiting assignment</p>
+        </motion.div>
+
+        {/* Total Sessions Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-lg border border-green-100 p-5"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
+              <Calendar size={20} className="text-green-600" />
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{detentions.length}</p>
+          <p className="text-sm text-gray-500 mt-1">Total Sessions</p>
+          <p className="text-xs text-gray-400 mt-1">{detentions.filter((d: any) => d.status === 'scheduled').length} scheduled</p>
+        </motion.div>
+
+        {/* In Progress Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-lg border border-yellow-100 p-5"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="w-10 h-10 rounded-xl bg-yellow-100 flex items-center justify-center">
+              <TrendingUp size={20} className="text-yellow-600" />
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-gray-900">{detentions.filter((d: any) => d.status === 'in_progress').length}</p>
+          <p className="text-sm text-gray-500 mt-1">In Progress</p>
+          <p className="text-xs text-gray-400 mt-1">{detentions.filter((d: any) => d.status === 'completed').length} completed</p>
+        </motion.div>
+      </div>
 
       {/* Detention Rules */}
       <motion.div
@@ -810,6 +906,113 @@ const Detentions: React.FC = () => {
           </div>
         </form>
       </Modal>
+      {/* Qualifying Students Popup */}
+      <Modal
+        isOpen={isQualifyingPopupOpen}
+        onClose={() => setIsQualifyingPopupOpen(false)}
+        title={`Qualifying Students (${allQualifyingStudents.length})`}
+        size="lg"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">Students with 10+ accumulated demerit points who are eligible for detention.</p>
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={qualifyingSearch}
+              onChange={e => setQualifyingSearch(e.target.value)}
+              placeholder="Search by name or class..."
+              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-300"
+            />
+          </div>
+          <div className="max-h-96 overflow-y-auto space-y-2">
+            {allQualifyingStudents
+              .filter((s: any) => !qualifyingSearch || (s.student_name || '').toLowerCase().includes(qualifyingSearch.toLowerCase()) || (s.class_name || '').toLowerCase().includes(qualifyingSearch.toLowerCase()))
+              .map((s: any) => (
+                <div key={s.id} className="flex items-center justify-between px-4 py-3 rounded-xl border border-gray-100 hover:bg-amber-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-bold text-sm">
+                      {(s.student_name || '?').charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-800 text-sm">{s.student_name}</p>
+                      <p className="text-xs text-gray-400">{s.class_name || ''}{s.student_number ? ` · ${s.student_number}` : ''}</p>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
+                    {s.total_points} pts
+                  </span>
+                </div>
+              ))}
+            {allQualifyingStudents.filter((s: any) => !qualifyingSearch || (s.student_name || '').toLowerCase().includes(qualifyingSearch.toLowerCase()) || (s.class_name || '').toLowerCase().includes(qualifyingSearch.toLowerCase())).length === 0 && (
+              <div className="text-center py-10 text-gray-400">
+                <AlertTriangle size={32} className="mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">No qualifying students found</p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button variant="secondary" onClick={() => setIsQualifyingPopupOpen(false)}>Close</Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Queued Students Popup */}
+      <Modal
+        isOpen={isQueuedPopupOpen}
+        onClose={() => setIsQueuedPopupOpen(false)}
+        title={`Queued Students (${queuedStudentsList.length})`}
+        size="lg"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">Students waiting to be assigned to the next available detention session.</p>
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={queuedSearch}
+              onChange={e => setQueuedSearch(e.target.value)}
+              placeholder="Search by name..."
+              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+            />
+          </div>
+          <div className="max-h-96 overflow-y-auto space-y-2">
+            {queuedStudentsList
+              .filter((s: any) => !queuedSearch || (s.student_name || '').toLowerCase().includes(queuedSearch.toLowerCase()))
+              .map((s: any, idx: number) => (
+                <div key={s.id || idx} className="flex items-center justify-between px-4 py-3 rounded-xl border border-gray-100 hover:bg-blue-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white font-bold text-sm">
+                      {(s.student_name || '?').charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-800 text-sm">{s.student_name}</p>
+                      <p className="text-xs text-gray-400">{s.class_name || ''}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold block">
+                      {s.points_at_queue || s.total_points || 0} pts
+                    </span>
+                    {s.queued_at && (
+                      <p className="text-xs text-gray-400 mt-1">{new Date(s.queued_at).toLocaleDateString()}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            {queuedStudentsList.filter((s: any) => !queuedSearch || (s.student_name || '').toLowerCase().includes(queuedSearch.toLowerCase())).length === 0 && (
+              <div className="text-center py-10 text-gray-400">
+                <Users size={32} className="mx-auto mb-2 text-gray-300" />
+                <p className="text-sm">No queued students</p>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button variant="secondary" onClick={() => setIsQueuedPopupOpen(false)}>Close</Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Assign Students Modal */}
       <Modal
         isOpen={isAssignModalOpen}
