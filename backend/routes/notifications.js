@@ -9,7 +9,7 @@ const router = express.Router();
 // Get notifications for current user
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { is_read } = req.query;
+    const { is_read, start_date, end_date } = req.query;
     const schema = getSchema(req);
 
     if (!schema) {
@@ -25,7 +25,17 @@ router.get('/', authenticateToken, async (req, res) => {
       params.push(is_read === 'true');
     }
 
-    query += ' ORDER BY created_at DESC LIMIT 50';
+    if (start_date) {
+      query += ` AND created_at >= $${paramIndex++}`;
+      params.push(start_date);
+    }
+
+    if (end_date) {
+      query += ` AND created_at < ($${paramIndex++}::date + INTERVAL '1 day')`;
+      params.push(end_date);
+    }
+
+    query += ' ORDER BY created_at DESC';
 
     const notifications = await schemaAll(req, query, params);
     res.json(notifications);

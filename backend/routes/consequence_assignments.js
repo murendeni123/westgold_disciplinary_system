@@ -470,11 +470,19 @@ router.post('/evaluate-student', authenticateToken, async (req, res) => {
 });
 
 // Get consequence statistics for dashboard
-router.get('/statistics', authenticateToken, requireRole('admin'), async (req, res) => {
+router.get('/statistics', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
   try {
     const schema = getSchema(req);
     if (!schema) {
       return res.status(403).json({ error: 'School context required' });
+    }
+
+    // Teachers and grade heads only see their own stats; admins see all
+    let whereClause = '';
+    const params = [];
+    if (req.user.role === 'teacher') {
+      whereClause = ' WHERE assigned_by = $1';
+      params.push(req.user.id);
     }
 
     const stats = await schemaGet(req, `
@@ -486,8 +494,8 @@ router.get('/statistics', authenticateToken, requireRole('admin'), async (req, r
         COUNT(*) FILTER (WHERE status = 'active') as active_consequences,
         COUNT(*) FILTER (WHERE assigned_at >= CURRENT_DATE - INTERVAL '7 days') as this_week,
         COUNT(*) FILTER (WHERE assigned_at >= CURRENT_DATE - INTERVAL '30 days') as this_month
-      FROM consequence_assignments
-    `);
+      FROM consequence_assignments${whereClause}
+    `, params);
 
     res.json(stats);
   } catch (error) {

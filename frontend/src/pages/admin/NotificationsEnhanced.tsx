@@ -40,14 +40,16 @@ const NotificationsEnhanced: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   const [stats, setStats] = useState({ total: 0, unread: 0, read: 0 });
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+  }, [startDate, endDate]);
 
   useEffect(() => {
     filterNotifications();
@@ -56,7 +58,10 @@ const NotificationsEnhanced: React.FC = () => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const response = await api.getNotifications();
+      const params: any = {};
+      if (startDate) params.start_date = startDate;
+      if (endDate) params.end_date = endDate;
+      const response = await api.getNotifications(params);
       setNotifications(response.data || []);
       
       const unreadCount = response.data?.filter((n: Notification) => !n.is_read).length || 0;
@@ -285,9 +290,9 @@ const NotificationsEnhanced: React.FC = () => {
         </div>
         
         <div className="p-6 bg-gray-50/50">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Search */}
-            <div>
+            <div className="lg:col-span-1">
               <label className="block text-xs font-medium text-gray-600 mb-1.5">Search</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
@@ -302,7 +307,7 @@ const NotificationsEnhanced: React.FC = () => {
             </div>
 
             {/* Type */}
-            <div>
+            <div className="lg:col-span-1">
               <label className="block text-xs font-medium text-gray-600 mb-1.5">Type</label>
               <select
                 value={selectedType}
@@ -319,7 +324,7 @@ const NotificationsEnhanced: React.FC = () => {
             </div>
 
             {/* Status */}
-            <div>
+            <div className="lg:col-span-1">
               <label className="block text-xs font-medium text-gray-600 mb-1.5">Status</label>
               <select
                 value={selectedStatus}
@@ -330,6 +335,34 @@ const NotificationsEnhanced: React.FC = () => {
                 <option value="unread">Unread Only</option>
                 <option value="read">Read Only</option>
               </select>
+            </div>
+
+            {/* Start Date */}
+            <div className="lg:col-span-1">
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">From Date</label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                />
+              </div>
+            </div>
+
+            {/* End Date */}
+            <div className="lg:col-span-1">
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">To Date</label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                />
+              </div>
             </div>
           </div>
         </div>

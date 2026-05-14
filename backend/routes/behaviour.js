@@ -595,6 +595,41 @@ router.post('/', authenticateToken, async (req, res) => {
             );
         }
 
+        // Demerit threshold notifications (5 and 10 demerits)
+        const prevDemerits = beforeEligibility.totalDemerits;
+        const newDemerits = afterEligibility.totalDemerits;
+        const crossed5 = prevDemerits < 5 && newDemerits >= 5;
+        const crossed10 = prevDemerits < 10 && newDemerits >= 10;
+
+        if (crossed5 || crossed10) {
+            const threshold = crossed10 ? 10 : 5;
+            const demeritTitle = `⚠️ Student Reached ${threshold} Demerit Points`;
+            const demeritMessage = `${student.student_name} has now accumulated ${newDemerits} demerit point${newDemerits !== 1 ? 's' : ''} (${threshold}-point threshold reached). Please review their behaviour record.`;
+
+            // Notify class teacher
+            if (classTeacher?.user_id) {
+                await createNotification(req, classTeacher.user_id, 'demerit_threshold', demeritTitle, demeritMessage, student_id, 'student');
+            }
+
+            // Notify grade head for this student's class
+            if (student.class_id) {
+                const gradeHeads = await schemaAll(req, `
+                    SELECT DISTINCT t.user_id
+                    FROM teachers t
+                    WHERE t.is_grade_head = true
+                      AND t.grade_head_for = (SELECT grade_level FROM classes WHERE id = $1)
+                `, [student.class_id]);
+                for (const gh of gradeHeads) {
+                    if (gh.user_id && gh.user_id !== req.user.id) {
+                        await createNotification(req, gh.user_id, 'demerit_threshold', demeritTitle, demeritMessage, student_id, 'student');
+                    }
+                }
+            }
+
+            // Notify admins
+            await notifySchoolAdmins(req, 'demerit_threshold', demeritTitle, demeritMessage, student_id, 'student');
+        }
+
         // Check if badge status changed and send notifications
         const badgeStatusChange = await checkBadgeStatusChange(
             req, 

@@ -333,7 +333,7 @@ const DisciplineCenter: React.FC = () => {
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-100">
-        {incidents.map((incident, index) => (
+        {filteredIncidents.map((incident, index) => (
           <motion.tr
             key={incident.id}
             initial={{ opacity: 0, y: 10 }}
@@ -419,7 +419,7 @@ const DisciplineCenter: React.FC = () => {
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-100">
-        {detentions.map((detention, index) => (
+        {filteredDetentions.map((detention, index) => (
           <motion.tr
             key={detention.id}
             initial={{ opacity: 0, y: 10 }}
@@ -477,7 +477,7 @@ const DisciplineCenter: React.FC = () => {
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-100">
-        {interventions.map((intervention, index) => (
+        {filteredInterventions.map((intervention, index) => (
           <motion.tr
             key={intervention.id}
             initial={{ opacity: 0, y: 10 }}
@@ -528,7 +528,7 @@ const DisciplineCenter: React.FC = () => {
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-100">
-        {consequences.map((consequence, index) => (
+        {filteredConsequences.map((consequence, index) => (
           <motion.tr
             key={consequence.id}
             initial={{ opacity: 0, y: 10 }}
@@ -585,7 +585,7 @@ const DisciplineCenter: React.FC = () => {
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-100">
-        {merits.map((merit, index) => (
+        {filteredMerits.map((merit, index) => (
           <motion.tr
             key={merit.id}
             initial={{ opacity: 0, y: 10 }}
@@ -646,18 +646,38 @@ const DisciplineCenter: React.FC = () => {
     }
   };
 
+  const applyFilters = (data: any[]) => {
+    return data.filter(item => {
+      const name = (item.student_name || '').toLowerCase();
+      const matchesSearch = !searchTerm || name.includes(searchTerm.toLowerCase());
+      const itemStatus = (item.status || '').toLowerCase();
+      const matchesStatus = statusFilter === 'all' || itemStatus === statusFilter.toLowerCase();
+      return matchesSearch && matchesStatus;
+    });
+  };
+
+  const filteredIncidents = applyFilters(incidents);
+  const filteredDetentions = applyFilters(detentions);
+  const filteredInterventions = applyFilters(interventions);
+  const filteredConsequences = applyFilters(consequences);
+  const filteredMerits = applyFilters(merits);
+
+  const pendingHighIncidents = incidents.filter(
+    i => i.status === 'pending' && (i.severity === 'high' || i.severity === 'critical')
+  );
+
   const getCurrentData = () => {
     switch (activeTab) {
       case 'behaviour':
-        return incidents;
+        return filteredIncidents;
       case 'detentions':
-        return detentions;
+        return filteredDetentions;
       case 'interventions':
-        return interventions;
+        return filteredInterventions;
       case 'consequences':
-        return consequences;
+        return filteredConsequences;
       case 'merits':
-        return merits;
+        return filteredMerits;
     }
   };
 
@@ -679,6 +699,31 @@ const DisciplineCenter: React.FC = () => {
           <p className="text-gray-500 mt-1">Manage behaviour, detentions, interventions, and consequences</p>
         </div>
       </motion.div>
+
+      {/* Pending High-Severity Incidents Alert */}
+      {pendingHighIncidents.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center justify-between"
+        >
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+              <AlertTriangle size={20} className="text-red-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-red-900">{pendingHighIncidents.length} High-Severity Incident{pendingHighIncidents.length > 1 ? 's' : ''} Pending Approval</p>
+              <p className="text-sm text-red-700">Review and approve or decline these incidents in the Behaviour tab below.</p>
+            </div>
+          </div>
+          <button
+            onClick={() => { setActiveTab('behaviour'); setStatusFilter('pending'); }}
+            className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-medium hover:bg-red-700 transition-colors"
+          >
+            Review Now
+          </button>
+        </motion.div>
+      )}
 
       {/* Stats Cards */}
       <motion.div

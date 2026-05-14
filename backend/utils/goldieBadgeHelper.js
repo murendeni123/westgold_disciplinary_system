@@ -1,4 +1,5 @@
 const { schemaGet, schemaAll } = require('./schemaHelper');
+const { dbAll } = require('../database/db');
 const { createNotification } = require('../routes/notifications');
 
 /**
@@ -129,25 +130,54 @@ async function sendBadgeEarnedNotifications(req, student) {
     }
   }
 
-  // Notify all admins
-  const admins = await schemaAll(req, `
-    SELECT DISTINCT u.id
-    FROM public.users u
-    WHERE u.role = 'admin' 
-      AND u.school_id = (SELECT school_id FROM public.users WHERE id = $1)
-      AND u.is_active = true
-  `, [req.user.id]);
+  // Notify grade head responsible for this student's grade level
+  if (student.class_id) {
+    const gradeHeads = await schemaAll(req, `
+      SELECT DISTINCT t.user_id
+      FROM teachers t
+      WHERE t.is_grade_head = true
+        AND t.grade_head_for = (
+          SELECT grade_level FROM classes WHERE id = $1
+        )
+    `, [student.class_id]);
 
-  for (const admin of admins) {
-    await createNotification(
-      req,
-      admin.id,
-      'goldie_badge_earned',
-      'Student Earned Goldie Badge! 🌟',
-      message,
-      student.id,
-      'student'
+    for (const gh of gradeHeads) {
+      if (gh.user_id && gh.user_id !== student.class_teacher_id) {
+        await createNotification(
+          req,
+          gh.user_id,
+          'goldie_badge_earned',
+          'Student Earned Goldie Badge! 🌟',
+          message,
+          student.id,
+          'student'
+        );
+      }
+    }
+  }
+
+  // Notify all admins
+  const schoolId = req.schoolId;
+  if (schoolId) {
+    const admins = await dbAll(
+      `SELECT DISTINCT u.id FROM public.users u
+       LEFT JOIN public.user_schools us ON u.id = us.user_id AND us.school_id = $2
+       WHERE u.role = $1 AND u.is_active = true
+         AND (u.primary_school_id = $2 OR us.school_id = $2)`,
+      ['admin', schoolId]
     );
+
+    for (const admin of admins) {
+      await createNotification(
+        req,
+        admin.id,
+        'goldie_badge_earned',
+        'Student Earned Goldie Badge! 🌟',
+        message,
+        student.id,
+        'student'
+      );
+    }
   }
 }
 
@@ -190,25 +220,54 @@ async function sendBadgeLostNotifications(req, student) {
     }
   }
 
-  // Notify all admins
-  const admins = await schemaAll(req, `
-    SELECT DISTINCT u.id
-    FROM public.users u
-    WHERE u.role = 'admin' 
-      AND u.school_id = (SELECT school_id FROM public.users WHERE id = $1)
-      AND u.is_active = true
-  `, [req.user.id]);
+  // Notify grade head responsible for this student's grade level
+  if (student.class_id) {
+    const gradeHeads = await schemaAll(req, `
+      SELECT DISTINCT t.user_id
+      FROM teachers t
+      WHERE t.is_grade_head = true
+        AND t.grade_head_for = (
+          SELECT grade_level FROM classes WHERE id = $1
+        )
+    `, [student.class_id]);
 
-  for (const admin of admins) {
-    await createNotification(
-      req,
-      admin.id,
-      'goldie_badge_lost',
-      'Student Lost Goldie Badge',
-      message,
-      student.id,
-      'student'
+    for (const gh of gradeHeads) {
+      if (gh.user_id && gh.user_id !== student.class_teacher_id) {
+        await createNotification(
+          req,
+          gh.user_id,
+          'goldie_badge_lost',
+          'Student Lost Goldie Badge',
+          message,
+          student.id,
+          'student'
+        );
+      }
+    }
+  }
+
+  // Notify all admins
+  const schoolId = req.schoolId;
+  if (schoolId) {
+    const admins = await dbAll(
+      `SELECT DISTINCT u.id FROM public.users u
+       LEFT JOIN public.user_schools us ON u.id = us.user_id AND us.school_id = $2
+       WHERE u.role = $1 AND u.is_active = true
+         AND (u.primary_school_id = $2 OR us.school_id = $2)`,
+      ['admin', schoolId]
     );
+
+    for (const admin of admins) {
+      await createNotification(
+        req,
+        admin.id,
+        'goldie_badge_lost',
+        'Student Lost Goldie Badge',
+        message,
+        student.id,
+        'student'
+      );
+    }
   }
 }
 

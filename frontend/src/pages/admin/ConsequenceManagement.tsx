@@ -91,26 +91,20 @@ const ConsequenceManagement: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [studentsRes, consequencesRes, assignmentsRes, statsRes] = await Promise.all([
+      const [studentsRes, consequencesRes, assignmentsRes, statsRes] = await Promise.allSettled([
         api.getStudents(),
         api.getAvailableConsequences(),
         api.getConsequenceAssignments(),
         api.getConsequenceStatistics()
       ]);
 
-      console.log('Students response:', studentsRes.data);
-      console.log('Consequences response:', consequencesRes.data);
-      console.log('Assignments response:', assignmentsRes.data);
-      console.log('Stats response:', statsRes.data);
-
-      setStudents(studentsRes.data || []);
-      setConsequences(consequencesRes.data || []);
-      setAssignments(assignmentsRes.data || []);
-      setStats(statsRes.data);
+      if (studentsRes.status === 'fulfilled') setStudents(studentsRes.value.data || []);
+      if (consequencesRes.status === 'fulfilled') setConsequences(consequencesRes.value.data || []);
+      if (assignmentsRes.status === 'fulfilled') setAssignments(assignmentsRes.value.data || []);
+      if (statsRes.status === 'fulfilled') setStats(statsRes.value.data);
     } catch (error: any) {
       console.error('Error fetching data:', error);
-      console.error('Error details:', error.response?.data);
-      toast.error(error.response?.data?.error || 'Failed to load data');
+      toast.error('Failed to load some data');
     } finally {
       setLoading(false);
     }
