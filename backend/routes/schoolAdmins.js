@@ -99,8 +99,8 @@ router.post('/schools/:schoolId/admins', requirePlatformAdmin, async (req, res) 
         const hashedPassword = password ? await bcrypt.hash(password, 10) : null;
 
         const result = await dbRun(
-            `INSERT INTO users (email, password_hash, name, role, primary_school_id, created_at)
-             VALUES ($1, $2, $3, 'admin', $4, CURRENT_TIMESTAMP) RETURNING id`,
+            `INSERT INTO users (email, password_hash, name, role, primary_school_id, school_id, created_at)
+             VALUES ($1, $2, $3, 'admin', $4, $4, CURRENT_TIMESTAMP) RETURNING id`,
             [email, hashedPassword, name, schoolId]
         );
 

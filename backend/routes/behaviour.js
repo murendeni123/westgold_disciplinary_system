@@ -567,6 +567,29 @@ router.post('/', authenticateToken, async (req, res) => {
                 'incident',
                 { sendEmail: true } // Send email to admins for high-severity incidents
             );
+
+            // Notify grade head for this student's class
+            if (student && student.class_id) {
+                const gradeHeads = await schemaAll(req, `
+                    SELECT DISTINCT t.user_id
+                    FROM teachers t
+                    WHERE t.is_grade_head = true
+                      AND t.grade_head_for = (SELECT grade_level FROM classes WHERE id = $1)
+                `, [student.class_id]);
+                for (const gh of gradeHeads) {
+                    if (gh.user_id && gh.user_id !== req.user.id) {
+                        await createNotification(
+                            req,
+                            gh.user_id,
+                            'high_severity_incident',
+                            '⚠️ High-Severity Incident - Your Grade',
+                            `${loggingTeacher?.teacher_name || 'A teacher'} logged a ${severity} incident for ${student.student_name}: ${String(description).trim().substring(0, 100)}. Pending admin approval.`,
+                            result.id,
+                            'incident'
+                        );
+                    }
+                }
+            }
         }
         
         // Notify logging teacher (confirmation)
