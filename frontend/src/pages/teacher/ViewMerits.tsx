@@ -73,7 +73,7 @@ const ViewMerits: React.FC = () => {
       // Prepare monthly chart data
       const monthlyData: Record<string, { merits: number; points: number }> = {};
       response.data.forEach((merit: any) => {
-        const month = new Date(merit.merit_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const month = new Date(merit.merit_date || merit.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
         if (!monthlyData[month]) {
           monthlyData[month] = { merits: 0, points: 0 };
         }

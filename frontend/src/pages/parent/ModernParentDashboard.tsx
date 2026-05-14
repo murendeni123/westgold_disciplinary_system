@@ -120,7 +120,7 @@ const ModernParentDashboard: React.FC = () => {
       });
 
       allMerits.forEach((merit: any) => {
-        const month = new Date(merit.merit_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const month = new Date(merit.merit_date || merit.date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
         if (!monthlyData[month]) {
           monthlyData[month] = { incidents: 0, merits: 0 };
         }

@@ -32,7 +32,8 @@ router.get('/', authenticateToken, async (req, res) => {
              m.merit_type_id,
              m.description,
              m.points,
-             m.date,
+             COALESCE(m.merit_date, m.date, m.date_awarded::date) as merit_date,
+             COALESCE(m.merit_date, m.date, m.date_awarded::date) as date,
              CAST(m.created_at AS TIME) as time,
              m.created_at,
              s.first_name || ' ' || s.last_name as student_name,
@@ -72,15 +73,15 @@ router.get('/', authenticateToken, async (req, res) => {
       params.push(teacher_id);
     }
     if (start_date) {
-      query += ` AND m.date >= $${paramIndex++}`;
+      query += ` AND COALESCE(m.merit_date, m.date, m.date_awarded::date) >= $${paramIndex++}`;
       params.push(start_date);
     }
     if (end_date) {
-      query += ` AND m.date <= $${paramIndex++}`;
+      query += ` AND COALESCE(m.merit_date, m.date, m.date_awarded::date) <= $${paramIndex++}`;
       params.push(end_date);
     }
 
-    query += ' ORDER BY m.date DESC';
+    query += ' ORDER BY COALESCE(m.merit_date, m.date, m.date_awarded::date) DESC NULLS LAST';
 
     console.log('Executing merits query in schema:', schema);
     const merits = await schemaAll(req, query, params);
@@ -107,7 +108,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
              m.merit_type_id,
              m.description,
              m.points,
-             m.date,
+             COALESCE(m.merit_date, m.date, m.date_awarded::date) as merit_date,
+             COALESCE(m.merit_date, m.date, m.date_awarded::date) as date,
              CAST(m.created_at AS TIME) as time,
              m.created_at,
              s.first_name || ' ' || s.last_name as student_name,
@@ -196,8 +198,8 @@ router.post('/', authenticateToken, async (req, res) => {
     console.log('Insert params:', [student_id, teacherId, merit_date, merit_type_id || null, meritTypeName, String(description).trim(), points || 1]);
     
     const result = await schemaRun(req,
-      `INSERT INTO merits (student_id, teacher_id, date, merit_type_id, merit_type, description, points)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+      `INSERT INTO merits (student_id, teacher_id, date, merit_date, merit_type_id, merit_type, description, points)
+       VALUES ($1, $2, $3, $3, $4, $5, $6, $7) RETURNING id`,
       [student_id, teacherId, merit_date, merit_type_id || null, meritTypeName, String(description).trim(), points || 1]
     );
     console.log('Merit inserted, ID:', result.id);

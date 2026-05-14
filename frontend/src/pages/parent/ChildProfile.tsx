@@ -122,11 +122,11 @@ const ChildProfile: React.FC = () => {
       // Prepare behavior trend (last 6 months)
       const monthlyBehavior: Record<string, { merits: number; incidents: number }> = {};
       [...meritsRes.data, ...incidentsRes.data].forEach((item: any) => {
-        const month = new Date(item.merit_date || item.incident_date).toLocaleDateString('en-US', { month: 'short' });
+        const month = new Date(item.merit_date || item.date || item.incident_date).toLocaleDateString('en-US', { month: 'short' });
         if (!monthlyBehavior[month]) {
           monthlyBehavior[month] = { merits: 0, incidents: 0 };
         }
-        if (item.merit_date) monthlyBehavior[month].merits++;
+        if (item.merit_date || item.points) monthlyBehavior[month].merits++;
         else monthlyBehavior[month].incidents++;
       });
 
@@ -141,7 +141,7 @@ const ChildProfile: React.FC = () => {
       meritsRes.data.slice(-5).forEach((merit: any) => {
         activities.push({
           type: 'merit',
-          date: merit.merit_date,
+          date: merit.merit_date || merit.date,
           description: `Awarded ${merit.points} merit points`,
           points: merit.points,
         });
