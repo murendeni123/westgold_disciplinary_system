@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
 import SearchableSelect from '../../components/SearchableSelect';
 import {
   Clock,
@@ -26,6 +27,9 @@ import {
   FileDown,
   Trash2 as RemoveIcon,
   UserPlus,
+  Play,
+  CheckSquare,
+  ClipboardList,
 } from 'lucide-react';
 
 interface DetentionSession {
@@ -49,6 +53,8 @@ interface Teacher {
 }
 
 const DetentionSessions: React.FC = () => {
+  const { user } = useAuth();
+  const isGradeHead = (user as any)?.isGradeHead || user?.role === 'admin';
   const [sessions, setSessions] = useState<DetentionSession[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +66,7 @@ const DetentionSessions: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [autoAssignLoading, setAutoAssignLoading] = useState<number | null>(null);
+  const [statusLoading, setStatusLoading] = useState<number | null>(null);
   const [queuedStudents, setQueuedStudents] = useState<any[]>([]);
   const [qualifyingStudents, setQualifyingStudents] = useState<any[]>([]);
   const [showQueueModal, setShowQueueModal] = useState(false);
@@ -542,46 +549,65 @@ const DetentionSessions: React.FC = () => {
             )}
 
             {/* Actions */}
-            <div className="flex items-center space-x-2">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleAutoAssign(session.id)}
-                disabled={autoAssignLoading === session.id || session.status !== 'scheduled'}
-                className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {autoAssignLoading === session.id ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    <span>Assigning...</span>
-                  </>
-                ) : (
-                  <>
-                    <Zap size={16} />
-                    <span>Auto-Assign</span>
-                  </>
+            <div className="flex flex-col gap-2">
+              {/* Start / Complete row — visible to grade heads and admins */}
+              {isGradeHead && session.status === 'scheduled' && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => handleSessionStatus(session.id, 'in_progress')}
+                  disabled={statusLoading === session.id}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-medium hover:from-amber-600 hover:to-orange-600 transition-all shadow-md disabled:opacity-50"
+                >
+                  {statusLoading === session.id ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+                  <span>Start Session</span>
+                </motion.button>
+              )}
+              {isGradeHead && session.status === 'in_progress' && (
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    if (window.confirm('Complete this session? Attendance will be locked and cannot be changed.')) {
+                      handleSessionStatus(session.id, 'completed');
+                    }
+                  }}
+                  disabled={statusLoading === session.id}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-medium hover:from-emerald-600 hover:to-teal-700 transition-all shadow-md disabled:opacity-50"
+                >
+                  {statusLoading === session.id ? <Loader2 size={16} className="animate-spin" /> : <CheckSquare size={16} />}
+                  <span>Complete Session</span>
+                </motion.button>
+              )}
+              <div className="flex items-center gap-2">
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => handleAutoAssign(session.id)}
+                  disabled={autoAssignLoading === session.id || session.status !== 'scheduled'}
+                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium hover:from-green-600 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {autoAssignLoading === session.id ? (
+                    <><Loader2 size={16} className="animate-spin" /><span>Assigning...</span></>
+                  ) : (
+                    <><Zap size={16} /><span>Auto-Assign</span></>
+                  )}
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={() => { setSelectedSession(session); setShowDetailsModal(true); }}
+                  className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-100 text-blue-600 rounded-xl font-medium hover:bg-blue-200 transition-colors"
+                >
+                  <Eye size={16} />
+                  <span>{session.status === 'in_progress' ? 'Take Register' : 'View Details'}</span>
+                </motion.button>
+                {user?.role === 'admin' && (
+                  <motion.button
+                    whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                    onClick={() => handleDeleteSession(session.id)}
+                    className="p-2 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                  >
+                    <Trash2 size={18} />
+                  </motion.button>
                 )}
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  setSelectedSession(session);
-                  setShowDetailsModal(true);
-                }}
-                className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-100 text-blue-600 rounded-xl font-medium hover:bg-blue-200 transition-colors"
-              >
-                <Eye size={16} />
-                <span>View Details</span>
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => handleDeleteSession(session.id)}
-                className="p-2 rounded-xl bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
-              >
-                <Trash2 size={18} />
-              </motion.button>
+              </div>
             </div>
           </motion.div>
         ))}
@@ -929,6 +955,7 @@ const SessionDetailsModal: React.FC<{
   const [addStudentSearch, setAddStudentSearch] = useState('');
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
   const [addingStudents, setAddingStudents] = useState(false);
+  const [markingAttendance, setMarkingAttendance] = useState<number | null>(null);
 
   useEffect(() => {
     fetchAssignedStudents();
@@ -959,6 +986,15 @@ const SessionDetailsModal: React.FC<{
       await api.removeTeacherFromSession(session.id, teacherId);
       setCoTeachers(prev => prev.filter(t => t.id !== teacherId));
     } catch { /* handled silently */ }
+  };
+
+  const handleMarkAttendance = async (assignmentId: number, status: string) => {
+    setMarkingAttendance(assignmentId);
+    try {
+      await api.markDetentionAttendance(assignmentId, status);
+      setAssignedStudents(prev => prev.map(s => s.id === assignmentId ? { ...s, status } : s));
+    } catch { /* silently handled */ }
+    finally { setMarkingAttendance(null); }
   };
 
   const handleRemoveStudent = async (assignmentId: number) => {
@@ -1164,6 +1200,17 @@ const SessionDetailsModal: React.FC<{
           )}
         </div>
 
+        {/* Take Register Banner */}
+        {session.status === 'in_progress' && (
+          <div className="mx-6 mt-4 flex items-start gap-3 bg-green-50 border border-green-200 rounded-xl p-4">
+            <ClipboardList className="text-green-600 mt-0.5 shrink-0" size={18} />
+            <div>
+              <p className="font-semibold text-green-800">Session in progress — Take Register</p>
+              <p className="text-sm text-green-700 mt-0.5">Mark each student's attendance using the buttons below. Changes are saved immediately.</p>
+            </div>
+          </div>
+        )}
+
         {/* Completed/Locked Banner */}
         {session.status === 'completed' && (
           <div className="mx-6 mt-4 flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
@@ -1336,42 +1383,51 @@ const SessionDetailsModal: React.FC<{
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-xl hover:shadow-md transition-all"
+                    className="p-4 bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-xl hover:shadow-md transition-all"
                   >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white font-bold">
-                        {student.name.charAt(0)}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                          {student.name.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-900 text-sm">{student.name}</p>
+                          <p className="text-xs text-gray-500">{student.grade} · {student.points} pts</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-gray-900">{student.name}</p>
-                        <p className="text-sm text-gray-600">{student.grade}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right flex flex-col items-end gap-1">
-                        <p className="text-sm text-gray-600">{student.reason}</p>
-                        <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">
-                          {student.points} pts
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${attendanceColors[student.status] || 'bg-gray-100 text-gray-600'}`}>
+                          {attendanceLabel[student.status] || student.status}
                         </span>
-                        {session.status === 'completed' && (
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                            attendanceColors[student.status] || 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {attendanceLabel[student.status] || student.status}
-                          </span>
+                        {session.status !== 'completed' && (
+                          <button onClick={() => handleRemoveStudent(student.id)} disabled={removingId === student.id}
+                            className="p-1 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40" title="Remove">
+                            {removingId === student.id ? <Loader2 size={13} className="animate-spin" /> : <RemoveIcon size={13} />}
+                          </button>
                         )}
                       </div>
-                      {session.status !== 'completed' && (
-                        <button
-                          onClick={() => handleRemoveStudent(student.id)}
-                          disabled={removingId === student.id}
-                          className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
-                          title="Remove from session"
-                        >
-                          {removingId === student.id ? <Loader2 size={15} className="animate-spin" /> : <RemoveIcon size={15} />}
-                        </button>
-                      )}
                     </div>
+                    {/* Attendance buttons — only shown when session is in_progress */}
+                    {session.status === 'in_progress' && (
+                      <div className="flex gap-1.5 mt-3 flex-wrap">
+                        {[
+                          { label: 'Present', value: 'attended', color: 'bg-green-100 text-green-700 hover:bg-green-200 border-green-300' },
+                          { label: 'Late', value: 'late', color: 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300' },
+                          { label: 'Absent', value: 'absent', color: 'bg-red-100 text-red-700 hover:bg-red-200 border-red-300' },
+                          { label: 'Excused', value: 'excused', color: 'bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-300' },
+                        ].map(opt => (
+                          <button key={opt.value}
+                            onClick={() => handleMarkAttendance(student.id, opt.value)}
+                            disabled={markingAttendance === student.id}
+                            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all disabled:opacity-40 ${
+                              student.status === opt.value ? `${opt.color} ring-2 ring-offset-1 ring-current` : `${opt.color} opacity-70`
+                            }`}>
+                            {markingAttendance === student.id ? <Loader2 size={11} className="animate-spin" /> : null}
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </motion.div>
                 ));
               })()}

@@ -217,10 +217,13 @@ router.put('/sessions/:id/status', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Detention session not found' });
     }
 
-    // Check authorization (admin, primary teacher, or any co-teacher)
+    // Check authorization (admin, grade heads, primary teacher, or any co-teacher)
     if (req.user.role !== 'admin') {
-      const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
-      let authorized = teacher && Number(teacher.id) === Number(session.teacher_on_duty_id);
+      const teacher = await schemaGet(req, 'SELECT id, is_grade_head FROM teachers WHERE user_id = $1', [req.user.id]);
+      let authorized = !!(teacher && teacher.is_grade_head);
+      if (!authorized && teacher) {
+        authorized = Number(teacher.id) === Number(session.teacher_on_duty_id);
+      }
       if (!authorized && teacher) {
         try {
           const coTeacher = await schemaGet(req, `
@@ -231,7 +234,7 @@ router.put('/sessions/:id/status', authenticateToken, async (req, res) => {
         } catch { /* table may not exist yet */ }
       }
       if (!authorized) {
-        return res.status(403).json({ error: 'Only assigned teachers or admin can update session status' });
+        return res.status(403).json({ error: 'Only assigned teachers, grade heads, or admin can update session status' });
       }
     }
 
@@ -402,10 +405,13 @@ router.put('/assignments/:id/attendance', authenticateToken, async (req, res) =>
       });
     }
 
-    // Check authorization: admin, primary teacher, or any co-teacher on this session
+    // Check authorization: admin, grade heads, primary teacher, or any co-teacher on this session
     if (req.user.role !== 'admin') {
-      const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
-      let authorized = teacher && Number(teacher.id) === Number(assignment.teacher_on_duty_id);
+      const teacher = await schemaGet(req, 'SELECT id, is_grade_head FROM teachers WHERE user_id = $1', [req.user.id]);
+      let authorized = !!(teacher && teacher.is_grade_head);
+      if (!authorized && teacher) {
+        authorized = Number(teacher.id) === Number(assignment.teacher_on_duty_id);
+      }
       if (!authorized && teacher) {
         try {
           const coTeacher = await schemaGet(req, `
@@ -416,7 +422,7 @@ router.put('/assignments/:id/attendance', authenticateToken, async (req, res) =>
         } catch { /* junction table not yet created */ }
       }
       if (!authorized) {
-        return res.status(403).json({ error: 'Only assigned teachers or admin can mark attendance' });
+        return res.status(403).json({ error: 'Only assigned teachers, grade heads, or admin can mark attendance' });
       }
     }
 
