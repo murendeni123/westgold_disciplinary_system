@@ -314,6 +314,7 @@ export const api = {
   markDetentionAttendance: (assignmentId: number, attendance_status: string, notes?: string) => 
     axiosInstance.put(`/detentions/assignments/${assignmentId}/attendance`, { attendance_status, notes }),
   deleteDetention: (id: number) => axiosInstance.delete(`/detentions/${id}`),
+  removeDetentionAssignment: (assignmentId: number) => axiosInstance.delete(`/detentions/assignments/${assignmentId}`),
   downloadDetentionReport: (id: number) =>
     axiosInstance.get(`/detentions/${id}/report/excel`, { responseType: 'blob' }),
   getSessionTeachers: (id: number) => axiosInstance.get(`/detentions/${id}/teachers`),

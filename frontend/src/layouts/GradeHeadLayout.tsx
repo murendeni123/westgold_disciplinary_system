@@ -98,7 +98,6 @@ const GradeHeadLayout: React.FC = () => {
         { name: 'Discipline Center', path: '/grade-head/discipline' },
         { name: 'Discipline Rules', path: '/grade-head/discipline-rules' },
         { name: 'Detention Sessions', path: '/grade-head/detention-sessions' },
-        { name: 'Consequences', path: '/grade-head/consequences' },
         { name: 'Consequence Management', path: '/grade-head/consequence-management' },
         { name: 'Merits & Demerits', path: '/grade-head/merits' }
       ]

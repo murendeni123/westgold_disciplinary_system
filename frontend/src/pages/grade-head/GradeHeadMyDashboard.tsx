@@ -208,8 +208,8 @@ const GradeHeadMyDashboard: React.FC = () => {
                 {[
                   { label: 'Log Incident', path: '/grade-head/behaviour/log', color: 'text-red-600 bg-red-50 hover:bg-red-100', icon: AlertTriangle },
                   { label: 'Award Merit', path: '/grade-head/merits/award', color: 'text-green-600 bg-green-50 hover:bg-green-100', icon: Award },
-                  { label: 'View My Class', path: `/grade-head/classes/${myClass.id}`, color: 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100', icon: BookOpen },
-                  { label: 'View Students', path: '/grade-head/students', color: 'text-purple-600 bg-purple-50 hover:bg-purple-100', icon: Users },
+                  { label: 'Assign Consequence', path: '/grade-head/consequence-management', color: 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100', icon: Shield },
+                  { label: 'Reports', path: '/grade-head/reports', color: 'text-purple-600 bg-purple-50 hover:bg-purple-100', icon: BookOpen },
                 ].map((action) => (
                   <button
                     key={action.path}

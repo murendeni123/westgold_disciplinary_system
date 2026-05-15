@@ -923,6 +923,11 @@ const SessionDetailsModal: React.FC<{
   const [addingTeacher, setAddingTeacher] = useState(false);
   const [newCoTeacherId, setNewCoTeacherId] = useState<string>('');
   const [coTeacherSaving, setCoTeacherSaving] = useState(false);
+  const [removingId, setRemovingId] = useState<number | null>(null);
+  const [showAddStudent, setShowAddStudent] = useState(false);
+  const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [addStudentSearch, setAddStudentSearch] = useState('');
+  const [addingStudentId, setAddingStudentId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchAssignedStudents();
@@ -955,6 +960,37 @@ const SessionDetailsModal: React.FC<{
     } catch { /* handled silently */ }
   };
 
+  const handleRemoveStudent = async (assignmentId: number) => {
+    if (!window.confirm('Remove this student from the detention session?')) return;
+    setRemovingId(assignmentId);
+    try {
+      await api.removeDetentionAssignment(assignmentId);
+      setAssignedStudents(prev => prev.filter(s => s.id !== assignmentId));
+      if (onStudentsRefresh) onStudentsRefresh();
+    } catch { /* silently handled */ }
+    finally { setRemovingId(null); }
+  };
+
+  const handleOpenAddStudent = async () => {
+    setShowAddStudent(true);
+    setAddStudentSearch('');
+    try {
+      const res = await api.getStudents();
+      setAllStudents(res.data || []);
+    } catch { setAllStudents([]); }
+  };
+
+  const handleAddStudent = async (studentId: number) => {
+    setAddingStudentId(studentId);
+    try {
+      await api.assignToDetention(session.id, { student_id: studentId, reason: 'Manually assigned by admin' });
+      await fetchAssignedStudents();
+      if (onStudentsRefresh) onStudentsRefresh();
+      setShowAddStudent(false);
+    } catch { /* silently handled */ }
+    finally { setAddingStudentId(null); }
+  };
+
   const handleDownloadReport = async () => {
     try {
       const response = await api.downloadDetentionReport(session.id);
@@ -977,12 +1013,14 @@ const SessionDetailsModal: React.FC<{
       const detention = response.data;
       const students = (detention.assignments || []).map((assignment: any) => ({
         id: assignment.id,
+        student_id: assignment.student_id,
         student_number: assignment.student_number || '',
         name: assignment.student_name || 'Unknown Student',
         grade: `Grade ${assignment.grade_level || 'N/A'}`,
-        reason: assignment.reason || 'Not specified',
+        reason: assignment.notes || assignment.reason || 'Not specified',
         status: assignment.status || 'assigned',
-        attendance_time: assignment.attendance_time
+        attendance_time: assignment.attendance_time,
+        points: assignment.total_demerit_points ?? 0,
       }));
       setAssignedStudents(students);
     } catch (error: any) {
@@ -1295,17 +1333,29 @@ const SessionDetailsModal: React.FC<{
                         <p className="text-sm text-gray-600">{student.grade}</p>
                       </div>
                     </div>
-                    <div className="text-right flex flex-col items-end gap-1">
-                      <p className="text-sm text-gray-600">{student.reason}</p>
-                      <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">
-                        {student.points} pts
-                      </span>
-                      {session.status === 'completed' && (
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                          attendanceColors[student.status] || 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {attendanceLabel[student.status] || student.status}
+                    <div className="flex items-center gap-3">
+                      <div className="text-right flex flex-col items-end gap-1">
+                        <p className="text-sm text-gray-600">{student.reason}</p>
+                        <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">
+                          {student.points} pts
                         </span>
+                        {session.status === 'completed' && (
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                            attendanceColors[student.status] || 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {attendanceLabel[student.status] || student.status}
+                          </span>
+                        )}
+                      </div>
+                      {session.status !== 'completed' && (
+                        <button
+                          onClick={() => handleRemoveStudent(student.id)}
+                          disabled={removingId === student.id}
+                          className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                          title="Remove from session"
+                        >
+                          {removingId === student.id ? <Loader2 size={15} className="animate-spin" /> : <RemoveIcon size={15} />}
+                        </button>
                       )}
                     </div>
                   </motion.div>
@@ -1314,6 +1364,53 @@ const SessionDetailsModal: React.FC<{
             </div>
           )}
         </div>
+
+        {/* Add Student Modal */}
+        {showAddStudent && (
+          <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4" onClick={() => setShowAddStudent(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 className="font-bold text-gray-900">Add Student to Session</h3>
+                <button onClick={() => setShowAddStudent(false)} className="p-1 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
+              </div>
+              <div className="p-4">
+                <div className="relative mb-3">
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={addStudentSearch}
+                    onChange={e => setAddStudentSearch(e.target.value)}
+                    placeholder="Search students..."
+                    className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
+                    autoFocus
+                  />
+                </div>
+                <div className="overflow-y-auto max-h-72 space-y-1">
+                  {allStudents
+                    .filter((s: any) => !addStudentSearch || (`${s.first_name} ${s.last_name}`).toLowerCase().includes(addStudentSearch.toLowerCase()) || (s.student_id || '').toLowerCase().includes(addStudentSearch.toLowerCase()))
+                    .filter((s: any) => !assignedStudents.some(a => a.student_id === s.id))
+                    .map((s: any) => (
+                      <button
+                        key={s.id}
+                        onClick={() => handleAddStudent(s.id)}
+                        disabled={addingStudentId === s.id}
+                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-purple-50 transition-colors text-left disabled:opacity-50"
+                      >
+                        <div>
+                          <p className="font-medium text-gray-900 text-sm">{s.first_name} {s.last_name}</p>
+                          <p className="text-xs text-gray-500">{s.student_id} · {s.class_name || 'No class'}</p>
+                        </div>
+                        {addingStudentId === s.id ? <Loader2 size={15} className="animate-spin text-purple-500" /> : <UserPlus size={15} className="text-purple-400" />}
+                      </button>
+                    ))}
+                  {allStudents.filter((s: any) => !addStudentSearch || (`${s.first_name} ${s.last_name}`).toLowerCase().includes(addStudentSearch.toLowerCase())).length === 0 && (
+                    <p className="text-center text-sm text-gray-400 py-6">No students found</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="p-6 border-t border-gray-100 bg-gray-50">
@@ -1329,6 +1426,17 @@ const SessionDetailsModal: React.FC<{
               <span>Download Register</span>
             </motion.button>
 
+            {session.status !== 'completed' && (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleOpenAddStudent}
+                className="flex items-center space-x-2 px-5 py-3 bg-white border-2 border-purple-400 text-purple-700 rounded-xl font-medium hover:bg-purple-50 transition-all"
+              >
+                <UserPlus size={18} />
+                <span>Add Student</span>
+              </motion.button>
+            )}
             {onAutoAssign && session.status === 'scheduled' && (
               <motion.button
                 whileHover={{ scale: 1.02 }}

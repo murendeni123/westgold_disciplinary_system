@@ -875,7 +875,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
              s.student_id        AS student_number,
              TRIM(COALESCE(s.first_name, '') || ' ' || COALESCE(s.last_name, '')) AS student_name,
              c.grade_level,
-             c.class_name
+             c.class_name,
+             COALESCE((SELECT SUM(bi.points_deducted) FROM behaviour_incidents bi WHERE bi.student_id = s.id AND bi.status != 'resolved'), 0) AS total_demerit_points
       FROM detention_assignments da
       INNER JOIN students s ON da.student_id = s.id
       LEFT  JOIN classes  c ON s.class_id    = c.id
@@ -1650,6 +1651,22 @@ router.post('/recurring', authenticateToken, requireRole('admin'), async (req, r
   } catch (error) {
     console.error('Error creating recurring detentions:', error);
     res.status(500).json({ error: 'Internal server error', details: error.message });
+  }
+});
+
+// Remove a student from a detention session
+router.delete('/assignments/:assignmentId', authenticateToken, requireRole('admin'), async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    if (!schema) return res.status(403).json({ error: 'School context required' });
+    const { assignmentId } = req.params;
+    const existing = await schemaGet(req, 'SELECT id FROM detention_assignments WHERE id = $1', [assignmentId]);
+    if (!existing) return res.status(404).json({ error: 'Assignment not found' });
+    await schemaRun(req, 'DELETE FROM detention_assignments WHERE id = $1', [assignmentId]);
+    res.json({ message: 'Student removed from detention session' });
+  } catch (error) {
+    console.error('Error removing detention assignment:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

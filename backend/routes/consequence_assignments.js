@@ -226,9 +226,10 @@ router.post('/assign', authenticateToken, requireRole('admin', 'teacher'), async
       WHERE ca.id = $1
     `, [result.id]);
 
+    const consequenceLabel = consequence_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
     // Notify parent if exists
     if (student.parent_id) {
-      const consequenceLabel = consequence_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
       await createNotification(
         req,
         student.parent_id,
@@ -240,17 +241,46 @@ router.post('/assign', authenticateToken, requireRole('admin', 'teacher'), async
       );
     }
 
-    // Notify admins for suspensions
-    if (consequence_type === 'suspension') {
-      await notifySchoolAdmins(
+    // Notify the class teacher (if different from assigner)
+    const classTeacher = await schemaGet(req, `
+      SELECT t.user_id FROM students s
+      JOIN classes c ON s.class_id = c.id
+      JOIN teachers t ON c.teacher_id = t.id
+      WHERE s.id = $1
+    `, [student_id]);
+    if (classTeacher && classTeacher.user_id && classTeacher.user_id !== req.user.id) {
+      await createNotification(
         req,
-        'suspension_assigned',
-        '⚠️ Suspension Assigned',
-        `${student.student_name} has been suspended. Reason: ${reason}`,
+        classTeacher.user_id,
+        'consequence',
+        `${consequenceLabel} Logged for Your Student`,
+        `${student.student_name} has been assigned a ${consequenceLabel}. Reason: ${reason}. Assigned by: ${req.user.name || 'Staff'}.`,
         result.id,
         'consequence'
       );
     }
+
+    // Notify admins for all consequence types
+    const adminTitle = consequence_type === 'suspension' ? '⚠️ Suspension Assigned' : `${consequenceLabel} Logged`;
+    await notifySchoolAdmins(
+      req,
+      'consequence_assigned',
+      adminTitle,
+      `${student.student_name} has been assigned a ${consequenceLabel}. Reason: ${reason}. Assigned by: ${req.user.name || 'Staff'}.`,
+      result.id,
+      'consequence'
+    );
+
+    // Confirm to the person who logged it
+    await createNotification(
+      req,
+      req.user.id,
+      'consequence',
+      `Consequence Logged Successfully`,
+      `You have logged a ${consequenceLabel} for ${student.student_name}. Reason: ${reason}.`,
+      result.id,
+      'consequence'
+    );
 
     res.status(201).json(assignment);
   } catch (error) {
@@ -311,12 +341,21 @@ router.put('/:id', authenticateToken, requireRole('admin', 'teacher'), async (re
   }
 });
 
-// Delete consequence assignment (admin only)
-router.delete('/:id', authenticateToken, requireRole('admin'), async (req, res) => {
+// Delete consequence assignment (admin or teacher who assigned it)
+router.delete('/:id', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
   try {
     const schema = getSchema(req);
     if (!schema) {
       return res.status(403).json({ error: 'School context required' });
+    }
+
+    // Teachers can only delete their own assignments
+    if (req.user.role === 'teacher') {
+      const existing = await schemaGet(req, 'SELECT id, assigned_by FROM consequence_assignments WHERE id = $1', [req.params.id]);
+      if (!existing) return res.status(404).json({ error: 'Consequence not found' });
+      if (existing.assigned_by !== req.user.id) {
+        return res.status(403).json({ error: 'You can only delete your own consequence assignments' });
+      }
     }
 
     await schemaRun(req, 'DELETE FROM consequence_assignments WHERE id = $1', [req.params.id]);

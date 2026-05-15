@@ -202,7 +202,6 @@ function App() {
             <Route path="discipline" element={<DisciplineCenter />} />
             <Route path="discipline-rules" element={<DisciplineRules />} />
             <Route path="detention-sessions" element={<DetentionSessions />} />
-            <Route path="consequences" element={<AdminConsequences />} />
             <Route path="consequence-management" element={<ConsequenceManagement />} />
             <Route path="merits" element={<MeritsDemerits />} />
             <Route path="reports" element={<ReportsAnalytics />} />

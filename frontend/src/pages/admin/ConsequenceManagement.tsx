@@ -15,7 +15,8 @@ import {
   TrendingUp,
   BarChart3,
   Users,
-  Eye
+  Eye,
+  Trash2
 } from 'lucide-react';
 import SearchableSelect from '../../components/SearchableSelect';
 
@@ -74,6 +75,7 @@ const ConsequenceManagement: React.FC = () => {
   const [selectedStudent, setSelectedStudent] = useState<number | null>(null);
   const [evaluation, setEvaluation] = useState<any>(null);
   const [showEvaluationModal, setShowEvaluationModal] = useState(false);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const [formData, setFormData] = useState({
     student_id: '',
@@ -107,6 +109,20 @@ const ConsequenceManagement: React.FC = () => {
       toast.error('Failed to load some data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteAssignment = async (id: number) => {
+    if (!window.confirm('Delete this consequence? This cannot be undone.')) return;
+    setDeletingId(id);
+    try {
+      await api.deleteConsequenceAssignment(id);
+      setAssignments(prev => prev.filter(a => a.id !== id));
+      toast.success('Consequence deleted');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Failed to delete consequence');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -382,18 +398,28 @@ const ConsequenceManagement: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex flex-col items-end gap-1">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${getConsequenceColor(assignment.consequence_type)}`}>
                       {assignment.consequence_type.replace('_', ' ').toUpperCase()}
                     </span>
-                    <p className="text-xs text-gray-500 mt-2">
+                    <p className="text-xs text-gray-500">
                       {new Date(assignment.assigned_at).toLocaleDateString()}
                     </p>
                     {assignment.start_date && assignment.end_date && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500">
                         {new Date(assignment.start_date).toLocaleDateString()} - {new Date(assignment.end_date).toLocaleDateString()}
                       </p>
                     )}
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => handleDeleteAssignment(assignment.id)}
+                      disabled={deletingId === assignment.id}
+                      className="mt-1 p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+                      title="Delete consequence"
+                    >
+                      {deletingId === assignment.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                    </motion.button>
                   </div>
                 </div>
               </motion.div>

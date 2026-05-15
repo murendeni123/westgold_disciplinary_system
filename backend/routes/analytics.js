@@ -449,16 +449,13 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 LIMIT 10
             `);
 
-            // Teachers logging most incidents
+            // Teachers logging most incidents (use subqueries to avoid cross-join inflation)
             const topTeachers = await schemaAll(req, `
                 SELECT t.id, t.name,
-                       COUNT(bi.id) as incident_count,
-                       COUNT(m.id) as merit_count
+                       (SELECT COUNT(*) FROM behaviour_incidents WHERE teacher_id = t.id) as incident_count,
+                       (SELECT COUNT(*) FROM merits WHERE teacher_id = t.id) as merit_count
                 FROM teachers t
-                LEFT JOIN behaviour_incidents bi ON t.id = bi.teacher_id
-                LEFT JOIN merits m ON t.id = m.teacher_id
                 WHERE t.is_active = true
-                GROUP BY t.id
                 ORDER BY incident_count DESC, merit_count DESC
                 LIMIT 10
             `);
