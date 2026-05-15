@@ -927,7 +927,8 @@ const SessionDetailsModal: React.FC<{
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [addStudentSearch, setAddStudentSearch] = useState('');
-  const [addingStudentId, setAddingStudentId] = useState<number | null>(null);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
+  const [addingStudents, setAddingStudents] = useState(false);
 
   useEffect(() => {
     fetchAssignedStudents();
@@ -974,21 +975,34 @@ const SessionDetailsModal: React.FC<{
   const handleOpenAddStudent = async () => {
     setShowAddStudent(true);
     setAddStudentSearch('');
+    setSelectedStudentIds([]);
     try {
       const res = await api.getStudents();
       setAllStudents(res.data || []);
     } catch { setAllStudents([]); }
   };
 
-  const handleAddStudent = async (studentId: number) => {
-    setAddingStudentId(studentId);
+  const handleToggleStudent = (studentId: number) => {
+    setSelectedStudentIds(prev =>
+      prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
+    );
+  };
+
+  const handleAddSelectedStudents = async () => {
+    if (selectedStudentIds.length === 0) return;
+    setAddingStudents(true);
     try {
-      await api.assignToDetention(session.id, { student_id: studentId, reason: 'Manually assigned by admin' });
+      await Promise.all(
+        selectedStudentIds.map(id =>
+          api.assignToDetention(session.id, { student_id: id, reason: 'Manually assigned' })
+        )
+      );
       await fetchAssignedStudents();
       if (onStudentsRefresh) onStudentsRefresh();
       setShowAddStudent(false);
+      setSelectedStudentIds([]);
     } catch { /* silently handled */ }
-    finally { setAddingStudentId(null); }
+    finally { setAddingStudents(false); }
   };
 
   const handleDownloadReport = async () => {
@@ -1365,47 +1379,61 @@ const SessionDetailsModal: React.FC<{
           )}
         </div>
 
-        {/* Add Student Modal */}
+        {/* Add Students Modal — multi-select */}
         {showAddStudent && (
-          <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4" onClick={() => setShowAddStudent(false)}>
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4" onClick={() => !addingStudents && setShowAddStudent(false)}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col" onClick={e => e.stopPropagation()}>
               <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="font-bold text-gray-900">Add Student to Session</h3>
-                <button onClick={() => setShowAddStudent(false)} className="p-1 hover:bg-gray-100 rounded-lg"><X size={18} /></button>
-              </div>
-              <div className="p-4">
-                <div className="relative mb-3">
-                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={addStudentSearch}
-                    onChange={e => setAddStudentSearch(e.target.value)}
-                    placeholder="Search students..."
-                    className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300"
-                    autoFocus
-                  />
+                <div>
+                  <h3 className="font-bold text-gray-900">Add Students to Session</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Select students then confirm to add all at once</p>
                 </div>
-                <div className="overflow-y-auto max-h-72 space-y-1">
-                  {allStudents
+                <button onClick={() => setShowAddStudent(false)} disabled={addingStudents} className="p-1 hover:bg-gray-100 rounded-lg disabled:opacity-40"><X size={18} /></button>
+              </div>
+              <div className="px-4 pt-3 pb-2">
+                <div className="relative">
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input type="text" value={addStudentSearch} onChange={e => setAddStudentSearch(e.target.value)}
+                    placeholder="Search by name or student number..." autoFocus
+                    className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-300" />
+                </div>
+              </div>
+              <div className="overflow-y-auto flex-1 px-4 pb-2 space-y-1">
+                {(() => {
+                  const filtered = allStudents
                     .filter((s: any) => !addStudentSearch || (`${s.first_name} ${s.last_name}`).toLowerCase().includes(addStudentSearch.toLowerCase()) || (s.student_id || '').toLowerCase().includes(addStudentSearch.toLowerCase()))
-                    .filter((s: any) => !assignedStudents.some(a => a.student_id === s.id))
-                    .map((s: any) => (
-                      <button
-                        key={s.id}
-                        onClick={() => handleAddStudent(s.id)}
-                        disabled={addingStudentId === s.id}
-                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-purple-50 transition-colors text-left disabled:opacity-50"
-                      >
-                        <div>
-                          <p className="font-medium text-gray-900 text-sm">{s.first_name} {s.last_name}</p>
+                    .filter((s: any) => !assignedStudents.some(a => a.student_id === s.id));
+                  if (filtered.length === 0) return <p className="text-center text-sm text-gray-400 py-8">No students found</p>;
+                  return filtered.map((s: any) => {
+                    const isSelected = selectedStudentIds.includes(s.id);
+                    return (
+                      <button key={s.id} onClick={() => handleToggleStudent(s.id)} disabled={addingStudents}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left disabled:opacity-50 border ${isSelected ? 'bg-purple-50 border-purple-200' : 'hover:bg-gray-50 border-transparent'}`}>
+                        <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? 'bg-purple-600 border-purple-600' : 'border-gray-300'}`}>
+                          {isSelected && <CheckCircle size={12} className="text-white" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 text-sm truncate">{s.first_name} {s.last_name}</p>
                           <p className="text-xs text-gray-500">{s.student_id} · {s.class_name || 'No class'}</p>
                         </div>
-                        {addingStudentId === s.id ? <Loader2 size={15} className="animate-spin text-purple-500" /> : <UserPlus size={15} className="text-purple-400" />}
                       </button>
-                    ))}
-                  {allStudents.filter((s: any) => !addStudentSearch || (`${s.first_name} ${s.last_name}`).toLowerCase().includes(addStudentSearch.toLowerCase())).length === 0 && (
-                    <p className="text-center text-sm text-gray-400 py-6">No students found</p>
-                  )}
+                    );
+                  });
+                })()}
+              </div>
+              <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex items-center gap-3">
+                {selectedStudentIds.length > 0
+                  ? <span className="px-2.5 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold">{selectedStudentIds.length} selected</span>
+                  : <span className="text-xs text-gray-400">No students selected</span>}
+                <div className="flex gap-2 ml-auto">
+                  <button onClick={() => setShowAddStudent(false)} disabled={addingStudents}
+                    className="px-4 py-2 text-sm text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-40">
+                    Cancel
+                  </button>
+                  <button onClick={handleAddSelectedStudents} disabled={selectedStudentIds.length === 0 || addingStudents}
+                    className="flex items-center gap-2 px-4 py-2 text-sm bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-medium hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-40">
+                    {addingStudents ? <><Loader2 size={14} className="animate-spin" /> Adding...</> : <><UserPlus size={14} /> Add {selectedStudentIds.length > 0 ? `${selectedStudentIds.length} ` : ''}Student{selectedStudentIds.length !== 1 ? 's' : ''}</>}
+                  </button>
                 </div>
               </div>
             </div>
