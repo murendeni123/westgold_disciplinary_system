@@ -219,6 +219,22 @@ const DetentionSessions: React.FC = () => {
     }
   };
 
+  const handleSessionStatus = async (sessionId: number, newStatus: 'in_progress' | 'completed') => {
+    setStatusLoading(sessionId);
+    try {
+      await api.updateDetentionSessionStatus(sessionId, newStatus);
+      setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, status: newStatus } : s));
+      if (selectedSession?.id === sessionId) {
+        setSelectedSession(prev => prev ? { ...prev, status: newStatus } : prev);
+      }
+      setMessage({ type: 'success', text: newStatus === 'in_progress' ? 'Session started successfully' : 'Session completed and locked' });
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error?.response?.data?.error || 'Failed to update session status' });
+    } finally {
+      setStatusLoading(null);
+    }
+  };
+
   const handleAutoAssign = async (sessionId: number) => {
     try {
       setAutoAssignLoading(sessionId);
