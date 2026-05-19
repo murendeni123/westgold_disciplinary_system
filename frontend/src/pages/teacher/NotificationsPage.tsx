@@ -17,6 +17,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface Notification {
   id: number;
@@ -31,6 +32,7 @@ interface Notification {
 
 const NotificationsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -214,9 +216,9 @@ const NotificationsPage: React.FC = () => {
       >
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-            Notifications
+            {t('notifications.title')}
           </h1>
-          <p className="text-gray-600 mt-2">Stay updated with all your notifications</p>
+          <p className="text-gray-600 mt-2">{t('teacher.notificationsSubtitle')}</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.05 }}

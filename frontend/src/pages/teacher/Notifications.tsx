@@ -6,9 +6,11 @@ import { Bell, Check, Trash2, Filter } from 'lucide-react';
 import Select from '../../components/Select';
 import Input from '../../components/Input';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Notifications: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -96,9 +98,9 @@ const Notifications: React.FC = () => {
       >
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-            Notifications
+            {t('notifications.title')}
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">View and manage your notifications</p>
+          <p className="text-gray-600 mt-2 text-lg">{t('notifications.subtitle')}</p>
         </div>
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button

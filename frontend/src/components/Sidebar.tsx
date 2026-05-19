@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import {
   LayoutDashboard,
   Users,
@@ -32,52 +33,53 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
   const location = useLocation();
   const { user, logout } = useAuth();
   const { customizations, getImageUrl } = useSchoolTheme();
+  const { t } = useLanguage();
 
   const adminMenu = [
-    { path: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/admin/students', label: 'Students', icon: Users },
-    { path: '/admin/classes', label: 'Classes', icon: BookOpen },
-    { path: '/admin/teachers', label: 'Teachers', icon: UserCheck },
-    { path: '/admin/parents', label: 'Parents', icon: Users },
-    { path: '/admin/behaviour-dashboard', label: 'Behaviour Dashboard', icon: AlertTriangle },
-    { path: '/admin/discipline', label: 'Discipline Center', icon: Scale },
-    { path: '/admin/discipline-rules', label: 'Discipline Rules', icon: Shield },
-    { path: '/admin/detention-sessions', label: 'Detention Sessions', icon: Clock },
-    { path: '/admin/consequence-management', label: 'Assign Consequences', icon: Scale },
-    { path: '/admin/merits', label: 'Merits & Recognition', icon: Award },
-    { path: '/admin/reports', label: 'Reports & Analytics', icon: BarChart3 },
-    { path: '/admin/smart-import', label: 'Smart Import', icon: Upload },
-    { path: '/admin/notifications', label: 'Notifications', icon: Bell },
-    { path: '/admin/settings', label: 'Settings', icon: Settings },
+    { path: '/admin', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { path: '/admin/students', label: t('nav.students'), icon: Users },
+    { path: '/admin/classes', label: t('nav.classes'), icon: BookOpen },
+    { path: '/admin/teachers', label: t('nav.teachers'), icon: UserCheck },
+    { path: '/admin/parents', label: t('nav.parents'), icon: Users },
+    { path: '/admin/behaviour-dashboard', label: t('nav.behaviourDashboard'), icon: AlertTriangle },
+    { path: '/admin/discipline', label: t('nav.disciplineCenter'), icon: Scale },
+    { path: '/admin/discipline-rules', label: t('nav.disciplineRules'), icon: Shield },
+    { path: '/admin/detention-sessions', label: t('nav.detentionSessions'), icon: Clock },
+    { path: '/admin/consequence-management', label: t('nav.consequenceManagement'), icon: Scale },
+    { path: '/admin/merits', label: t('nav.meritsRecognition'), icon: Award },
+    { path: '/admin/reports', label: t('nav.reports'), icon: BarChart3 },
+    { path: '/admin/smart-import', label: t('nav.smartImport'), icon: Upload },
+    { path: '/admin/notifications', label: t('nav.notifications'), icon: Bell },
+    { path: '/admin/settings', label: t('nav.settings'), icon: Settings },
   ];
 
   const teacherMenu = [
-    { path: '/teacher', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/teacher/classes', label: 'My Classes', icon: BookOpen },
-    { path: '/teacher/behaviour', label: 'Behaviour', icon: AlertTriangle },
-    { path: '/teacher/merits', label: 'Merits', icon: Award },
-    { path: '/teacher/detentions', label: 'Detentions', icon: Clock },
-    { path: '/teacher/interventions', label: 'Interventions', icon: Shield },
-    { path: '/teacher/assign-consequence', label: 'Assign Consequences', icon: Scale },
-    { path: '/teacher/reports', label: 'Reports', icon: BarChart3 },
-    { path: '/teacher/notifications', label: 'Notifications', icon: Bell },
-    { path: '/teacher/settings', label: 'Settings', icon: Settings },
+    { path: '/teacher', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { path: '/teacher/classes', label: t('nav.myClasses'), icon: BookOpen },
+    { path: '/teacher/behaviour', label: t('nav.behaviour'), icon: AlertTriangle },
+    { path: '/teacher/merits', label: t('nav.merits'), icon: Award },
+    { path: '/teacher/detentions', label: t('nav.detentions'), icon: Clock },
+    { path: '/teacher/interventions', label: t('nav.interventions'), icon: Shield },
+    { path: '/teacher/assign-consequence', label: t('nav.assignConsequence'), icon: Scale },
+    { path: '/teacher/reports', label: t('nav.reports'), icon: BarChart3 },
+    { path: '/teacher/notifications', label: t('nav.notifications'), icon: Bell },
+    { path: '/teacher/settings', label: t('nav.settings'), icon: Settings },
   ];
 
   const parentMenu = [
-    { path: '/parent', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/parent/link-school', label: 'Link School', icon: Building2 },
-    { path: '/parent/link-child', label: 'Link Child', icon: GraduationCap },
-    { path: '/parent/children', label: 'My Children', icon: Users },
-    { path: '/parent/behaviour', label: 'Behaviour', icon: AlertTriangle },
-    { path: '/parent/merits', label: 'Merits', icon: Award },
-    { path: '/parent/detentions', label: 'Detentions', icon: AlertTriangle },
-    { path: '/parent/interventions', label: 'Interventions', icon: AlertTriangle },
-    { path: '/parent/consequences', label: 'Consequences', icon: AlertTriangle },
-    { path: '/parent/messages', label: 'Messages', icon: MessageSquare },
-    { path: '/parent/notifications', label: 'Notifications', icon: Bell },
-    { path: '/parent/profile', label: 'Profile', icon: UserCheck },
-    { path: '/parent/settings', label: 'Settings', icon: Settings },
+    { path: '/parent', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { path: '/parent/link-school', label: t('nav.linkSchool'), icon: Building2 },
+    { path: '/parent/link-child', label: t('nav.linkChild'), icon: GraduationCap },
+    { path: '/parent/children', label: t('nav.myChildren'), icon: Users },
+    { path: '/parent/behaviour', label: t('nav.behaviour'), icon: AlertTriangle },
+    { path: '/parent/merits', label: t('nav.merits'), icon: Award },
+    { path: '/parent/detentions', label: t('nav.detentions'), icon: AlertTriangle },
+    { path: '/parent/interventions', label: t('nav.interventions'), icon: AlertTriangle },
+    { path: '/parent/consequences', label: t('nav.consequences'), icon: AlertTriangle },
+    { path: '/parent/messages', label: t('nav.messages'), icon: MessageSquare },
+    { path: '/parent/notifications', label: t('nav.notifications'), icon: Bell },
+    { path: '/parent/profile', label: t('nav.profile'), icon: UserCheck },
+    { path: '/parent/settings', label: t('nav.settings'), icon: Settings },
   ];
 
   const menuItems = user?.role === 'admin' ? adminMenu : user?.role === 'teacher' ? teacherMenu : parentMenu;
@@ -139,7 +141,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
                   )}
                   <div>
                     <h1 className="font-bold text-xl text-white drop-shadow-lg">DMS</h1>
-                    <p className="text-xs text-white/80 capitalize font-medium">{user?.role} Portal</p>
+                    <p className="text-xs text-white/80 capitalize font-medium">{user?.role === 'admin' ? t('portals.admin') : user?.role === 'teacher' ? t('portals.teacher') : t('portals.parent')}</p>
                   </div>
                 </div>
 
@@ -217,7 +219,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
               <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gray-100 flex-shrink-0">
                 <LogOut size={18} />
               </div>
-              <span className="font-semibold text-sm">Logout</span>
+              <span className="font-semibold text-sm">{t('nav.logout')}</span>
             </button>
           </div>
 

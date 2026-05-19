@@ -9,11 +9,13 @@ import Textarea from '../../components/Textarea';
 import { motion } from 'framer-motion';
 import { Award, CheckCircle, User, Calendar, Star, FileText } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import BadgeStatusModal from '../../components/BadgeStatusModal';
 
 const AwardMerit: React.FC = () => {
   const navigate = useNavigate();
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [classes, setClasses] = useState<any[]>([]);
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [classStudents, setClassStudents] = useState<any[]>([]);
@@ -297,9 +299,9 @@ const AwardMerit: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-              Award Merit
+              {t('merits.awardMerit')}
             </h1>
-            <p className="text-gray-600 mt-2 text-lg">Recognize and reward positive student behavior</p>
+            <p className="text-gray-600 mt-2 text-lg">{t('teacher.awardMeritSubtitle')}</p>
           </div>
           <motion.div
             whileHover={{ scale: 1.05 }}

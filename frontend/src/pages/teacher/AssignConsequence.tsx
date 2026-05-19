@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { 
   AlertTriangle, 
   FileText, 
@@ -43,7 +44,8 @@ interface ConsequenceAssignment {
 }
 
 const AssignConsequence: React.FC = () => {
-  const toast = useToast();
+  const { success, error, warning, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [students, setStudents] = useState<Student[]>([]);
   const [consequences, setConsequences] = useState<Consequence[]>([]);
   const [assignments, setAssignments] = useState<ConsequenceAssignment[]>([]);
@@ -79,10 +81,10 @@ const AssignConsequence: React.FC = () => {
       setStudents(studentsRes.data || []);
       setConsequences(consequencesRes.data || []);
       setAssignments(assignmentsRes.data || []);
-    } catch (error: any) {
-      console.error('Error fetching data:', error);
-      console.error('Error details:', error.response?.data);
-      toast.error(error.response?.data?.error || 'Failed to load data');
+    } catch (err: any) {
+      console.error('Error fetching data:', err);
+      console.error('Error details:', err.response?.data);
+      error(err.response?.data?.error || 'Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -92,14 +94,14 @@ const AssignConsequence: React.FC = () => {
     e.preventDefault();
 
     if (!formData.student_id || !formData.consequence_type || !formData.reason) {
-      toast.warning('Please fill in all required fields');
+      warning('Please fill in all required fields');
       return;
     }
 
     setSubmitting(true);
     try {
       await api.assignConsequenceToStudent(formData);
-      toast.success('Consequence assigned successfully!');
+      success('Consequence assigned successfully!');
       
       // Reset form and close modal
       setFormData({
@@ -112,9 +114,9 @@ const AssignConsequence: React.FC = () => {
       
       // Refresh assignments
       fetchData();
-    } catch (error: any) {
-      console.error('Error assigning consequence:', error);
-      toast.error(error.response?.data?.error || 'Failed to assign consequence');
+    } catch (err: any) {
+      console.error('Error assigning consequence:', err);
+      error(err.response?.data?.error || 'Failed to assign consequence');
     } finally {
       setSubmitting(false);
     }
@@ -173,9 +175,9 @@ const AssignConsequence: React.FC = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg">
               <AlertTriangle className="text-white" size={24} />
             </div>
-            <span>Assign Consequences</span>
+            <span>{t('teacher.assignConsequences')}</span>
           </h1>
-          <p className="text-gray-500 mt-1">Assign verbal or written warnings to students</p>
+          <p className="text-gray-500 mt-1">{t('teacher.assignConsequencesSubtitle')}</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}

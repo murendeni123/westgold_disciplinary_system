@@ -21,6 +21,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface User {
   id: number;
@@ -33,6 +34,7 @@ interface User {
 }
 
 const UserManagement: React.FC = () => {
+  const { t } = useLanguage();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -172,9 +174,9 @@ const UserManagement: React.FC = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg">
               <Shield className="text-white" size={24} />
             </div>
-            <span>User Management</span>
+            <span>{t('users.title')}</span>
           </h1>
-          <p className="text-gray-500 mt-1">Manage all users and assign roles</p>
+          <p className="text-gray-500 mt-1">{t('users.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
           <motion.button

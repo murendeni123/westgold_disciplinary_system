@@ -7,9 +7,11 @@ import Modal from '../../components/Modal';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Gavel, TrendingUp, Sparkles } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const ViewDetentions: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const { t } = useLanguage();
   const [detentions, setDetentions] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [selectedDetention, setSelectedDetention] = useState<any>(null);
@@ -201,9 +203,9 @@ const ViewDetentions: React.FC = () => {
         transition={{ duration: 0.5 }}
       >
         <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-          Student Detentions
+          {t('teacher.studentDetentions')}
         </h1>
-        <p className="text-gray-600 mt-2 text-lg">View detention assignments for your students</p>
+        <p className="text-gray-600 mt-2 text-lg">{t('teacher.studentDetentionsSubtitle')}</p>
       </motion.div>
 
       {/* Filters Card */}

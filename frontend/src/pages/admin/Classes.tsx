@@ -9,11 +9,13 @@ import Select from '../../components/Select';
 import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, Users, GraduationCap, ChevronRight, Search } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Classes: React.FC = () => {
   const navigate = useNavigate();
   const portal = usePortalPrefix();
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [classes, setClasses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,14 +83,14 @@ const Classes: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this class?')) {
+    if (window.confirm(t('classes.deleteConfirm'))) {
       try {
         await api.deleteClass(id);
-        success('Class deleted successfully');
+        success(t('classes.deletedSuccess'));
         fetchClasses();
       } catch (err) {
         console.error('Error deleting class:', err);
-        error('Error deleting class');
+        error(t('classes.deleteError'));
       }
     }
   };
@@ -216,7 +218,7 @@ const Classes: React.FC = () => {
         className="flex justify-between items-center"
       >
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">Classes</h1>
+          <h1 className="text-4xl font-bold text-gray-900">{t('classes.title')}</h1>
           <p className="text-gray-500 mt-2">Manage all classes and view detailed information</p>
         </div>
         <Button
@@ -224,7 +226,7 @@ const Classes: React.FC = () => {
           className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white"
         >
           <Plus size={20} className="mr-2" />
-          Add Class
+          {t('classes.addClass')}
         </Button>
       </motion.div>
 
@@ -404,11 +406,11 @@ const Classes: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingClass ? 'Edit Class' : 'Add Class'}
+        title={editingClass ? t('classes.editClass') : t('classes.addClass')}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input
-            label="Class Name"
+            label={t('classes.className')}
             value={formData.class_name}
             onChange={(e) => setFormData({ ...formData, class_name: e.target.value })}
             required
@@ -416,7 +418,7 @@ const Classes: React.FC = () => {
           />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Grade Level"
+              label={t('classes.gradeLevel')}
               value={formData.grade_level}
               onChange={(e) => setFormData({ ...formData, grade_level: e.target.value })}
               className="rounded-xl"
@@ -442,14 +444,14 @@ const Classes: React.FC = () => {
               onClick={() => setIsModalOpen(false)}
               className="rounded-xl"
             >
-              Cancel
+              {t('cancel')}
             </Button>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 type="submit"
                 className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 shadow-lg hover:shadow-xl"
               >
-                Save
+                {t('save')}
               </Button>
             </motion.div>
           </div>

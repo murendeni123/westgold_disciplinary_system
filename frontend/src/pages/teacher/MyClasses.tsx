@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../services/api';
 import { motion } from 'framer-motion';
 import { BookOpen, Users, TrendingUp, Calendar, ArrowRight, GraduationCap, BarChart3 } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const MyClasses: React.FC = () => {
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   useEffect(() => {
     fetchClasses();
@@ -57,9 +59,9 @@ const MyClasses: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-              My Classes
+              {t('teacher.myClasses')}
             </h1>
-            <p className="text-gray-600 mt-2 text-lg">View and manage your assigned classes</p>
+            <p className="text-gray-600 mt-2 text-lg">{t('teacher.myClassesSubtitle')}</p>
           </div>
           <motion.div
             whileHover={{ scale: 1.05 }}

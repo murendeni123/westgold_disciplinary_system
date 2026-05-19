@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { getPhotoUrl } from '../../utils/photoUrl';
 import { api } from '../../services/api';
 import Table from '../../components/Table';
@@ -10,6 +11,7 @@ import { ArrowLeft, Calendar, BookOpen, Users } from 'lucide-react';
 
 const ClassDetails: React.FC = () => {
   const { id } = useParams();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [classData, setClassData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -97,7 +99,7 @@ const ClassDetails: React.FC = () => {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
             {classData.class_name}
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">Class Details</p>
+          <p className="text-gray-600 mt-2 text-lg">{t('teacher.classDetails')}</p>
         </div>
       </motion.div>
 
@@ -109,7 +111,7 @@ const ClassDetails: React.FC = () => {
         className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6"
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Class Information</h2>
+          <h2 className="text-2xl font-bold text-gray-900">{t('teacher.classInfo')}</h2>
           <BookOpen className="text-emerald-600" size={24} />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">

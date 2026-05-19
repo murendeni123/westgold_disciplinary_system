@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { getPhotoUrl, handlePhotoError } from '../../utils/photoUrl';
 
 type TabType = 'overview' | 'incidents' | 'merits' | 'consequences' | 'detentions';
@@ -25,6 +26,7 @@ const StudentProfileRedesigned: React.FC = () => {
   const navigate = useNavigate();
   const portal = usePortalPrefix();
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   
   const [student, setStudent] = useState<any>(null);
   const [classes, setClasses] = useState<any[]>([]);

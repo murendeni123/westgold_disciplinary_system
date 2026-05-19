@@ -12,11 +12,13 @@ import { motion } from 'framer-motion';
 import { Filter, Download, AlertTriangle, Check, X, Eye, Edit2, Save, Scale, TrendingUp, Sparkles, Award } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useFeatureFlags } from '../../contexts/FeatureFlagsContext';
 import { decodeHtmlEntities } from '../../utils/htmlDecode';
 
 const BehaviourDashboard: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const { isFeatureEnabled } = useFeatureFlags();
   const [incidents, setIncidents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -428,9 +430,9 @@ const BehaviourDashboard: React.FC = () => {
       >
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            Behaviour Dashboard
+            {t('behaviour.title')}
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">Review and manage behaviour incidents</p>
+          <p className="text-gray-600 mt-2 text-lg">{t('behaviour.subtitle')}</p>
         </div>
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button

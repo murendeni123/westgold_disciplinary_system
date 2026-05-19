@@ -8,8 +8,10 @@ import Select from '../../components/Select';
 import Input from '../../components/Input';
 import Card from '../../components/Card';
 import { Plus } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const AdminMessages: React.FC = () => {
+  const { t } = useLanguage();
   const [messages, setMessages] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,8 +94,8 @@ const AdminMessages: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-          <p className="text-gray-600 mt-2">Communicate with teachers and parents</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('messages.title')}</h1>
+          <p className="text-gray-600 mt-2">{t('messages.subtitle')}</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>
           <Plus size={20} className="mr-2" />

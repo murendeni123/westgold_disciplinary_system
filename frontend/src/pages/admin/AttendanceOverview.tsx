@@ -6,8 +6,10 @@ import Button from '../../components/Button';
 import { motion } from 'framer-motion';
 import { Download, Calendar, TrendingUp, Sparkles } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const AttendanceOverview: React.FC = () => {
+  const { t } = useLanguage();
   const [attendance, setAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -136,9 +138,9 @@ const AttendanceOverview: React.FC = () => {
       >
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            Attendance Overview
+            {t('attendance.title')}
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">View and manage attendance records</p>
+          <p className="text-gray-600 mt-2 text-lg">{t('attendance.subtitle')}</p>
         </div>
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button

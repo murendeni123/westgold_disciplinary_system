@@ -6,10 +6,12 @@ import { motion } from 'framer-motion';
 import { BookOpen, AlertTriangle, Bell, Award, TrendingUp, Sparkles, ArrowRight, Users, ChevronRight, UserCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [stats, setStats] = useState<any>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -267,9 +269,9 @@ const TeacherDashboard: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-              Teacher Dashboard
+              {t('teacher.dashboard')}
             </h1>
-            <p className="text-gray-600 mt-2 text-lg">Welcome back, {user?.name}! Here's your overview</p>
+            <p className="text-gray-600 mt-2 text-lg">{t('teacher.dashboardSubtitle')}</p>
           </div>
           <motion.div
             whileHover={{ scale: 1.05 }}

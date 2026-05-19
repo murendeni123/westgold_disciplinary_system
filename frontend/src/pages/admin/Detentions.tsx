@@ -9,9 +9,11 @@ import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, Settings, Users, Eye, Download, AlertTriangle, Calendar, TrendingUp, UserPlus, Search } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Detentions: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [detentions, setDetentions] = useState<any[]>([]);
   const [rules, setRules] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
@@ -416,9 +418,9 @@ const Detentions: React.FC = () => {
       >
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            Detention Management
+            {t('detentions.title')}
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">Manage detention sessions and rules</p>
+          <p className="text-gray-600 mt-2 text-lg">{t('detentions.subtitle')}</p>
         </div>
         <div className="flex space-x-3">
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>

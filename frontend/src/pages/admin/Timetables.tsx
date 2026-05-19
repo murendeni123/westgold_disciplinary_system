@@ -7,8 +7,10 @@ import Input from '../../components/Input';
 import Select from '../../components/Select';
 import Card from '../../components/Card';
 import { Plus, Edit, Trash2, Download, Printer } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Timetables: React.FC = () => {
+  const { t } = useLanguage();
   const [timetables, setTimetables] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
@@ -435,7 +437,7 @@ const Timetables: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Timetables & Schedules</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('timetable.title')}</h1>
           <p className="text-gray-600 mt-2">Manage class timetables and teacher daily schedules</p>
         </div>
         <div className="flex space-x-3">

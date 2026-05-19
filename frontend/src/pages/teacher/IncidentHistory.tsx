@@ -8,11 +8,13 @@ import { motion } from 'framer-motion';
 import { Plus, AlertTriangle, Edit2, Trash2, Eye, TrendingUp, Filter, X } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { decodeHtmlEntities } from '../../utils/htmlDecode';
 
 const IncidentHistory: React.FC = () => {
   const navigate = useNavigate();
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [incidents, setIncidents] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
@@ -228,9 +230,9 @@ const IncidentHistory: React.FC = () => {
       >
         <div>
           <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
-            Incident History
+            {t('behaviour.incidentHistory')}
           </h1>
-          <p className="text-gray-600 mt-2">View all incidents you've logged</p>
+          <p className="text-gray-600 mt-2">{t('teacher.incidentHistorySubtitle')}</p>
         </div>
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button

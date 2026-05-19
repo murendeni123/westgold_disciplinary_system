@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import {
   LayoutDashboard,
   Users,
@@ -26,18 +27,19 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { customizations, getImageUrl } = useSchoolTheme();
+  const { t } = useLanguage();
 
   // Static parent menu — Link School / Link Child available via Settings → School & Children
   const parentMenu = [
-    { path: '/parent',              label: 'Dashboard',     icon: LayoutDashboard },
-    { path: '/parent/children',     label: 'My Children',   icon: Users },
-    { path: '/parent/behaviour',    label: 'Behaviour',     icon: AlertTriangle },
-    { path: '/parent/merits',       label: 'Merits',        icon: Award },
-    { path: '/parent/detentions',   label: 'Detentions',    icon: AlertTriangle },
-    { path: '/parent/interventions',label: 'Interventions', icon: AlertTriangle },
-    { path: '/parent/consequences', label: 'Consequences',  icon: AlertTriangle },
-    { path: '/parent/notifications',label: 'Notifications', icon: Bell },
-    { path: '/parent/settings',     label: 'Settings',      icon: Settings },
+    { path: '/parent',              label: t('nav.dashboard'),     icon: LayoutDashboard },
+    { path: '/parent/children',     label: t('nav.myChildren'),    icon: Users },
+    { path: '/parent/behaviour',    label: t('nav.behaviour'),     icon: AlertTriangle },
+    { path: '/parent/merits',       label: t('nav.merits'),        icon: Award },
+    { path: '/parent/detentions',   label: t('nav.detentions'),    icon: AlertTriangle },
+    { path: '/parent/interventions',label: t('nav.interventions'), icon: AlertTriangle },
+    { path: '/parent/consequences', label: t('nav.consequences'),  icon: AlertTriangle },
+    { path: '/parent/notifications',label: t('nav.notifications'), icon: Bell },
+    { path: '/parent/settings',     label: t('nav.settings'),      icon: Settings },
   ];
 
   const isActive = (path: string) => {
@@ -122,7 +124,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
                     <div className="flex items-center space-x-1">
                       <Sparkles size={10} className="text-yellow-300" />
                       <span className="text-[10px] text-white/70 uppercase tracking-wider hidden sm:block">
-                        Parent Portal
+                        {t('portals.parent')}
                       </span>
                     </div>
                   </div>
@@ -207,7 +209,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
               className="flex items-center space-x-2 sm:space-x-3 w-full px-3 sm:px-4 py-3 rounded-lg text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors min-h-[48px]"
             >
               <LogOut size={18} className="sm:w-5 sm:h-5 flex-shrink-0" />
-              <span className="font-medium text-xs sm:text-sm">Logout</span>
+              <span className="font-medium text-xs sm:text-sm">{t('nav.logout')}</span>
             </button>
           </div>
         </div>

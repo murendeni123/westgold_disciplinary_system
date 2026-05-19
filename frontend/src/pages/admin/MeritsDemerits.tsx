@@ -7,9 +7,11 @@ import { motion } from 'framer-motion';
 import { Download, Award, AlertTriangle, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const MeritsDemerits: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [merits, setMerits] = useState<any[]>([]);
   const [demerits, setDemerits] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
@@ -186,9 +188,9 @@ const MeritsDemerits: React.FC = () => {
       >
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            Merits & Demerits
+            {t('merits.title')}
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">View and analyze student behavior records</p>
+          <p className="text-gray-600 mt-2 text-lg">{t('behaviour.subtitle')}</p>
         </div>
         <div className="flex space-x-3">
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -198,7 +200,7 @@ const MeritsDemerits: React.FC = () => {
               className={`rounded-xl ${viewType === 'merits' ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white' : ''}`}
             >
               <Award size={20} className="mr-2" />
-              Merits
+              {t('merits.title')}
             </Button>
           </motion.div>
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -208,7 +210,7 @@ const MeritsDemerits: React.FC = () => {
               className={`rounded-xl ${viewType === 'demerits' ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white' : ''}`}
             >
               <AlertTriangle size={20} className="mr-2" />
-              Demerits
+              {t('behaviour.title')}
             </Button>
           </motion.div>
         </div>

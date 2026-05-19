@@ -14,6 +14,7 @@ import {
 import Button from '../../components/Button';
 import Modal from '../../components/Modal';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface TimetableTemplate {
   id: number;
@@ -39,6 +40,7 @@ interface TimeSlot {
 
 const TimetableManagement: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [templates, setTemplates] = useState<TimetableTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<TimetableTemplate | null>(null);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
@@ -236,7 +238,7 @@ const TimetableManagement: React.FC = () => {
         className="flex justify-between items-center"
       >
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">Timetable Management</h1>
+          <h1 className="text-4xl font-bold text-gray-900">{t('timetable.title')}</h1>
           <p className="text-gray-500 mt-2">Create and manage school timetables</p>
         </div>
         <Button

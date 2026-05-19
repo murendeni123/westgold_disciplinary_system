@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import SearchableSelect from '../../components/SearchableSelect';
 import {
   Clock,
@@ -54,6 +55,7 @@ interface Teacher {
 
 const DetentionSessions: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const isGradeHead = (user as any)?.isGradeHead || user?.role === 'admin';
   const [sessions, setSessions] = useState<DetentionSession[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -323,9 +325,9 @@ const DetentionSessions: React.FC = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
               <Clock className="text-white" size={24} />
             </div>
-            <span>Detention Sessions</span>
+            <span>{t('detentions.title')}</span>
           </h1>
-          <p className="text-gray-500 mt-1">Create and manage detention sessions</p>
+          <p className="text-gray-500 mt-1">{t('detentions.subtitle')}</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}

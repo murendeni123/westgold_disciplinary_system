@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePortalPrefix } from '../../hooks/usePortalPrefix';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 interface CriticalAlerts {
@@ -39,6 +40,7 @@ interface AtRiskStudents {
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const portal = usePortalPrefix();
+  const { t } = useLanguage();
   const [stats, setStats] = useState<any>(null);
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [criticalAlerts, setCriticalAlerts] = useState<CriticalAlerts | null>(null);
@@ -232,10 +234,10 @@ const AdminDashboard: React.FC = () => {
   const COLORS = ['#10B981', '#EF4444', '#F59E0B'];
 
   const quickActions = [
-    { label: 'Log Incident', desc: 'Record new incident', icon: AlertTriangle, color: 'from-red-500 to-pink-500', path: '/admin/behaviour/log' },
-    { label: 'Award Merit', desc: 'Award student merit', icon: Award, color: 'from-green-500 to-emerald-500', path: '/admin/merits/award' },
-    { label: 'Assign Consequence', desc: 'Assign consequence', icon: Shield, color: 'from-purple-500 to-indigo-500', path: '/admin/consequence-management' },
-    { label: 'Schedule Detention', desc: 'Assign detention', icon: Gavel, color: 'from-orange-500 to-amber-500', path: '/admin/detention-sessions' },
+    { label: t('behaviour.logIncident'), desc: t('behaviour.logIncident'), icon: AlertTriangle, color: 'from-red-500 to-pink-500', path: '/admin/behaviour/log' },
+    { label: t('merits.awardMerit'), desc: t('merits.awardMerit'), icon: Award, color: 'from-green-500 to-emerald-500', path: '/admin/merits/award' },
+    { label: t('consequences.assignConsequence'), desc: t('consequences.assignConsequence'), icon: Shield, color: 'from-purple-500 to-indigo-500', path: '/admin/consequence-management' },
+    { label: t('detentions.addDetention'), desc: t('detentions.addDetention'), icon: Gavel, color: 'from-orange-500 to-amber-500', path: '/admin/detention-sessions' },
   ];
 
   return (
@@ -248,7 +250,7 @@ const AdminDashboard: React.FC = () => {
       >
         <div>
           <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            Admin Dashboard
+            {t('portals.admin')}
           </h1>
           <p className="text-gray-500 mt-1">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -262,7 +264,7 @@ const AdminDashboard: React.FC = () => {
           className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-white shadow-lg border border-gray-100 text-gray-700 hover:bg-gray-50 transition-all"
         >
           <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
-          <span className="font-medium">Refresh</span>
+          <span className="font-medium">{t('dashboard.refresh')}</span>
         </motion.button>
       </motion.div>
 
@@ -280,14 +282,14 @@ const AdminDashboard: React.FC = () => {
                 <Key size={24} className="text-white" />
               </div>
               <div>
-                <p className="text-white/80 text-sm font-medium">School Registration Code</p>
+                <p className="text-white/80 text-sm font-medium">{t('dashboard.schoolCode')}</p>
                 <p className="text-2xl md:text-3xl font-bold text-white tracking-wider font-mono">
                   {schoolInfo.school_code}
                 </p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <p className="text-white/70 text-sm hidden md:block">Share this code with parents to link their accounts</p>
+              <p className="text-white/70 text-sm hidden md:block">{t('settings.shareCode')}</p>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -297,12 +299,12 @@ const AdminDashboard: React.FC = () => {
                 {copiedCode ? (
                   <>
                     <Check size={18} className="text-green-300" />
-                    <span className="text-white font-medium">Copied!</span>
+                    <span className="text-white font-medium">{t('copied')}</span>
                   </>
                 ) : (
                   <>
                     <Copy size={18} className="text-white" />
-                    <span className="text-white font-medium">Copy Code</span>
+                    <span className="text-white font-medium">{t('dashboard.copySchoolCode')}</span>
                   </>
                 )}
               </motion.button>
@@ -396,12 +398,12 @@ const AdminDashboard: React.FC = () => {
       {/* Stats Overview */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {[
-          { title: 'Students', value: stats?.totalStudents || 0, icon: Users, color: 'blue' },
-          { title: 'Demerits', value: stats?.totalIncidents || 0, icon: AlertTriangle, color: 'red' },
-          { title: 'Merits', value: stats?.totalMerits || 0, icon: Award, color: 'green' },
-          { title: 'Detentions', value: stats?.scheduledDetentions || 0, icon: Gavel, color: 'orange' },
-          { title: 'Pending', value: stats?.pendingApprovals || 0, icon: Clock, color: 'yellow', badge: stats?.pendingApprovals > 0 },
-          { title: 'Attendance', value: `${Math.round(((stats?.todayAttendance?.present || 0) / (stats?.todayAttendance?.total || 1)) * 100)}%`, icon: Calendar, color: 'emerald' },
+          { title: t('nav.students'), value: stats?.totalStudents || 0, icon: Users, color: 'blue' },
+          { title: t('behaviour.title'), value: stats?.totalIncidents || 0, icon: AlertTriangle, color: 'red' },
+          { title: t('merits.title'), value: stats?.totalMerits || 0, icon: Award, color: 'green' },
+          { title: t('detentions.title'), value: stats?.scheduledDetentions || 0, icon: Gavel, color: 'orange' },
+          { title: t('pending'), value: stats?.pendingApprovals || 0, icon: Clock, color: 'yellow', badge: stats?.pendingApprovals > 0 },
+          { title: t('attendance.title'), value: `${Math.round(((stats?.todayAttendance?.present || 0) / (stats?.todayAttendance?.total || 1)) * 100)}%`, icon: Calendar, color: 'emerald' },
         ].map((stat, index) => {
           const Icon = stat.icon;
           const colorClasses: Record<string, string> = {

@@ -9,9 +9,11 @@ import Input from '../../components/Input';
 import { motion } from 'framer-motion';
 import { Award, TrendingUp, Sparkles } from 'lucide-react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const ViewMerits: React.FC = () => {
   const [searchParams] = useSearchParams();
+  const { t } = useLanguage();
   const [merits, setMerits] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -161,9 +163,9 @@ const ViewMerits: React.FC = () => {
         transition={{ duration: 0.5 }}
       >
         <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-          Student Merits
+          {t('teacher.viewMerits')}
         </h1>
-        <p className="text-gray-600 mt-2 text-lg">View merits awarded to your students</p>
+        <p className="text-gray-600 mt-2 text-lg">{t('teacher.viewMeritsSubtitle')}</p>
       </motion.div>
 
       {/* Summary Cards */}

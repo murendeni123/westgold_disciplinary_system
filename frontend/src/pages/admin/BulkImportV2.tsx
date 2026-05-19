@@ -9,6 +9,7 @@ import {
   Layers, Settings, Eye, Play, FileDown, Users, GraduationCap, BookOpen, Calendar
 } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { useImportProgress } from '../../hooks/useImportProgress';
 
 interface ValidationResult {
@@ -58,6 +59,7 @@ type ImportStep = 'select' | 'validate' | 'review' | 'import' | 'complete';
 const BulkImportV2: React.FC = () => {
   const navigate = useNavigate();
   const { success, error: showError, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const { progress, resetProgress } = useImportProgress();
   
   // State
@@ -261,9 +263,9 @@ const BulkImportV2: React.FC = () => {
           </Button>
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Smart Import
+              {t('import.smartImport')}
             </h1>
-            <p className="text-gray-600 mt-1">Import with validation, upsert, and auto-create</p>
+            <p className="text-gray-600 mt-1">{t('import.subtitle')}</p>
           </div>
         </div>
         

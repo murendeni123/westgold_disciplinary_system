@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { Award, AlertTriangle } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const MeritsDemeritsSimple: React.FC = () => {
+  const { t } = useLanguage();
   const [merits, setMerits] = useState<any[]>([]);
   const [demerits, setDemerits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +60,7 @@ const MeritsDemeritsSimple: React.FC = () => {
   return (
     <div className="p-8 space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Merits & Demerits</h1>
+        <h1 className="text-3xl font-bold">{t('merits.title')}</h1>
         <div className="flex space-x-3">
           <button
             onClick={() => setViewType('merits')}
@@ -69,7 +71,7 @@ const MeritsDemeritsSimple: React.FC = () => {
             }`}
           >
             <Award size={20} />
-            <span>Merits</span>
+            <span>{t('merits.title')}</span>
           </button>
           <button
             onClick={() => setViewType('demerits')}
@@ -80,7 +82,7 @@ const MeritsDemeritsSimple: React.FC = () => {
             }`}
           >
             <AlertTriangle size={20} />
-            <span>Demerits</span>
+            <span>{t('behaviour.title')}</span>
           </button>
         </div>
       </div>

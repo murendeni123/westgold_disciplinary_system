@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Award, Plus, Eye } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 import AwardMerit from './AwardMerit';
 import TeacherViewMerits from './ViewMerits';
 
 const Merits: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'award' | 'view'>('award');
+  const { t } = useLanguage();
 
   const tabs = [
     { id: 'award' as const, label: 'Award Merit', icon: Plus },
@@ -25,9 +27,9 @@ const Merits: React.FC = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-xl flex items-center justify-center shadow-lg">
               <Award className="text-white" size={24} />
             </div>
-            <span>Merits Management</span>
+            <span>{t('teacher.meritsManagement')}</span>
           </h1>
-          <p className="text-gray-500 mt-1">Award merits and view merit history</p>
+          <p className="text-gray-500 mt-1">{t('teacher.meritsManagementSubtitle')}</p>
         </div>
       </motion.div>
 

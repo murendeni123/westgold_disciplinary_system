@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { AlertTriangle, CheckCircle, Users, Calendar, TrendingUp, Lock, FileDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 // DB attendance status → UI display value — defined outside the component
 // so it is not recreated on every render or async callback.
@@ -22,6 +23,7 @@ const DB_TO_FRONTEND_STATUS: Record<string, string> = {
 
 const MyDetentions: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { success, error, ToastContainer } = useToast();
   const [detentions, setDetentions] = useState<any[]>([]);
   const [selectedDetention, setSelectedDetention] = useState<any>(null);
@@ -347,9 +349,9 @@ const MyDetentions: React.FC = () => {
         transition={{ duration: 0.5 }}
       >
         <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-          My Detentions
+          {t('teacher.myDetentions')}
         </h1>
-        <p className="text-gray-600 mt-2 text-lg">View and manage detention sessions you're assigned to</p>
+        <p className="text-gray-600 mt-2 text-lg">{t('teacher.myDetentionsSubtitle')}</p>
       </motion.div>
 
       {/* Summary Stats */}

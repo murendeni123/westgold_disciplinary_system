@@ -14,6 +14,7 @@ import {
 import Button from '../../components/Button';
 import Modal from '../../components/Modal';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface Class {
   id: number;
@@ -72,6 +73,7 @@ interface ClassTimetableEntry {
 
 const ClassTimetableAssignment: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [classes, setClasses] = useState<Class[]>([]);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [templates, setTemplates] = useState<TimetableTemplate[]>([]);
@@ -310,7 +312,7 @@ const ClassTimetableAssignment: React.FC = () => {
         className="flex justify-between items-center"
       >
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">Class Timetable Assignment</h1>
+          <h1 className="text-4xl font-bold text-gray-900">{t('timetable.classTimetable')}</h1>
           <p className="text-gray-500 mt-2">Assign subjects, teachers, and classrooms to each period</p>
         </div>
         <div className="flex space-x-3">

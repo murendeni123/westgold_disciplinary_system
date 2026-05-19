@@ -5,8 +5,10 @@ import Button from '../../components/Button';
 import ParentProfileModal from '../../components/ParentProfileModal';
 import { motion } from 'framer-motion';
 import { Eye, Mail, Users, Search } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Parents: React.FC = () => {
+  const { t } = useLanguage();
   const [parents, setParents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedParent, setSelectedParent] = useState<any>(null);
@@ -68,9 +70,9 @@ const Parents: React.FC = () => {
       >
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            Parents
+            {t('parents.title')}
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">Manage all parents in the system</p>
+          <p className="text-gray-600 mt-2 text-lg">{t('parents.title')}</p>
         </div>
       </motion.div>
 
@@ -166,7 +168,7 @@ const Parents: React.FC = () => {
             {filteredParents.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <Users size={48} className="mx-auto mb-4 text-gray-300" />
-                <p>{searchQuery ? 'No parents match your search' : 'No parents found'}</p>
+                <p>{t('parents.noParents')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { 
   AlertTriangle, 
   FileText, 
@@ -63,6 +64,7 @@ interface ConsequenceStats {
 
 const ConsequenceManagement: React.FC = () => {
   const toast = useToast();
+  const { t } = useLanguage();
   const [students, setStudents] = useState<Student[]>([]);
   const [consequences, setConsequences] = useState<Consequence[]>([]);
   const [assignments, setAssignments] = useState<ConsequenceAssignment[]>([]);
@@ -235,9 +237,9 @@ const ConsequenceManagement: React.FC = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
               <Shield className="text-white" size={24} />
             </div>
-            <span>Consequence Management</span>
+            <span>{t('consequences.title')}</span>
           </h1>
-          <p className="text-gray-500 mt-1">Assign and manage all types of consequences</p>
+          <p className="text-gray-500 mt-1">{t('consequences.subtitle')}</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}

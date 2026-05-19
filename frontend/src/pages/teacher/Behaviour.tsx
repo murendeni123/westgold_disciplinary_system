@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, Plus, History } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 import LogIncident from './LogIncident';
 import IncidentHistory from './IncidentHistory';
 
 const Behaviour: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'log' | 'history'>('log');
+  const { t } = useLanguage();
 
   const tabs = [
     { id: 'log' as const, label: 'Log Incident', icon: Plus },
@@ -25,9 +27,9 @@ const Behaviour: React.FC = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
               <AlertTriangle className="text-white" size={24} />
             </div>
-            <span>Behaviour Management</span>
+            <span>{t('teacher.behaviourManagement')}</span>
           </h1>
-          <p className="text-gray-500 mt-1">Log incidents and view behaviour history</p>
+          <p className="text-gray-500 mt-1">{t('teacher.behaviourManagementSubtitle')}</p>
         </div>
       </motion.div>
 

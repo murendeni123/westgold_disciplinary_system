@@ -11,10 +11,12 @@ import { Plus, Edit, Trash2, Copy, Users, Search, Filter, UserCircle2, Graduatio
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
 import { usePortalPrefix } from '../../hooks/usePortalPrefix';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Students: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
   const portal = usePortalPrefix();
+  const { t } = useLanguage();
   const [students, setStudents] = useState<any[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
@@ -105,14 +107,14 @@ const Students: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this student?')) {
+    if (window.confirm(t('students.deleteConfirm'))) {
       try {
         await api.deleteStudent(id);
-        success('Student deleted successfully');
+        success(t('students.deletedSuccess'));
         fetchStudents();
       } catch (err) {
         console.error('Error deleting student:', err);
-        error('Error deleting student');
+        error(t('students.deleteError'));
       }
     }
   };
@@ -122,17 +124,17 @@ const Students: React.FC = () => {
     
     // Validate required fields
     if (!formData.student_id || !formData.first_name || !formData.last_name) {
-      error('Student ID, First Name, and Last Name are required');
+      error(t('students.requiredFields'));
       return;
     }
     
     try {
       if (editingStudent) {
         await api.updateStudent(editingStudent.id, formData);
-        success('Student updated successfully');
+        success(t('students.updatedSuccess'));
       } else {
         await api.createStudent(formData);
-        success('Student created successfully');
+        success(t('students.createdSuccess'));
       }
       setIsModalOpen(false);
       fetchStudents();
@@ -150,7 +152,7 @@ const Students: React.FC = () => {
   const columns = [
     {
       key: 'photo_path',
-      label: 'PHOTO',
+      label: t('table.photo').toUpperCase(),
       render: (value: string) => (
         value ? (
           <img
@@ -172,21 +174,21 @@ const Students: React.FC = () => {
     },
     { 
       key: 'student_id', 
-      label: 'STUDENT ID',
+      label: t('table.studentId').toUpperCase(),
       render: (value: string) => (
         <span className="font-semibold text-gray-900">{value}</span>
       )
     },
     { 
       key: 'first_name', 
-      label: 'FIRST NAME',
+      label: t('table.firstName').toUpperCase(),
       render: (value: string) => (
         <span className="text-gray-800">{value}</span>
       )
     },
     { 
       key: 'last_name', 
-      label: 'LAST NAME',
+      label: t('table.lastName').toUpperCase(),
       render: (value: string) => (
         <span className="text-gray-800">{value}</span>
       )
@@ -294,9 +296,9 @@ const Students: React.FC = () => {
       >
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            Students
+            {t('students.title')}
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">Manage all students in the system</p>
+          <p className="text-gray-600 mt-2 text-lg">{t('students.title')}</p>
         </div>
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button
@@ -304,7 +306,7 @@ const Students: React.FC = () => {
             className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 shadow-lg hover:shadow-xl"
           >
             <Plus size={20} className="mr-2" />
-            Add Student
+            {t('students.addStudent')}
           </Button>
         </motion.div>
       </motion.div>
@@ -394,7 +396,7 @@ const Students: React.FC = () => {
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
                   <Users size={32} className="text-gray-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No students found</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('students.noStudents')}</h3>
                 <p className="text-gray-500">
                   {searchTerm || selectedClass
                     ? 'Try adjusting your search or filters'
@@ -409,12 +411,12 @@ const Students: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingStudent ? 'Edit Student' : 'Add Student'}
+        title={editingStudent ? t('students.editStudent') : t('students.addStudent')}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Student ID"
+              label={t('students.studentId')}
               value={formData.student_id}
               onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
               required
@@ -422,7 +424,7 @@ const Students: React.FC = () => {
               className="rounded-xl"
             />
             <Input
-              label="Date of Birth"
+              label={t('students.dateOfBirth')}
               type="date"
               value={formData.date_of_birth}
               onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
@@ -431,14 +433,14 @@ const Students: React.FC = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="First Name"
+              label={t('students.firstName')}
               value={formData.first_name}
               onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
               required
               className="rounded-xl"
             />
             <Input
-              label="Last Name"
+              label={t('students.lastName')}
               value={formData.last_name}
               onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
               required
@@ -465,14 +467,14 @@ const Students: React.FC = () => {
               onClick={() => setIsModalOpen(false)}
               className="rounded-xl"
             >
-              Cancel
+              {t('cancel')}
             </Button>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 type="submit"
                 className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 shadow-lg hover:shadow-xl"
               >
-                Save
+                {t('save')}
               </Button>
             </motion.div>
           </div>

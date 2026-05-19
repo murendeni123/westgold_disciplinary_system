@@ -13,6 +13,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface TimetableTemplate {
   id: number;
@@ -40,6 +41,7 @@ interface SlotFormRow {
 
 const TimetableManagementNew: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [templates, setTemplates] = useState<TimetableTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<TimetableTemplate | null>(null);
@@ -357,9 +359,9 @@ const TimetableManagementNew: React.FC = () => {
       >
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            Timetable Management
+            {t('timetable.title')}
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">Create and manage school timetable templates</p>
+          <p className="text-gray-600 mt-2 text-lg">{t('timetable.subtitle')}</p>
         </div>
         <div className="flex space-x-3">
           <Button

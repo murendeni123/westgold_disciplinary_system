@@ -5,6 +5,7 @@ import QuickStudentSearch from '../components/QuickStudentSearch';
 import NotificationBell from '../components/NotificationBell';
 import TokenExpirationWarning from '../components/TokenExpirationWarning';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Menu, X, GraduationCap, Search } from 'lucide-react';
 
 const TeacherLayout: React.FC = () => {
@@ -12,6 +13,7 @@ const TeacherLayout: React.FC = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
   const { customizations } = useSchoolTheme();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const handleResize = () => {
@@ -61,9 +63,9 @@ const TeacherLayout: React.FC = () => {
                 </div>
                 <div>
                   <h1 className="font-bold text-xl bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                    Teacher Portal
+                    {t('portals.teacher')}
                   </h1>
-                  <p className="text-xs text-gray-500">Manage your classes and students</p>
+                  <p className="text-xs text-gray-500">{t('portals.teacherSubtitle')}</p>
                 </div>
               </div>
             </div>

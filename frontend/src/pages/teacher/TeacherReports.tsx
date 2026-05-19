@@ -3,6 +3,7 @@ import { api } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { exportComprehensiveReport } from '../../utils/excelExport';
 import { useToast } from '../../contexts/ToastContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import {
   Download,
   Users,
@@ -28,6 +29,7 @@ interface ClassData {
 
 const TeacherReports: React.FC = () => {
   const { showSuccess, showError, showWarning } = useToast();
+  const { t } = useLanguage();
 
   // ── Data state ─────────────────────────────────────────────────────────────
   const [myClasses, setMyClasses] = useState<ClassData[]>([]);
@@ -381,7 +383,7 @@ const TeacherReports: React.FC = () => {
       >
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Class Reports</h1>
+            <h1 className="text-3xl font-bold">{t('teacher.classReports')}</h1>
             <p className="text-emerald-100 mt-2">
               {selectedClass ? `${selectedClass.class_name} — Grade ${selectedClass.grade_level}` : 'Select a class'}
             </p>

@@ -5,6 +5,7 @@ import Button from '../../components/Button';
 import { motion } from 'framer-motion';
 import { Upload, Download, FileSpreadsheet, CheckCircle, XCircle, AlertCircle, ArrowLeft, Sparkles } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface ImportResult {
   total: number;
@@ -17,6 +18,7 @@ interface ImportResult {
 const BulkImport: React.FC = () => {
   const navigate = useNavigate();
   const { success, error: showError, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'students' | 'teachers' | 'classes'>('students');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -146,9 +148,9 @@ const BulkImport: React.FC = () => {
         </motion.div>
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            Bulk Import
+            {t('import.title')}
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">Import multiple records from Excel spreadsheet</p>
+          <p className="text-gray-600 mt-2 text-lg">{t('import.subtitle')}</p>
         </div>
       </motion.div>
 

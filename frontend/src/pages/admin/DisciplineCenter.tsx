@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { decodeHtmlEntities } from '../../utils/htmlDecode';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../services/api';
 import {
@@ -92,6 +93,7 @@ interface Merit {
 }
 
 const DisciplineCenter: React.FC = () => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('behaviour');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -702,9 +704,9 @@ const DisciplineCenter: React.FC = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
               <Scale className="text-white" size={24} />
             </div>
-            <span>Discipline Center</span>
+            <span>{t('discipline.title')}</span>
           </h1>
-          <p className="text-gray-500 mt-1">Manage behaviour, detentions, interventions, and consequences</p>
+          <p className="text-gray-500 mt-1">{t('discipline.subtitle')}</p>
         </div>
       </motion.div>
 

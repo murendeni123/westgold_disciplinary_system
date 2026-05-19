@@ -17,6 +17,7 @@ import {
   Heart,
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface DetentionRule {
   id: number;
@@ -72,6 +73,7 @@ interface InterventionType {
 }
 
 const DisciplineRules: React.FC = () => {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'incidents' | 'merits' | 'interventions' | 'consequences' | 'detention' | 'settings'>('incidents');
   const [detentionRules, setDetentionRules] = useState<DetentionRule[]>([]);
   const [consequences, setConsequences] = useState<Consequence[]>([]);
@@ -384,9 +386,9 @@ const DisciplineRules: React.FC = () => {
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
               <Scale className="text-white" size={20} />
             </div>
-            <span>Discipline Rules</span>
+            <span>{t('discipline.rules')}</span>
           </h1>
-          <p className="text-sm sm:text-base text-gray-500 mt-1">Configure automatic detention and consequence rules</p>
+          <p className="text-sm sm:text-base text-gray-500 mt-1">{t('discipline.rulesSubtitle')}</p>
         </div>
       </motion.div>
 

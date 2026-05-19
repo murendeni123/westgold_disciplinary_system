@@ -19,6 +19,7 @@ import SearchableSelect from '../../components/SearchableSelect';
 import Textarea from '../../components/Textarea';
 import Input from '../../components/Input';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface BehaviourCategory {
   value: string;
@@ -41,6 +42,7 @@ interface Strategy {
 const GuidedIntervention: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { t } = useLanguage();
   const { success, error, ToastContainer } = useToast();
 
   // Step management
@@ -223,9 +225,9 @@ const GuidedIntervention: React.FC = () => {
           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
             <Lightbulb className="text-white" size={24} />
           </div>
-          <span>Guided Intervention</span>
+          <span>{t('interventions.guidedIntervention')}</span>
         </h1>
-        <p className="text-gray-600 mt-2">2-step evidence-based intervention planning</p>
+        <p className="text-gray-600 mt-2">{t('teacher.guidedInterventionSubtitle')}</p>
       </motion.div>
 
       {/* Progress Steps */}

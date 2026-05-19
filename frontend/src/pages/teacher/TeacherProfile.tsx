@@ -5,10 +5,12 @@ import Button from '../../components/Button';
 import { motion } from 'framer-motion';
 import { Camera, Upload, User, Building2 } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { getPhotoUrl, handlePhotoError } from '../../utils/photoUrl';
 
 const TeacherProfile: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const { success, error, ToastContainer } = useToast();
   const [teacher, setTeacher] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
@@ -65,9 +67,9 @@ const TeacherProfile: React.FC = () => {
         transition={{ duration: 0.5 }}
       >
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-          My Profile
+          {t('teacher.profileTitle')}
         </h1>
-        <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base md:text-lg">View and manage your profile information</p>
+        <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base md:text-lg">{t('teacher.profileSubtitle')}</p>
       </motion.div>
 
       {/* Profile Information */}
@@ -78,7 +80,7 @@ const TeacherProfile: React.FC = () => {
         className="rounded-xl sm:rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-4 sm:p-6"
       >
         <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Profile Information</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">{t('teacher.profileInfo')}</h2>
           <User className="text-emerald-600" size={24} />
         </div>
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">

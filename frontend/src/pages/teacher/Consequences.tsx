@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../../services/api';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { 
   AlertTriangle, 
   FileText, 
@@ -62,7 +63,8 @@ interface ConsequenceStats {
 }
 
 const TeacherConsequences: React.FC = () => {
-  const toast = useToast();
+  const { success, error, warning, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [students, setStudents] = useState<Student[]>([]);
   const [consequences, setConsequences] = useState<Consequence[]>([]);
   const [assignments, setAssignments] = useState<ConsequenceAssignment[]>([]);
@@ -105,9 +107,9 @@ const TeacherConsequences: React.FC = () => {
       setConsequences(teacherConsequences);
       setAssignments(assignmentsRes.data || []);
       setStats(statsRes.data);
-    } catch (error: any) {
-      console.error('Error fetching data:', error);
-      toast.error(error.response?.data?.error || 'Failed to load data');
+    } catch (err: any) {
+      console.error('Error fetching data:', err);
+      error(err.response?.data?.error || 'Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -119,9 +121,9 @@ const TeacherConsequences: React.FC = () => {
       setEvaluation(response.data);
       setSelectedStudent(studentId);
       setShowEvaluationModal(true);
-    } catch (error: any) {
-      console.error('Error evaluating student:', error);
-      toast.error(error.response?.data?.error || 'Failed to evaluate student');
+    } catch (err: any) {
+      console.error('Error evaluating student:', err);
+      error(err.response?.data?.error || 'Failed to evaluate student');
     }
   };
 
@@ -129,14 +131,14 @@ const TeacherConsequences: React.FC = () => {
     e.preventDefault();
 
     if (!formData.student_id || !formData.consequence_type || !formData.reason) {
-      toast.warning('Please fill in all required fields');
+      warning('Please fill in all required fields');
       return;
     }
 
     setSubmitting(true);
     try {
       await api.assignConsequenceToStudent(formData);
-      toast.success('Consequence assigned successfully!');
+      success('Consequence assigned successfully!');
       
       // Reset form and close modal
       setFormData({
@@ -149,9 +151,9 @@ const TeacherConsequences: React.FC = () => {
       
       // Refresh data
       fetchData();
-    } catch (error: any) {
-      console.error('Error assigning consequence:', error);
-      toast.error(error.response?.data?.error || 'Failed to assign consequence');
+    } catch (err: any) {
+      console.error('Error assigning consequence:', err);
+      error(err.response?.data?.error || 'Failed to assign consequence');
     } finally {
       setSubmitting(false);
     }
@@ -214,9 +216,9 @@ const TeacherConsequences: React.FC = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
               <Shield className="text-white" size={24} />
             </div>
-            <span>Consequence Management</span>
+            <span>{t('teacher.consequenceManagement')}</span>
           </h1>
-          <p className="text-gray-500 mt-1">Assign and manage verbal and written warnings</p>
+          <p className="text-gray-500 mt-1">{t('teacher.consequenceManagementSubtitle')}</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.02 }}

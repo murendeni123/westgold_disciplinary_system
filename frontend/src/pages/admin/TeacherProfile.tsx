@@ -5,6 +5,7 @@ import Button from '../../components/Button';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Camera, Upload, User, Mail, Phone, GraduationCap, Sparkles, Shield, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { getPhotoUrl, handlePhotoError } from '../../utils/photoUrl';
 import AssignGradeHeadModal from '../../components/AssignGradeHeadModal';
 
@@ -12,6 +13,7 @@ const TeacherProfile: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [teacher, setTeacher] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -117,7 +119,7 @@ const TeacherProfile: React.FC = () => {
               </motion.div>
             )}
           </div>
-          <p className="text-gray-600 mt-2 text-lg">Teacher Profile</p>
+          <p className="text-gray-600 mt-2 text-lg">{t('teachers.teacherProfile')}</p>
         </div>
         <div className="flex items-center space-x-3">
           {teacher.is_grade_head ? (

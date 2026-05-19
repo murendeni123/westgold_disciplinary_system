@@ -3,6 +3,7 @@ import { api } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { exportToExcel, exportMultiSheetExcel, exportComprehensiveReport } from '../../utils/excelExport';
 import { useToast } from '../../contexts/ToastContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import {
   BarChart3,
   TrendingUp,
@@ -73,6 +74,7 @@ function settled<T>(result: PromiseSettledResult<T>, fallback: T): T {
 
 const ReportsAnalytics: React.FC = () => {
   const { showSuccess, showError, showWarning } = useToast();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState('all');
@@ -659,9 +661,9 @@ const ReportsAnalytics: React.FC = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
               <BarChart3 className="text-white" size={24} />
             </div>
-            <span>Reports & Analytics</span>
+            <span>{t('reports.title')}</span>
           </h1>
-          <p className="text-gray-500 mt-1">Comprehensive insights and data analysis</p>
+          <p className="text-gray-500 mt-1">{t('reports.subtitle')}</p>
         </div>
         
         <div className="flex items-center space-x-3 flex-wrap gap-2">

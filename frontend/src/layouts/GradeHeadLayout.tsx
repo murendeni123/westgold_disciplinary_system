@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../services/api';
 import NotificationBell from '../components/NotificationBell';
@@ -38,12 +39,13 @@ interface NavItem {
 
 const GradeHeadLayout: React.FC = () => {
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [openSubMenus, setOpenSubMenus] = useState<string[]>(['Discipline', 'Behaviour']);
+  const [openSubMenus, setOpenSubMenus] = useState<string[]>(['Discipline', 'Behaviour']); // keys match item.name
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchTotalCount, setSearchTotalCount] = useState(0);
@@ -54,12 +56,12 @@ const GradeHeadLayout: React.FC = () => {
   // Personal section — only shown when teacher has an assigned class
   const personalNavItems: NavItem[] = [
     {
-      name: 'My Dashboard',
+      name: t('nav.myDashboard'),
       path: '/grade-head/my-dashboard',
       icon: LayoutDashboard
     },
     {
-      name: 'My Class',
+      name: t('nav.myClass'),
       path: '/grade-head/my-class',
       icon: BookOpen
     }
@@ -68,7 +70,7 @@ const GradeHeadLayout: React.FC = () => {
   // Grade management section — always visible
   const gradeNavItems: NavItem[] = [
     {
-      name: 'Dashboard',
+      name: t('nav.dashboard'),
       path: '/grade-head',
       icon: LayoutDashboard
     },
@@ -76,18 +78,18 @@ const GradeHeadLayout: React.FC = () => {
       name: 'Behaviour',
       icon: AlertTriangle,
       subItems: [
-        { name: 'Behaviour Dashboard', path: '/grade-head/behaviour' },
-        { name: 'Log Incident', path: '/grade-head/behaviour/log' },
-        { name: 'Award Merit', path: '/grade-head/merits/award' }
+        { name: t('nav.behaviourDashboard'), path: '/grade-head/behaviour' },
+        { name: t('nav.logIncident'), path: '/grade-head/behaviour/log' },
+        { name: t('nav.awardMerit'), path: '/grade-head/merits/award' }
       ]
     },
     {
-      name: 'Students',
+      name: t('nav.students'),
       path: '/grade-head/students',
       icon: Users
     },
     {
-      name: 'Classes',
+      name: t('nav.classes'),
       path: '/grade-head/classes',
       icon: School
     },
@@ -95,30 +97,30 @@ const GradeHeadLayout: React.FC = () => {
       name: 'Discipline',
       icon: Target,
       subItems: [
-        { name: 'Discipline Center', path: '/grade-head/discipline' },
-        { name: 'Discipline Rules', path: '/grade-head/discipline-rules' },
-        { name: 'Detention Sessions', path: '/grade-head/detention-sessions' },
-        { name: 'Consequence Management', path: '/grade-head/consequence-management' },
-        { name: 'Merits & Demerits', path: '/grade-head/merits' }
+        { name: t('nav.disciplineCenter'), path: '/grade-head/discipline' },
+        { name: t('nav.disciplineRules'), path: '/grade-head/discipline-rules' },
+        { name: t('nav.detentionSessions'), path: '/grade-head/detention-sessions' },
+        { name: t('nav.consequenceManagement'), path: '/grade-head/consequence-management' },
+        { name: t('nav.meritsDemerits'), path: '/grade-head/merits' }
       ]
     },
     {
-      name: 'Reports',
+      name: t('nav.reports'),
       path: '/grade-head/reports',
       icon: BarChart3
     },
     {
-      name: 'Bulk Import',
+      name: t('nav.bulkImport'),
       path: '/grade-head/bulk-import',
       icon: Upload
     },
     {
-      name: 'Notifications',
+      name: t('nav.notifications'),
       path: '/grade-head/notifications',
       icon: Bell
     },
     {
-      name: 'Settings',
+      name: t('nav.settings'),
       path: '/grade-head/settings',
       icon: Settings
     }
@@ -227,7 +229,7 @@ const GradeHeadLayout: React.FC = () => {
                 <Shield size={16} className="text-white" />
               </div>
               <div className="overflow-hidden">
-                <p className="text-sm font-bold truncate">Grade Head</p>
+                <p className="text-sm font-bold truncate">{t('gradeHead.portal')}</p>
                 <p className="text-xs text-amber-300 truncate">Grade {user?.gradeHeadFor}</p>
               </div>
             </div>
@@ -263,7 +265,7 @@ const GradeHeadLayout: React.FC = () => {
             <div className="mb-1">
               {(sidebarOpen || isMobile) && (
                 <p className="px-2 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-indigo-400 select-none">
-                  My Teaching
+                  {t('nav.myTeaching')}
                 </p>
               )}
               <div className="space-y-0.5">
@@ -291,7 +293,7 @@ const GradeHeadLayout: React.FC = () => {
           <div className="space-y-0.5 mt-1">
             {(sidebarOpen || isMobile) && (
               <p className="px-2 pt-1 pb-1 text-[10px] font-bold uppercase tracking-widest text-indigo-400 select-none">
-                Grade Management
+                {t('nav.gradeManagement')}
               </p>
             )}
             {gradeNavItems.map((item) => {
@@ -363,7 +365,7 @@ const GradeHeadLayout: React.FC = () => {
             className={`flex items-center px-2 py-2 rounded-lg text-red-300 hover:bg-red-500/20 hover:text-red-100 transition-colors w-full min-h-[44px] ${(!sidebarOpen && !isMobile) ? 'justify-center' : ''}`}
           >
             <LogOut size={18} className="flex-shrink-0" />
-            {(sidebarOpen || isMobile) && <span className="ml-2.5 text-sm font-medium">Logout</span>}
+            {(sidebarOpen || isMobile) && <span className="ml-2.5 text-sm font-medium">{t('nav.logout')}</span>}
           </button>
         </div>
       </aside>

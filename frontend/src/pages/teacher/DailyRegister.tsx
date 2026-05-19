@@ -7,9 +7,11 @@ import Input from '../../components/Input';
 import { motion } from 'framer-motion';
 import { Save, CheckCircle, Calendar, Users } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { getPhotoUrl } from '../../utils/photoUrl';
 
 const DailyRegister: React.FC = () => {
+  const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const { success, error, ToastContainer } = useToast();
   const [classes, setClasses] = useState<any[]>([]);
@@ -128,9 +130,9 @@ const DailyRegister: React.FC = () => {
         transition={{ duration: 0.5 }}
       >
         <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-          Daily Register
+          {t('attendance.dailyRegister')}
         </h1>
-        <p className="text-gray-600 mt-2 text-lg">Take attendance for your class</p>
+        <p className="text-gray-600 mt-2 text-lg">{t('teacher.dailyRegisterSubtitle')}</p>
       </motion.div>
 
       {/* Filters Card */}

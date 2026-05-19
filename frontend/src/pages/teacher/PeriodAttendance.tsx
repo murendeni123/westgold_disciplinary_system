@@ -6,10 +6,12 @@ import Input from '../../components/Input';
 import { motion } from 'framer-motion';
 import { Save, Calendar, Clock, Users } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { getPhotoUrl } from '../../utils/photoUrl';
 
 const PeriodAttendance: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [classes, setClasses] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
@@ -111,9 +113,9 @@ const PeriodAttendance: React.FC = () => {
         transition={{ duration: 0.5 }}
       >
         <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-          Period Attendance
+          {t('teacher.periodAttendance')}
         </h1>
-        <p className="text-gray-600 mt-2 text-lg">Take attendance for a specific period</p>
+        <p className="text-gray-600 mt-2 text-lg">{t('teacher.periodAttendanceSubtitle')}</p>
       </motion.div>
 
       {/* Form Card */}

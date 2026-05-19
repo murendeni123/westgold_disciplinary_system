@@ -22,9 +22,11 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const AttendanceOverviewEnhanced: React.FC = () => {
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'overview' | 'dismissals' | 'reports' | 'flags'>('overview');
   const [attendance, setAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -266,9 +268,9 @@ const AttendanceOverviewEnhanced: React.FC = () => {
       >
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            Attendance Management
+            {t('attendance.title')}
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">Comprehensive attendance tracking and management</p>
+          <p className="text-gray-600 mt-2 text-lg">{t('attendance.subtitle')}</p>
         </div>
         {activeTab === 'overview' && (
           <Button

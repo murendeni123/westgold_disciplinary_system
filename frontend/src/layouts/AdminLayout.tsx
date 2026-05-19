@@ -5,6 +5,7 @@ import QuickStudentSearch from '../components/QuickStudentSearch';
 import NotificationBell from '../components/NotificationBell';
 import TokenExpirationWarning from '../components/TokenExpirationWarning';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Menu, X, Shield, Search } from 'lucide-react';
 
 const AdminLayout: React.FC = () => {
@@ -12,6 +13,7 @@ const AdminLayout: React.FC = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const location = useLocation();
   const { customizations } = useSchoolTheme();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const handleResize = () => {
@@ -61,9 +63,9 @@ const AdminLayout: React.FC = () => {
                 </div>
                 <div>
                   <h1 className="font-bold text-xl bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                    Admin Portal
+                    {t('portals.admin')}
                   </h1>
-                  <p className="text-xs text-gray-500">Manage your school efficiently</p>
+                  <p className="text-xs text-gray-500">{t('portals.adminSubtitle')}</p>
                 </div>
               </div>
             </div>

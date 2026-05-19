@@ -12,12 +12,14 @@ import { Menu, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const ModernParentLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const { customizations, getImageUrl } = useSchoolTheme();
+  const { t } = useLanguage();
 
   useEffect(() => {
     const handleResize = () => {
@@ -88,11 +90,11 @@ const ModernParentLayout: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <Sparkles size={20} className="text-yellow-300" />
                   <h1 className="text-xl font-bold text-white tracking-tight">
-                    Parent Portal
+                    {t('portals.parent')}
                   </h1>
                 </div>
                 <span className="px-2 py-1 bg-white/20 backdrop-blur-sm rounded-lg text-xs text-white/80 font-medium">
-                  Dashboard
+                  {t('portals.parentSubtitle')}
                 </span>
               </div>
             </div>

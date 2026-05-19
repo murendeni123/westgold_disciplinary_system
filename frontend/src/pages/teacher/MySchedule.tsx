@@ -4,9 +4,11 @@ import { api } from '../../services/api';
 import Card from '../../components/Card';
 import Select from '../../components/Select';
 import { Calendar, Clock, BookOpen, Coffee } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const MySchedule: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [schedule, setSchedule] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1); // Monday = 0
@@ -51,8 +53,8 @@ const MySchedule: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">My Schedule</h1>
-        <p className="text-gray-600 mt-2">View your daily timetable and off periods</p>
+        <h1 className="text-3xl font-bold text-gray-900">{t('teacher.mySchedule')}</h1>
+        <p className="text-gray-600 mt-2">{t('teacher.myScheduleSubtitle')}</p>
       </div>
 
       <Card>

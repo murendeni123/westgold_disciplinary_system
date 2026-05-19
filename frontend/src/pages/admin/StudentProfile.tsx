@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Copy, Camera, Upload, User, Award, AlertTriangle, Calendar, TrendingUp, Clock, FileText, Shield, ChevronDown, ChevronUp, Search, Gavel } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { getPhotoUrl, handlePhotoError } from '../../utils/photoUrl';
 
 const StudentProfile: React.FC = () => {
@@ -21,6 +22,7 @@ const StudentProfile: React.FC = () => {
   const navigate = useNavigate();
   const portal = usePortalPrefix();
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [student, setStudent] = useState<any>(null);
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -338,7 +340,7 @@ const StudentProfile: React.FC = () => {
               <GoldenDotIndicator size="lg" showTooltip={true} animated={true} />
             )}
           </div>
-          <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base md:text-lg">Student Profile</p>
+          <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base md:text-lg">{t('students.studentProfile')}</p>
         </div>
       </motion.div>
 

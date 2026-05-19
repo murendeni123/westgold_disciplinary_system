@@ -9,6 +9,7 @@ import Textarea from '../../components/Textarea';
 import { motion } from 'framer-motion';
 import { Save, AlertTriangle } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import BadgeStatusModal from '../../components/BadgeStatusModal';
 
 // Static consequence options for teachers to select when logging an incident.
@@ -29,6 +30,7 @@ const CONSEQUENCE_OPTIONS: string[] = [
 const LogIncident: React.FC = () => {
   const navigate = useNavigate();
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [classes, setClasses] = useState<any[]>([]);
   const [allStudents, setAllStudents] = useState<any[]>([]);
   const [classStudents, setClassStudents] = useState<any[]>([]);
@@ -215,9 +217,9 @@ const LogIncident: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
-              Log Incident
+              {t('behaviour.logIncident')}
             </h1>
-            <p className="text-gray-600 mt-2 text-lg">Record a behaviour incident</p>
+            <p className="text-gray-600 mt-2 text-lg">{t('teacher.logIncidentSubtitle')}</p>
           </div>
           <motion.div
             whileHover={{ scale: 1.05 }}

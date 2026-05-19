@@ -16,6 +16,7 @@ import {
 import Button from '../../components/Button';
 import { useToast } from '../../hooks/useToast';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface Period {
   id: number;
@@ -37,7 +38,8 @@ interface Period {
 const TeacherPeriodTimetable: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { error, ToastContainer } = useToast();
+  const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [periods, setPeriods] = useState<Period[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'today' | 'week'>('today');
@@ -156,7 +158,7 @@ const TeacherPeriodTimetable: React.FC = () => {
         className="flex justify-between items-center"
       >
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">My Timetable</h1>
+          <h1 className="text-4xl font-bold text-gray-900">{t('timetable.myTimetable')}</h1>
           <p className="text-gray-500 mt-2">
             {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>

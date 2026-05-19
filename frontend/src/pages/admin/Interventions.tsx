@@ -11,10 +11,12 @@ import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, Eye, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Interventions: React.FC = () => {
   const navigate = useNavigate();
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [interventions, setInterventions] = useState<any[]>([]);
   const [types, setTypes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,9 +165,9 @@ const Interventions: React.FC = () => {
       >
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            Interventions
+            {t('interventions.title')}
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">Manage intervention types and assignments</p>
+          <p className="text-gray-600 mt-2 text-lg">{t('interventions.subtitle')}</p>
         </div>
         <div className="flex space-x-3">
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>

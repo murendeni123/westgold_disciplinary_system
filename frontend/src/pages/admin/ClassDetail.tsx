@@ -18,6 +18,7 @@ import Button from '../../components/Button';
 import Modal from '../../components/Modal';
 import Select from '../../components/Select';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface ClassData {
   id: number;
@@ -55,6 +56,7 @@ const ClassDetail: React.FC = () => {
   const navigate = useNavigate();
   const portal = usePortalPrefix();
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
 
   const [classData, setClassData] = useState<ClassData | null>(null);
   const [students, setStudents] = useState<Student[]>([]);

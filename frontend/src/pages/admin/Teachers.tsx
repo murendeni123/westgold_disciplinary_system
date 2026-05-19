@@ -8,10 +8,12 @@ import { motion } from 'framer-motion';
 import { Plus, Edit, Trash2, UserCheck, Sparkles, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const Teachers: React.FC = () => {
   const navigate = useNavigate();
   const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [teachers, setTeachers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -65,14 +67,14 @@ const Teachers: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('Are you sure you want to delete this teacher?')) {
+    if (window.confirm(t('teachers.deleteConfirm'))) {
       try {
         await api.deleteTeacher(id);
-        success('Teacher deleted successfully');
+        success(t('teachers.deletedSuccess'));
         fetchTeachers();
       } catch (err) {
         console.error('Error deleting teacher:', err);
-        error('Error deleting teacher');
+        error(t('teachers.deleteConfirm'));
       }
     }
   };
@@ -120,10 +122,10 @@ const Teachers: React.FC = () => {
         )
       ),
     },
-    { key: 'employee_id', label: 'Employee ID' },
-    { key: 'name', label: 'Name' },
-    { key: 'email', label: 'Email' },
-    { key: 'phone', label: 'Phone' },
+    { key: 'employee_id', label: t('teachers.employeeId') },
+    { key: 'name', label: t('name') },
+    { key: 'email', label: t('email') },
+    { key: 'phone', label: t('phone') },
     { 
       key: 'class_count', 
       label: 'Classes',
@@ -182,9 +184,9 @@ const Teachers: React.FC = () => {
       >
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-            Teachers
+            {t('teachers.title')}
           </h1>
-          <p className="text-gray-600 mt-2 text-lg">Manage all teachers in the system</p>
+          <p className="text-gray-600 mt-2 text-lg">{t('teachers.title')}</p>
         </div>
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button
@@ -192,7 +194,7 @@ const Teachers: React.FC = () => {
             className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 shadow-lg hover:shadow-xl"
           >
             <Plus size={20} className="mr-2" />
-            Add Teacher
+            {t('teachers.addTeacher')}
           </Button>
         </motion.div>
       </motion.div>
@@ -374,7 +376,7 @@ const Teachers: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={editingTeacher ? 'Edit Teacher' : 'Add Teacher'}
+        title={editingTeacher ? t('teachers.editTeacher') : t('teachers.addTeacher')}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -386,7 +388,7 @@ const Teachers: React.FC = () => {
               className="rounded-xl"
             />
             <Input
-              label="Employee ID"
+              label={t('teachers.employeeId')}
               value={formData.employee_id}
               onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
               required
@@ -424,14 +426,14 @@ const Teachers: React.FC = () => {
               onClick={() => setIsModalOpen(false)}
               className="rounded-xl"
             >
-              Cancel
+              {t('cancel')}
             </Button>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Button
                 type="submit"
                 className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 shadow-lg hover:shadow-xl"
               >
-                Save
+                {t('save')}
               </Button>
             </motion.div>
           </div>

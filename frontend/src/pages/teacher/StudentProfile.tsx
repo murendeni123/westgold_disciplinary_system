@@ -10,9 +10,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Camera, Upload, User, TrendingUp, Copy, RefreshCw, Clock, FileText, Shield, ChevronDown, ChevronUp, Search, Gavel } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { getPhotoUrl, handlePhotoError } from '../../utils/photoUrl';
 
 const StudentProfile: React.FC = () => {
+  const { t } = useLanguage();
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -272,7 +274,7 @@ const StudentProfile: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
             {student.first_name} {student.last_name}
           </h1>
-          <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base md:text-lg">Student Profile</p>
+          <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base md:text-lg">{t('students.studentProfile')}</p>
         </div>
       </motion.div>
 

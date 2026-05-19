@@ -12,10 +12,12 @@ import InterventionProgressModal from '../../components/InterventionProgressModa
 import { motion } from 'framer-motion';
 import { Filter, Sparkles, Edit, CheckCircle, Lightbulb, ArrowRight } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const TeacherInterventions: React.FC = () => {
   const navigate = useNavigate();
-  const { ToastContainer, success, error } = useToast();
+  const { success, error, ToastContainer } = useToast();
+  const { t } = useLanguage();
   const [interventions, setInterventions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -219,9 +221,9 @@ const TeacherInterventions: React.FC = () => {
         transition={{ duration: 0.5 }}
       >
         <h1 className="text-4xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-          Interventions
+          {t('interventions.title')}
         </h1>
-        <p className="text-gray-600 mt-2 text-lg">View interventions for students in your classes</p>
+        <p className="text-gray-600 mt-2 text-lg">{t('teacher.interventionsSubtitle')}</p>
       </motion.div>
 
       {/* Guided Intervention CTA */}

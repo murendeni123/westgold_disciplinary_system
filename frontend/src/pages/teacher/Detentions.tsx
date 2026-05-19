@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Calendar, Eye } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 import MyDetentions from './MyDetentions';
 import TeacherViewDetentions from './ViewDetentions';
 
 const Detentions: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'my' | 'view'>('my');
+  const { t } = useLanguage();
 
   const tabs = [
     { id: 'my' as const, label: 'My Detentions', icon: Calendar },
@@ -25,9 +27,9 @@ const Detentions: React.FC = () => {
             <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
               <Clock className="text-white" size={24} />
             </div>
-            <span>Detentions Management</span>
+            <span>{t('teacher.detentionsManagement')}</span>
           </h1>
-          <p className="text-gray-500 mt-1">Manage and view detention records</p>
+          <p className="text-gray-500 mt-1">{t('teacher.detentionsManagementSubtitle')}</p>
         </div>
       </motion.div>
 
