@@ -172,6 +172,7 @@ app.use('/api/theme-builder', require('./routes/themeBuilder'));
 app.use('/api/users', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/users'));
 app.use('/api/grade-heads', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/gradeHeads'));
 app.use('/api/preferences', authenticateToken, require('./routes/preferences'));
+app.use('/api/language', authenticateToken, require('./routes/language'));
 app.use('/api/feature-flags', require('./routes/featureFlags'));
 app.use('/api/goldie-badge', authenticateToken, setSchemaFromToken, enforceSchemaAccess, require('./routes/goldieBadge'));
 app.use('/api/invoices', require('./routes/invoices'));

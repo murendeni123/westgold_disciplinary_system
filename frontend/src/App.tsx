@@ -7,6 +7,7 @@ import { PlatformAuthProvider } from './contexts/PlatformAuthContext';
 import { SchoolThemeProvider } from './contexts/SchoolThemeContext';
 import { FeatureFlagsProvider } from './contexts/FeatureFlagsContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import { setNavigationCallback } from './services/api';
 
 // Layouts and guards remain static — needed immediately for routing
@@ -134,6 +135,7 @@ function App() {
           <NotificationProvider>
             <PlatformAuthProvider>
               <FeatureFlagsProvider>
+                <LanguageProvider>
                 <ToastProvider>
                   <NavigationSetup />
             <Suspense fallback={<PageLoader />}>
@@ -255,6 +257,7 @@ function App() {
         </Routes>
             </Suspense>
                 </ToastProvider>
+                </LanguageProvider>
               </FeatureFlagsProvider>
             </PlatformAuthProvider>
           </NotificationProvider>

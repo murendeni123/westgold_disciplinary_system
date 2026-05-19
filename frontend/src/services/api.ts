@@ -779,7 +779,14 @@ export const api = {
     email_on_absence?: boolean;
     dark_mode?: boolean;
     compact_view?: boolean;
+    preferred_language?: string | null;
   }) => axiosInstance.put('/preferences', data),
+
+  // Language
+  resolveLanguage: () => axiosInstance.get('/language/resolve'),
+  getGlobalLanguage: () => axiosInstance.get('/language/global'),
+  setUserLanguage: (language: string | null) => axiosInstance.patch('/language/me', { language }),
+  setGlobalLanguage: (language: string) => axiosInstance.patch('/language/global', { language }),
 };
 
 // Export the axios instance for direct use when needed

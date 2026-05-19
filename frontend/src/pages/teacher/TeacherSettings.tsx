@@ -5,14 +5,37 @@ import Input from '../../components/Input';
 import Button from '../../components/Button';
 import PasswordChangeForm from '../../components/PasswordChangeForm';
 import { motion } from 'framer-motion';
-import { Save, Lock, User, Settings, Building2, Bell } from 'lucide-react';
+import { Save, Lock, User, Settings, Building2, Bell, Globe } from 'lucide-react';
 import UserPreferencesPanel from '../../components/UserPreferencesPanel';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
+import LanguageSelector from '../../components/LanguageSelector';
+import { SupportedLanguage } from '../../locales';
 
 const TeacherSettings: React.FC = () => {
   const { user, updateUser } = useAuth();
   const { success, error, ToastContainer } = useToast();
+  const { userLanguage, setUserLanguage, t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'preferences'>('profile');
+
+  const [pendingUserLang, setPendingUserLang] = useState<SupportedLanguage | null>(userLanguage);
+  const [savingLang, setSavingLang] = useState(false);
+
+  useEffect(() => {
+    setPendingUserLang(userLanguage);
+  }, [userLanguage]);
+
+  const handleSaveLanguage = async () => {
+    setSavingLang(true);
+    try {
+      await setUserLanguage(pendingUserLang);
+      success(t('language.savedSuccess'));
+    } catch {
+      error('Failed to save language preference');
+    } finally {
+      setSavingLang(false);
+    }
+  };
   
   // Profile state
   const [profileData, setProfileData] = useState({
@@ -233,12 +256,38 @@ const TeacherSettings: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
+            className="space-y-8"
           >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Preferences</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-gray-900">{t('settings.preferences')}</h2>
               <Bell className="text-emerald-600" size={24} />
             </div>
             <UserPreferencesPanel onSaved={() => success('Preferences saved!')} />
+
+            {/* Language Section */}
+            <div className="border-t border-gray-100 pt-6">
+              <div className="flex items-center gap-2 mb-1">
+                <Globe size={16} className="text-emerald-600" />
+                <h3 className="text-base font-bold text-gray-900">{t('language.myLanguage')}</h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">{t('language.myLanguageDesc')}</p>
+              <LanguageSelector
+                value={pendingUserLang}
+                onChange={(lang) => setPendingUserLang(lang)}
+                accentColor="emerald"
+                allowReset={true}
+              />
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="mt-4">
+                <Button
+                  onClick={handleSaveLanguage}
+                  disabled={savingLang || pendingUserLang === userLanguage}
+                  className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white border-0 shadow-lg"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {savingLang ? t('language.saving') : t('language.saveMyLanguage')}
+                </Button>
+              </motion.div>
+            </div>
           </motion.div>
         )}
       </motion.div>

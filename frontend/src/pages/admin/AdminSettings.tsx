@@ -5,14 +5,18 @@ import Input from '../../components/Input';
 import Button from '../../components/Button';
 import PasswordChangeForm from '../../components/PasswordChangeForm';
 import { motion } from 'framer-motion';
-import { Save, Lock, User, Settings, Building2, Copy, Check, Bell } from 'lucide-react';
+import { Save, Lock, User, Settings, Building2, Copy, Check, Bell, Globe, Info } from 'lucide-react';
 import UserPreferencesPanel from '../../components/UserPreferencesPanel';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
+import LanguageSelector from '../../components/LanguageSelector';
+import { SupportedLanguage } from '../../locales';
 
 const AdminSettings: React.FC = () => {
   const { user, updateUser } = useAuth();
   const { success, error, ToastContainer } = useToast();
-  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'school' | 'preferences'>('profile');
+  const { userLanguage, globalLanguage, setUserLanguage, setGlobalLanguage, t } = useLanguage();
+  const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'school' | 'preferences' | 'language'>('profile');
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [copiedCode, setCopiedCode] = useState(false);
   
@@ -22,6 +26,44 @@ const AdminSettings: React.FC = () => {
     email: '',
   });
   const [updatingProfile, setUpdatingProfile] = useState(false);
+
+  // Language state
+  const [pendingUserLang, setPendingUserLang] = useState<SupportedLanguage | null>(userLanguage);
+  const [pendingGlobalLang, setPendingGlobalLang] = useState<SupportedLanguage>(globalLanguage);
+  const [savingUserLang, setSavingUserLang] = useState(false);
+  const [savingGlobalLang, setSavingGlobalLang] = useState(false);
+
+  useEffect(() => {
+    setPendingUserLang(userLanguage);
+  }, [userLanguage]);
+
+  useEffect(() => {
+    setPendingGlobalLang(globalLanguage);
+  }, [globalLanguage]);
+
+  const handleSaveUserLanguage = async () => {
+    setSavingUserLang(true);
+    try {
+      await setUserLanguage(pendingUserLang);
+      success(t('language.savedSuccess'));
+    } catch {
+      error('Failed to save language preference');
+    } finally {
+      setSavingUserLang(false);
+    }
+  };
+
+  const handleSaveGlobalLanguage = async () => {
+    setSavingGlobalLang(true);
+    try {
+      await setGlobalLanguage(pendingGlobalLang);
+      success(t('language.globalSavedSuccess'));
+    } catch {
+      error('Failed to update global language');
+    } finally {
+      setSavingGlobalLang(false);
+    }
+  };
 
 
   useEffect(() => {
@@ -109,10 +151,11 @@ const AdminSettings: React.FC = () => {
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
             {[
-              { id: 'profile', label: 'Profile', icon: User },
-              { id: 'password', label: 'Password', icon: Lock },
-              { id: 'school', label: 'School Info', icon: Building2 },
-              { id: 'preferences', label: 'Preferences', icon: Bell },
+              { id: 'profile', label: t('settings.profile'), icon: User },
+              { id: 'password', label: t('settings.password'), icon: Lock },
+              { id: 'school', label: t('settings.schoolInfo'), icon: Building2 },
+              { id: 'preferences', label: t('settings.preferences'), icon: Bell },
+              { id: 'language', label: t('settings.language'), icon: Globe },
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -287,10 +330,87 @@ const AdminSettings: React.FC = () => {
             transition={{ delay: 0.3 }}
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Preferences</h2>
+              <h2 className="text-2xl font-bold text-gray-900">{t('settings.preferences')}</h2>
               <Bell className="text-amber-600" size={24} />
             </div>
             <UserPreferencesPanel onSaved={() => success('Preferences saved!')} />
+          </motion.div>
+        )}
+
+        {/* Language Tab */}
+        {activeTab === 'language' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="space-y-8"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">{t('language.title')}</h2>
+                <p className="text-gray-500 text-sm mt-1">{t('language.subtitle')}</p>
+              </div>
+              <Globe className="text-amber-600" size={24} />
+            </div>
+
+            {/* Admin info banner */}
+            <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200">
+              <Info size={16} className="text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-amber-800">{t('language.adminNote')}</p>
+                <p className="text-xs text-amber-600 mt-1">{t('language.hierarchyNote')}</p>
+              </div>
+            </div>
+
+            {/* Global Language — School default */}
+            <div className="p-6 rounded-2xl border-2 border-dashed border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50">
+              <div className="flex items-center gap-2 mb-1">
+                <Globe size={16} className="text-amber-600" />
+                <h3 className="text-base font-bold text-gray-900">{t('language.globalLanguage')}</h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">{t('language.globalLanguageDesc')}</p>
+              <LanguageSelector
+                value={pendingGlobalLang}
+                onChange={(lang) => setPendingGlobalLang(lang || 'en')}
+                accentColor="amber"
+                allowReset={false}
+              />
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="mt-4">
+                <Button
+                  onClick={handleSaveGlobalLanguage}
+                  disabled={savingGlobalLang || pendingGlobalLang === globalLanguage}
+                  className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white border-0 shadow-lg"
+                >
+                  <Globe className="w-4 h-4 mr-2" />
+                  {savingGlobalLang ? t('language.saving') : t('language.saveGlobalLanguage')}
+                </Button>
+              </motion.div>
+            </div>
+
+            {/* Personal Language — Admin only changes theirs */}
+            <div className="p-6 rounded-2xl border-2 border-dashed border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+              <div className="flex items-center gap-2 mb-1">
+                <User size={16} className="text-blue-600" />
+                <h3 className="text-base font-bold text-gray-900">{t('language.myLanguage')}</h3>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">{t('language.myLanguageDesc')}</p>
+              <LanguageSelector
+                value={pendingUserLang}
+                onChange={(lang) => setPendingUserLang(lang)}
+                accentColor="blue"
+                allowReset={true}
+              />
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="mt-4">
+                <Button
+                  onClick={handleSaveUserLanguage}
+                  disabled={savingUserLang || pendingUserLang === userLanguage}
+                  className="rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white border-0 shadow-lg"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  {savingUserLang ? t('language.saving') : t('language.saveMyLanguage')}
+                </Button>
+              </motion.div>
+            </div>
           </motion.div>
         )}
       </motion.div>

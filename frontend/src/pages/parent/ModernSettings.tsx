@@ -4,16 +4,41 @@ import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import ModernCard from '../../components/ModernCard';
 import { motion } from 'framer-motion';
-import { Save, Lock, User, Settings as SettingsIcon, CheckCircle, AlertCircle, Building2, Users, Plus, Bell } from 'lucide-react';
+import { Save, Lock, User, Settings as SettingsIcon, CheckCircle, AlertCircle, Building2, Users, Plus, Bell, Globe } from 'lucide-react';
 import UserPreferencesPanel from '../../components/UserPreferencesPanel';
 import Input from '../../components/Input';
 import PasswordChangeForm from '../../components/PasswordChangeForm';
+import { useLanguage } from '../../contexts/LanguageContext';
+import LanguageSelector from '../../components/LanguageSelector';
+import { SupportedLanguage } from '../../locales';
 
 const ModernSettings: React.FC = () => {
   const navigate = useNavigate();
   const { user, updateUser } = useAuth();
+  const { userLanguage, setUserLanguage, t } = useLanguage();
   const [activeTab, setActiveTab] = useState<'profile' | 'password' | 'school' | 'preferences'>('profile');
   const [prefSaved, setPrefSaved] = useState(false);
+
+  const [pendingUserLang, setPendingUserLang] = useState<SupportedLanguage | null>(userLanguage);
+  const [savingLang, setSavingLang] = useState(false);
+  const [langSaved, setLangSaved] = useState(false);
+
+  useEffect(() => {
+    setPendingUserLang(userLanguage);
+  }, [userLanguage]);
+
+  const handleSaveLanguage = async () => {
+    setSavingLang(true);
+    try {
+      await setUserLanguage(pendingUserLang);
+      setLangSaved(true);
+      setTimeout(() => setLangSaved(false), 2500);
+    } catch {
+      console.error('Failed to save language');
+    } finally {
+      setSavingLang(false);
+    }
+  };
   
   const [profileData, setProfileData] = useState({
     name: '',
@@ -573,18 +598,50 @@ const ModernSettings: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
+              className="space-y-8"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Preferences</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">{t('settings.preferences')}</h2>
                 <Bell className="text-indigo-600" size={24} />
               </div>
               {prefSaved && (
-                <div className="mb-4 p-3 rounded-xl bg-green-50 border border-green-200 flex items-center space-x-2">
+                <div className="p-3 rounded-xl bg-green-50 border border-green-200 flex items-center space-x-2">
                   <CheckCircle size={18} className="text-green-600" />
                   <span className="text-sm text-green-700 font-medium">Preferences saved!</span>
                 </div>
               )}
               <UserPreferencesPanel onSaved={() => { setPrefSaved(true); setTimeout(() => setPrefSaved(false), 2500); }} />
+
+              {/* Language Section */}
+              <div className="border-t border-gray-100 pt-6">
+                <div className="flex items-center gap-2 mb-1">
+                  <Globe size={16} className="text-indigo-600" />
+                  <h3 className="text-base font-bold text-gray-900">{t('language.myLanguage')}</h3>
+                </div>
+                <p className="text-xs text-gray-500 mb-4">{t('language.myLanguageDesc')}</p>
+                {langSaved && (
+                  <div className="mb-3 p-3 rounded-xl bg-green-50 border border-green-200 flex items-center space-x-2">
+                    <CheckCircle size={18} className="text-green-600" />
+                    <span className="text-sm text-green-700 font-medium">{t('language.savedSuccess')}</span>
+                  </div>
+                )}
+                <LanguageSelector
+                  value={pendingUserLang}
+                  onChange={(lang) => setPendingUserLang(lang)}
+                  accentColor="indigo"
+                  allowReset={true}
+                />
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleSaveLanguage}
+                  disabled={savingLang || pendingUserLang === userLanguage}
+                  className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-semibold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Save size={14} />
+                  {savingLang ? t('language.saving') : t('language.saveMyLanguage')}
+                </motion.button>
+              </div>
             </motion.div>
           )}
         </ModernCard>
