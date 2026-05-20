@@ -145,8 +145,8 @@ const SchoolSelect: React.FC = () => {
                 <GraduationCap className="text-white" size={32} />
               </motion.div>
               <div>
-                <h1 className="text-3xl font-bold text-primary">GREENSTEM DMS</h1>
-                <p className="text-white/70 text-sm">Disciplinary Management System</p>
+                <h1 className="text-3xl font-bold text-primary">Classly</h1>
+                <p className="text-white/70 text-sm">School Management Platform</p>
               </div>
             </div>
           </motion.div>
@@ -162,7 +162,7 @@ const SchoolSelect: React.FC = () => {
               Welcome to
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-cyan-300">
-                GREENSTEM DMS
+                Classly
               </span>
             </h2>
             <p className="text-white/80 text-lg max-w-md">
@@ -230,7 +230,7 @@ const SchoolSelect: React.FC = () => {
             >
               <GraduationCap className="text-white" size={32} />
             </motion.div>
-            <h1 className="text-2xl font-bold text-primary">GREENSTEM DMS</h1>
+            <h1 className="text-2xl font-bold text-primary">Classly</h1>
             <p className="text-muted text-sm">Select your school</p>
           </div>
 
@@ -416,7 +416,7 @@ const SchoolSelect: React.FC = () => {
             transition={{ delay: 0.6 }}
             className="mt-8 text-center text-gray-400 text-sm"
           >
-            <p>© 2026 GREENSTEM DMS. All rights reserved.</p>
+            <p>© 2026 Classly. All rights reserved.</p>
           </motion.div>
         </motion.div>
       </div>

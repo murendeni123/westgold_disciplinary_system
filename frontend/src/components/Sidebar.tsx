@@ -140,7 +140,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
                     </div>
                   )}
                   <div>
-                    <h1 className="font-bold text-xl text-white drop-shadow-lg">DMS</h1>
+                    <h1 className="font-bold text-xl text-white drop-shadow-lg">Classly</h1>
                     <p className="text-xs text-white/80 capitalize font-medium">{user?.role === 'admin' ? t('portals.admin') : user?.role === 'teacher' ? t('portals.teacher') : t('portals.parent')}</p>
                   </div>
                 </div>

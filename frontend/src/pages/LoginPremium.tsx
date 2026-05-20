@@ -190,8 +190,8 @@ const LoginPremium: React.FC = () => {
               )}
             </motion.div>
             <div>
-              <h1 className="text-3xl font-bold text-white">DMS</h1>
-              <p className="text-gray-400 text-sm">Disciplinary Management System</p>
+              <h1 className="text-3xl font-bold text-white">Classly</h1>
+              <p className="text-gray-400 text-sm">School Management Platform</p>
             </div>
           </div>
         </motion.div>
@@ -267,7 +267,7 @@ const LoginPremium: React.FC = () => {
             >
               <GraduationCap className="text-white" size={32} />
             </motion.div>
-            <h1 className="text-2xl font-bold text-white">DMS</h1>
+            <h1 className="text-2xl font-bold text-white">Classly</h1>
           </div>
 
           {/* Glassmorphism Login Card */}
@@ -478,7 +478,7 @@ const LoginPremium: React.FC = () => {
             transition={{ delay: 0.6 }}
             className="mt-8 text-center text-gray-500 text-sm"
           >
-            <p>© 2026 DMS. All rights reserved.</p>
+            <p>© 2026 Classly. All rights reserved.</p>
           </motion.div>
         </motion.div>
       </div>

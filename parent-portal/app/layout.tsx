@@ -7,8 +7,8 @@ import { QueryProvider } from '@/core/providers/QueryProvider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Parent Portal - School Management',
-  description: 'Monitor your children\'s academic and behavioral performance',
+  title: 'Classly Parent Portal',
+  description: 'Monitor your children\'s academic and behavioral performance with Classly',
 };
 
 export default function RootLayout({

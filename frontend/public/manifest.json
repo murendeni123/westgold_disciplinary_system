@@ -1,7 +1,7 @@
 {
-  "name": "Positive Discipline System",
-  "short_name": "PDS",
-  "description": "School disciplinary management system for parents, teachers, and administrators",
+  "name": "Classly",
+  "short_name": "Classly",
+  "description": "Classly - School management platform for parents, teachers, and administrators",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
