@@ -187,8 +187,8 @@ const Login: React.FC = () => {
                 )}
               </motion.div>
               <div>
-                <h1 className="text-3xl font-bold text-white">DMS</h1>
-                <p className="text-white/70 text-sm">Discipline Management System</p>
+                <h1 className="text-3xl font-bold text-white">Classly</h1>
+                <p className="text-white/70 text-sm">School Management Platform</p>
               </div>
             </div>
           </motion.div>
@@ -274,7 +274,7 @@ const Login: React.FC = () => {
             >
               <GraduationCap className="text-white" size={28} />
             </motion.div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">DMS</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Classly</h1>
           </div>
 
           {/* Login Card */}
@@ -516,7 +516,7 @@ const Login: React.FC = () => {
             transition={{ delay: 0.6 }}
             className="mt-6 sm:mt-8 text-center text-gray-400 text-xs sm:text-sm"
           >
-            <p>© 2026 DMS. All rights reserved.</p>
+            <p>© 2026 Classly. All rights reserved.</p>
           </motion.div>
         </motion.div>
       </div>

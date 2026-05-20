@@ -285,8 +285,8 @@ const ParentSignup: React.FC = () => {
               <GraduationCap className="text-white" size={32} />
             </motion.div>
             <div>
-              <h1 className="text-3xl font-bold text-white">DMS</h1>
-              <p className="text-gray-400 text-sm">Disciplinary Management System</p>
+              <h1 className="text-3xl font-bold text-white">Classly</h1>
+              <p className="text-gray-400 text-sm">School Management Platform</p>
             </div>
           </div>
         </motion.div>
@@ -359,7 +359,7 @@ const ParentSignup: React.FC = () => {
             >
               <GraduationCap className="text-white" size={32} />
             </motion.div>
-            <h1 className="text-2xl font-bold text-white">DMS</h1>
+            <h1 className="text-2xl font-bold text-white">Classly</h1>
           </div>
 
           {/* Glassmorphism Card */}
@@ -389,7 +389,7 @@ const ParentSignup: React.FC = () => {
                       <Sparkles size={16} className="text-emerald-400" />
                       <span className="text-sm font-medium text-gray-200">Parent Portal</span>
                     </motion.div>
-                    <h2 className="text-3xl font-bold text-white mb-3">Welcome to DMS!</h2>
+                    <h2 className="text-3xl font-bold text-white mb-3">Welcome to Classly!</h2>
                     <p className="text-gray-300">
                       Your one-stop portal to track your child's progress, attendance, and behavior at school.
                     </p>
@@ -693,7 +693,7 @@ const ParentSignup: React.FC = () => {
             transition={{ delay: 0.6 }}
             className="mt-8 text-center text-gray-500 text-sm"
           >
-            <p>© 2026 DMS. All rights reserved.</p>
+            <p>© 2026 Classly. All rights reserved.</p>
           </motion.div>
         </motion.div>
       </div>

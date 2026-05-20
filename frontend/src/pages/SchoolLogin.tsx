@@ -313,7 +313,7 @@ const SchoolLogin: React.FC = () => {
           >
             <div className="flex items-center space-x-2 text-white/50 text-sm">
               <Sparkles size={16} />
-              <span>Powered by GREENSTEM DMS</span>
+              <span>Powered by Classly</span>
             </div>
           </motion.div>
         </div>
@@ -537,7 +537,7 @@ const SchoolLogin: React.FC = () => {
             transition={{ delay: 0.6 }}
             className="mt-8 text-center text-gray-400 text-sm"
           >
-            <p>© 2026 GREENSTEM DMS. All rights reserved.</p>
+            <p>© 2026 Classly. All rights reserved.</p>
           </motion.div>
         </motion.div>
       </div>
