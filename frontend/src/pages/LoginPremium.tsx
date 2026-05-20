@@ -186,7 +186,7 @@ const LoginPremium: React.FC = () => {
               {logoUrl ? (
                 <img src={logoUrl} alt="Logo" className="h-10 w-auto" />
               ) : (
-                <GraduationCap className="text-white" size={32} />
+                <img src="/classly_icon.PNG" alt="Classly" className="h-10 w-auto object-contain" />
               )}
             </motion.div>
             <div>
@@ -261,11 +261,11 @@ const LoginPremium: React.FC = () => {
         >
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
-            <motion.div 
+            <motion.div
               className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl mb-4 shadow-2xl shadow-primary/50"
               whileHover={{ scale: 1.05 }}
             >
-              <GraduationCap className="text-white" size={32} />
+              <img src="/classly_icon.PNG" alt="Classly" className="h-11 w-auto object-contain" />
             </motion.div>
             <h1 className="text-2xl font-bold text-white">Classly</h1>
           </div>

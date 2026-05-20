@@ -135,9 +135,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
                       className="h-10 sm:h-12 w-auto object-contain rounded-lg bg-white/20 p-1.5 backdrop-blur-sm"
                     />
                   ) : (
-                    <div className="p-3 rounded-2xl bg-white/20 backdrop-blur-sm shadow-lg border border-white/30">
-                      <GraduationCap className="text-white" size={24} />
-                    </div>
+                    <img src="/classly_icon.PNG" alt="Classly" className="h-10 sm:h-12 w-auto object-contain drop-shadow-lg" />
                   )}
                   <div>
                     <h1 className="font-bold text-xl text-white drop-shadow-lg">Classly</h1>

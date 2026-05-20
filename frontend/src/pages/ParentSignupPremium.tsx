@@ -277,12 +277,12 @@ const ParentSignup: React.FC = () => {
           className="mb-16"
         >
           <div className="flex items-center space-x-4">
-            <motion.div 
+            <motion.div
               className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center shadow-2xl shadow-emerald-500/50"
               whileHover={{ scale: 1.05, rotate: 5 }}
               transition={{ type: 'spring', stiffness: 400 }}
             >
-              <GraduationCap className="text-white" size={32} />
+              <img src="/classly_icon.PNG" alt="Classly" className="h-11 w-auto object-contain" />
             </motion.div>
             <div>
               <h1 className="text-3xl font-bold text-white">Classly</h1>
@@ -353,11 +353,11 @@ const ParentSignup: React.FC = () => {
         >
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
-            <motion.div 
+            <motion.div
               className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl mb-4 shadow-2xl shadow-emerald-500/50"
               whileHover={{ scale: 1.05 }}
             >
-              <GraduationCap className="text-white" size={32} />
+              <img src="/classly_icon.PNG" alt="Classly" className="h-11 w-auto object-contain" />
             </motion.div>
             <h1 className="text-2xl font-bold text-white">Classly</h1>
           </div>

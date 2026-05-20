@@ -376,7 +376,7 @@ const ParentSignup: React.FC = () => {
           >
             <div className="flex items-center space-x-3 mb-8">
               <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                <GraduationCap size={32} />
+                <img src="/classly_icon.PNG" alt="Classly" className="h-10 w-auto object-contain" />
               </div>
               <span className="text-2xl font-bold">Classly</span>
             </div>
@@ -439,7 +439,7 @@ const ParentSignup: React.FC = () => {
               >
                 <div className="text-center mb-8">
                   <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl mb-6 shadow-lg shadow-emerald-500/30">
-                    <GraduationCap className="text-white" size={40} />
+                    <img src="/classly_icon.PNG" alt="Classly" className="h-14 w-auto object-contain" />
                   </div>
                   <h2 className="text-3xl font-bold text-gray-900 mb-3">Welcome to Classly!</h2>
                   <p className="text-gray-600 text-lg">

@@ -110,12 +110,12 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
                       />
                     </div>
                   ) : (
-                    <motion.div 
-                      className="w-9 h-9 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-lg sm:rounded-xl flex items-center justify-center"
+                    <motion.img
+                      src="/classly_icon.PNG"
+                      alt="Classly"
+                      className="w-9 h-9 sm:w-10 sm:h-10 object-contain drop-shadow-md"
                       whileHover={{ scale: 1.05, rotate: 5 }}
-                    >
-                      <GraduationCap className="text-white" size={20} />
-                    </motion.div>
+                    />
                   )}
                   <div>
                     <span className="font-bold text-lg sm:text-xl text-white tracking-tight">
