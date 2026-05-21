@@ -6,8 +6,10 @@ import { Bell, Check, Trash2, CheckCircle2 } from 'lucide-react';
 import Select from '../../components/Select';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const ModernNotifications: React.FC = () => {
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
