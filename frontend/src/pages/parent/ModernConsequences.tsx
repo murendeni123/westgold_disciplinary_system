@@ -7,9 +7,11 @@ import Textarea from '../../components/Textarea';
 import { AlertCircle, Scale, Eye, X, CheckCircle, Shield, Clock, User, Calendar, Filter, Search, AlertTriangle, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const ModernConsequences: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [consequences, setConsequences] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedConsequence, setSelectedConsequence] = useState<any | null>(null);
@@ -78,7 +80,7 @@ const ModernConsequences: React.FC = () => {
     
     try {
       await api.acknowledgeConsequence(selectedConsequence.id, { parent_notes: acknowledgeNotes });
-      success('Consequence acknowledged successfully');
+      success(t('parent.acknowledged'));
       setIsAcknowledgeModalOpen(false);
       setIsDetailsModalOpen(false);
       fetchConsequences();
@@ -306,7 +308,7 @@ const ModernConsequences: React.FC = () => {
                   >
                     <Scale className="text-white" size={40} />
                   </motion.div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">No Consequences Found</h3>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('parent.noConsequences')}</h3>
                   <p className="text-gray-600">
                     {filters.searchQuery || filters.student_id || filters.status
                       ? 'Try adjusting your filters to see more results'
@@ -404,7 +406,7 @@ const ModernConsequences: React.FC = () => {
                           className="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-all"
                         >
                           <Eye size={16} />
-                          <span className="font-medium">View Details</span>
+                          <span className="font-medium">{t('common.viewDetails')}</span>
                         </motion.button>
                         {!consequence.parent_acknowledged && (
                           <motion.button
@@ -417,7 +419,7 @@ const ModernConsequences: React.FC = () => {
                             className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl hover:shadow-lg transition-all"
                           >
                             <CheckCircle size={16} />
-                            <span className="font-medium">Acknowledge</span>
+                            <span className="font-medium">{t('parent.acknowledge')}</span>
                           </motion.button>
                         )}
                       </div>
@@ -525,7 +527,7 @@ const ModernConsequences: React.FC = () => {
                       <div className="mt-1">
                         <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">
                           <CheckCircle size={12} className="mr-1" />
-                          Acknowledged
+                          {t('parent.acknowledged')}
                         </span>
                         {selectedConsequence.parent_acknowledged_at && (
                           <p className="text-xs text-gray-500 mt-1">
@@ -535,7 +537,7 @@ const ModernConsequences: React.FC = () => {
                       </div>
                     ) : (
                       <span className="mt-1 inline-block px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">
-                        Not Acknowledged
+                        {t('parent.notAcknowledged')}
                       </span>
                     )}
                   </div>
@@ -552,7 +554,7 @@ const ModernConsequences: React.FC = () => {
 
                 {selectedConsequence.parent_notes && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Your Notes</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('parent.parentNotes')}</label>
                     <p className="text-gray-900 bg-blue-50 p-3 rounded-lg">
                       {selectedConsequence.parent_notes}
                     </p>
@@ -572,7 +574,7 @@ const ModernConsequences: React.FC = () => {
                   <div className="flex justify-end pt-4 border-t">
                     <Button onClick={handleAcknowledge}>
                       <CheckCircle size={16} className="mr-2" />
-                      Acknowledge Consequence
+                      {t('parent.acknowledge')}
                     </Button>
                   </div>
                 )}
@@ -606,11 +608,11 @@ const ModernConsequences: React.FC = () => {
                     setAcknowledgeNotes('');
                   }}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
                 <Button onClick={handleSubmitAcknowledge}>
                   <CheckCircle size={16} className="mr-2" />
-                  Acknowledge
+                  {t('parent.acknowledge')}
                 </Button>
               </div>
             </div>
