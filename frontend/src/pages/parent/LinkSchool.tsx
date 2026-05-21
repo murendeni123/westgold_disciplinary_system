@@ -6,19 +6,21 @@ import Card from '../../components/Card';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import Modal from '../../components/Modal';
-import { 
-  Building2, 
-  CheckCircle, 
-  AlertCircle, 
+import {
+  Building2,
+  CheckCircle,
+  AlertCircle,
   Info,
   Sparkles,
   Check,
   X
 } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const LinkSchool: React.FC = () => {
   const navigate = useNavigate();
   const { user, refreshUser, updateUser } = useAuth();
+  const { t } = useLanguage();
   const [schoolCode, setSchoolCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -127,7 +129,7 @@ const LinkSchool: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Link to School</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t('parent.linkSchool')}</h1>
         <p className="text-gray-600 mt-2">Connect your account to your child's school using a school code</p>
       </div>
 
@@ -191,7 +193,7 @@ const LinkSchool: React.FC = () => {
               value={schoolCode}
               onChange={(e) => setSchoolCode(e.target.value.toUpperCase().replace(/\s/g, ''))}
               required
-              placeholder="e.g., LEAR-2041"
+              placeholder={t('parent.schoolCodePlaceholder')}
               className="font-mono text-lg tracking-wider"
               maxLength={20}
             />
@@ -234,7 +236,7 @@ const LinkSchool: React.FC = () => {
               <Building2 className="text-purple-600" size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Your Linked Schools</h2>
+              <h2 className="text-xl font-bold text-gray-900">{t('parent.linkedSchools')}</h2>
               <p className="text-sm text-gray-600">Switch between schools to view different information</p>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface Column {
   key: string;
@@ -13,6 +14,7 @@ interface TableProps {
 }
 
 const Table: React.FC<TableProps> = ({ columns, data, onRowClick }) => {
+  const { t } = useLanguage();
   return (
     <div className="table-container overflow-x-auto -mx-1 px-1">
       <p className="text-xs text-gray-400 mb-2 sm:hidden">← Scroll to see more →</p>
@@ -28,7 +30,7 @@ const Table: React.FC<TableProps> = ({ columns, data, onRowClick }) => {
           {data.length === 0 ? (
             <tr>
               <td colSpan={columns.length} className="text-center py-8 text-gray-500">
-                No data available
+                {t('common.noData')}
               </td>
             </tr>
           ) : (

@@ -6,9 +6,11 @@ import Input from '../../components/Input';
 import Button from '../../components/Button';
 import { Save, AlertCircle, User, Phone, Shield, MapPin, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const ParentProfile: React.FC = () => {
   const { user, updateUser } = useAuth();
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -62,13 +64,13 @@ const ParentProfile: React.FC = () => {
 
     try {
       await api.updateParentProfile(formData);
-      setSuccess('Profile updated successfully!');
+      setSuccess(t('parent.profileUpdated'));
       if (user) {
         const updatedUser = { ...user, ...formData };
         updateUser(updatedUser);
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error updating profile');
+      setError(err.response?.data?.error || t('parent.profileError'));
     } finally {
       setLoading(false);
     }
@@ -88,8 +90,8 @@ const ParentProfile: React.FC = () => {
             <User size={32} />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">My Profile</h1>
-            <p className="text-purple-100 mt-1">Manage your personal information and contact details</p>
+            <h1 className="text-3xl font-bold">{t('parent.profile')}</h1>
+            <p className="text-purple-100 mt-1">{t('parent.profileSubtitle')}</p>
           </div>
         </div>
       </motion.div>
@@ -127,7 +129,7 @@ const ParentProfile: React.FC = () => {
           <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4">
             <div className="flex items-center space-x-3">
               <User className="text-white" size={24} />
-              <h2 className="text-xl font-bold text-white">Account Information</h2>
+              <h2 className="text-xl font-bold text-white">{t('parent.personalInfo')}</h2>
             </div>
           </div>
           <div className="p-6">
@@ -159,13 +161,13 @@ const ParentProfile: React.FC = () => {
           <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
             <div className="flex items-center space-x-3">
               <Phone className="text-white" size={24} />
-              <h2 className="text-xl font-bold text-white">Contact Details</h2>
+              <h2 className="text-xl font-bold text-white">{t('parent.contactDetails')}</h2>
             </div>
           </div>
           <div className="p-6">
           <div className="space-y-4">
             <Input
-              label="Phone Number"
+              label={t('common.phone')}
               type="tel"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -173,14 +175,14 @@ const ParentProfile: React.FC = () => {
               required
             />
             <Input
-              label="Work Phone"
+              label={t('parent.workPhone')}
               type="tel"
               value={formData.work_phone}
               onChange={(e) => setFormData({ ...formData, work_phone: e.target.value })}
               placeholder="Enter your work phone number"
             />
             <Input
-              label="Relationship to Child"
+              label={t('parent.relationship')}
               value={formData.relationship_to_child}
               onChange={(e) => setFormData({ ...formData, relationship_to_child: e.target.value })}
               placeholder="e.g., Mother, Father, Legal Guardian"
@@ -200,20 +202,20 @@ const ParentProfile: React.FC = () => {
           <div className="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4">
             <div className="flex items-center space-x-3">
               <Shield className="text-white" size={24} />
-              <h2 className="text-xl font-bold text-white">Emergency Contacts</h2>
+              <h2 className="text-xl font-bold text-white">{t('parent.emergencyContacts')}</h2>
             </div>
           </div>
           <div className="p-6">
           <div className="space-y-4">
             <Input
-              label="Emergency Contact 1 Name"
+              label={t('parent.emergency1Name')}
               value={formData.emergency_contact_1_name}
               onChange={(e) => setFormData({ ...formData, emergency_contact_1_name: e.target.value })}
               placeholder="Enter emergency contact name"
               required
             />
             <Input
-              label="Emergency Contact 1 Phone"
+              label={t('parent.emergency1Phone')}
               type="tel"
               value={formData.emergency_contact_1_phone}
               onChange={(e) => setFormData({ ...formData, emergency_contact_1_phone: e.target.value })}
@@ -221,14 +223,14 @@ const ParentProfile: React.FC = () => {
               required
             />
             <Input
-              label="Emergency Contact 2 Name"
+              label={t('parent.emergency2Name')}
               value={formData.emergency_contact_2_name}
               onChange={(e) => setFormData({ ...formData, emergency_contact_2_name: e.target.value })}
               placeholder="Enter emergency contact name"
               required
             />
             <Input
-              label="Emergency Contact 2 Phone"
+              label={t('parent.emergency2Phone')}
               type="tel"
               value={formData.emergency_contact_2_phone}
               onChange={(e) => setFormData({ ...formData, emergency_contact_2_phone: e.target.value })}
@@ -249,13 +251,13 @@ const ParentProfile: React.FC = () => {
           <div className="bg-gradient-to-r from-green-500 to-green-600 px-6 py-4">
             <div className="flex items-center space-x-3">
               <MapPin className="text-white" size={24} />
-              <h2 className="text-xl font-bold text-white">Address</h2>
+              <h2 className="text-xl font-bold text-white">{t('parent.addressInfo')}</h2>
             </div>
           </div>
           <div className="p-6">
           <div className="space-y-4">
             <Input
-              label="Home Address"
+              label={t('parent.homeAddress')}
               value={formData.home_address}
               onChange={(e) => setFormData({ ...formData, home_address: e.target.value })}
               placeholder="Enter your home address"
@@ -263,13 +265,13 @@ const ParentProfile: React.FC = () => {
             />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input
-                label="City"
+                label={t('parent.city')}
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 placeholder="Enter city"
               />
               <Input
-                label="Postal Code"
+                label={t('parent.postalCode')}
                 value={formData.postal_code}
                 onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
                 placeholder="Enter postal code"
@@ -293,7 +295,7 @@ const ParentProfile: React.FC = () => {
             className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
           >
             <Save size={20} />
-            <span>{loading ? 'Saving...' : 'Save Changes'}</span>
+            <span>{loading ? t('common.saving') : t('parent.saveChanges')}</span>
           </motion.button>
         </motion.div>
       </form>

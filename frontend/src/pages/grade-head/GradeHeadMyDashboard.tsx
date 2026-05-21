@@ -14,10 +14,12 @@ import {
   Calendar,
   Activity,
 } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const GradeHeadMyDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [myClass, setMyClass] = useState<any | null>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [recentBehaviour, setRecentBehaviour] = useState<any[]>([]);
@@ -85,18 +87,18 @@ const GradeHeadMyDashboard: React.FC = () => {
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
-              My Dashboard
+              {t('gradeHead.myDashboard')}
             </h1>
             <p className="text-gray-600 mt-2 text-lg">
               {myClass
-                ? `Your personal view for ${myClass.class_name}`
-                : 'No class assigned yet'}
+                ? `${t('gradeHead.myDashboardSubtitle')} ${myClass.class_name}`
+                : t('gradeHead.noClassAssignedDesc')}
             </p>
           </div>
           {user?.gradeHeadFor && (
             <div className="flex items-center space-x-2 bg-amber-50 border border-amber-200 text-amber-700 px-4 py-2 rounded-xl text-sm font-medium">
               <Shield size={16} />
-              <span>Grade Head — Grade {user.gradeHeadFor}</span>
+              <span>{t('gradeHead.gradeHeadBadge')} {user.gradeHeadFor}</span>
             </div>
           )}
         </div>
@@ -109,9 +111,9 @@ const GradeHeadMyDashboard: React.FC = () => {
           className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-12 text-center"
         >
           <BookOpen className="mx-auto mb-4 text-gray-400" size={64} />
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">No Class Assigned</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('gradeHead.noClassAssignedTitle')}</h3>
           <p className="text-gray-600">
-            You don't have a class assigned yet. Contact your administrator.
+            {t('gradeHead.noClassAssignedDesc')}
           </p>
         </motion.div>
       ) : (
@@ -120,21 +122,21 @@ const GradeHeadMyDashboard: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               {
-                label: 'My Students',
+                label: t('gradeHead.myStudents'),
                 value: totalStudents,
                 icon: Users,
                 gradient: 'from-indigo-500 to-purple-500',
                 action: () => navigate(`/grade-head/classes/${myClass.id}`),
               },
               {
-                label: 'Recent Incidents',
+                label: t('gradeHead.recentIncidents'),
                 value: behaviourCount,
                 icon: AlertTriangle,
                 gradient: 'from-red-500 to-rose-500',
                 action: () => navigate('/grade-head/behaviour'),
               },
               {
-                label: 'Recent Merits',
+                label: t('gradeHead.recentMerits'),
                 value: meritsCount,
                 icon: Award,
                 gradient: 'from-green-500 to-emerald-500',
@@ -189,11 +191,11 @@ const GradeHeadMyDashboard: React.FC = () => {
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div className="bg-indigo-50 rounded-xl p-3 text-center">
                   <p className="text-2xl font-bold text-indigo-700">{totalStudents}</p>
-                  <p className="text-xs text-indigo-500 font-medium mt-0.5">Students</p>
+                  <p className="text-xs text-indigo-500 font-medium mt-0.5">{t('common.students')}</p>
                 </div>
                 <div className="bg-amber-50 rounded-xl p-3 text-center">
                   <p className="text-2xl font-bold text-amber-700">Grade {myClass.grade_level}</p>
-                  <p className="text-xs text-amber-500 font-medium mt-0.5">Grade Level</p>
+                  <p className="text-xs text-amber-500 font-medium mt-0.5">{t('common.gradeLevel')}</p>
                 </div>
               </div>
             </div>
@@ -202,14 +204,14 @@ const GradeHeadMyDashboard: React.FC = () => {
             <div className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
                 <Activity size={18} className="text-amber-500" />
-                <span>Quick Actions</span>
+                <span>{t('gradeHead.quickActions')}</span>
               </h3>
               <div className="space-y-2">
                 {[
-                  { label: 'Log Incident', path: '/grade-head/behaviour/log', color: 'text-red-600 bg-red-50 hover:bg-red-100', icon: AlertTriangle },
-                  { label: 'Award Merit', path: '/grade-head/merits/award', color: 'text-green-600 bg-green-50 hover:bg-green-100', icon: Award },
-                  { label: 'Assign Consequence', path: '/grade-head/consequence-management', color: 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100', icon: Shield },
-                  { label: 'Reports', path: '/grade-head/reports', color: 'text-purple-600 bg-purple-50 hover:bg-purple-100', icon: BookOpen },
+                  { label: t('gradeHead.logIncident'), path: '/grade-head/behaviour/log', color: 'text-red-600 bg-red-50 hover:bg-red-100', icon: AlertTriangle },
+                  { label: t('gradeHead.awardMerit'), path: '/grade-head/merits/award', color: 'text-green-600 bg-green-50 hover:bg-green-100', icon: Award },
+                  { label: t('gradeHead.assignConsequence'), path: '/grade-head/consequence-management', color: 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100', icon: Shield },
+                  { label: t('nav.reports'), path: '/grade-head/reports', color: 'text-purple-600 bg-purple-50 hover:bg-purple-100', icon: BookOpen },
                 ].map((action) => (
                   <button
                     key={action.path}
@@ -236,13 +238,13 @@ const GradeHeadMyDashboard: React.FC = () => {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-900 flex items-center space-x-2">
                   <Users size={18} className="text-indigo-500" />
-                  <span>My Students</span>
+                  <span>{t('gradeHead.myStudents')}</span>
                 </h3>
                 <button
                   onClick={() => navigate(`/grade-head/classes/${myClass.id}`)}
                   className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center space-x-1"
                 >
-                  <span>View all</span>
+                  <span>{t('common.viewAll')}</span>
                   <ArrowRight size={14} />
                 </button>
               </div>

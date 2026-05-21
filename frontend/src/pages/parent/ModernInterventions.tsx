@@ -4,9 +4,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import ModernCard from '../../components/ModernCard';
 import { Heart, Activity, Target, TrendingUp, CheckCircle, XCircle, Clock, Filter, Search, User, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const ModernInterventions: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [interventions, setInterventions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -270,7 +272,7 @@ const ModernInterventions: React.FC = () => {
                   >
                     <Heart className="text-white" size={40} />
                   </motion.div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">No Interventions Found</h3>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('parent.noInterventions')}</h3>
                   <p className="text-gray-600">
                     {filters.searchQuery || filters.student_id || filters.status || filters.type
                       ? 'Try adjusting your filters to see more results'

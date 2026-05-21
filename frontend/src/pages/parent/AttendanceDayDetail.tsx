@@ -4,10 +4,12 @@ import { api } from '../../services/api';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { ArrowLeft } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const AttendanceDayDetail: React.FC = () => {
   const { date } = useParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [attendance, setAttendance] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,7 +31,7 @@ const AttendanceDayDetail: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+    return <div className="flex justify-center items-center h-64">{t('common.loading')}</div>;
   }
 
   return (
@@ -37,11 +39,11 @@ const AttendanceDayDetail: React.FC = () => {
       <div className="flex items-center space-x-4">
         <Button variant="secondary" onClick={() => navigate('/parent/attendance')}>
           <ArrowLeft size={20} className="mr-2" />
-          Back
+          {t('common.back')}
         </Button>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Attendance Details</h1>
-          <p className="text-gray-600 mt-2">Date: {date}</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('parent.attendanceDetails')}</h1>
+          <p className="text-gray-600 mt-2">{t('common.date')}: {date}</p>
         </div>
       </div>
 

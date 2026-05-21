@@ -98,12 +98,18 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   useEffect(() => {
     fetchResolvedLanguage();
-    // Re-fetch whenever the token changes (i.e. after login)
+    // Re-fetch when token changes in another tab
     const onStorage = (e: StorageEvent) => {
       if (e.key === 'token') fetchResolvedLanguage();
     };
+    // Re-fetch after login in the same tab (AuthContext dispatches this event)
+    const onLogin = () => fetchResolvedLanguage();
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    window.addEventListener('userLoggedIn', onLogin);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('userLoggedIn', onLogin);
+    };
   }, [fetchResolvedLanguage]);
 
   // ── Set user's personal language ─────────────────────────────────────────

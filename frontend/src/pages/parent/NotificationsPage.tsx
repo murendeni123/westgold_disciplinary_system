@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationDetailModal from '../../components/NotificationDetailModal';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { 
   Bell, 
   Check, 
@@ -32,6 +33,7 @@ interface Notification {
 
 const NotificationsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -215,9 +217,9 @@ const NotificationsPage: React.FC = () => {
       >
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            Notifications
+            {t('parent.notificationsTitle')}
           </h1>
-          <p className="text-gray-600 mt-2">Stay updated about your child's progress</p>
+          <p className="text-gray-600 mt-2">{t('parent.notificationsSubtitle')}</p>
         </div>
         <motion.button
           whileHover={{ scale: 1.05 }}
@@ -227,7 +229,7 @@ const NotificationsPage: React.FC = () => {
           className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
         >
           <CheckCheck size={20} />
-          <span>Mark All Read</span>
+          <span>{t('common.markAllRead')}</span>
         </motion.button>
       </motion.div>
 
@@ -357,11 +359,11 @@ const NotificationsPage: React.FC = () => {
         {filteredNotifications.length === 0 ? (
           <div className="p-12 text-center">
             <Bell size={64} className="mx-auto mb-4 text-gray-300" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No notifications found</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">{t('parent.noNotificationsTitle')}</h3>
             <p className="text-gray-500">
               {searchQuery || selectedType !== 'all' || selectedStatus !== 'all'
                 ? 'Try adjusting your filters'
-                : "You're all caught up!"}
+                : t('parent.noNotificationsDesc')}
             </p>
           </div>
         ) : (
@@ -394,7 +396,7 @@ const NotificationsPage: React.FC = () => {
                           </h3>
                           {!notification.is_read && (
                             <span className="px-2 py-1 text-xs font-bold bg-blue-600 text-white rounded-full">
-                              NEW
+                              {t('common.new') || 'NEW'}
                             </span>
                           )}
                         </div>

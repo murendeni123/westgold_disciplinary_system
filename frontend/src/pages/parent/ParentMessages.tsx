@@ -8,8 +8,10 @@ import Textarea from '../../components/Textarea';
 import Input from '../../components/Input';
 import Select from '../../components/Select';
 import { Plus } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const ParentMessages: React.FC = () => {
+  const { t } = useLanguage();
   const [messages, setMessages] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,36 +67,36 @@ const ParentMessages: React.FC = () => {
   const columns = [
     {
       key: messageType === 'received' ? 'sender_name' : 'receiver_name',
-      label: messageType === 'received' ? 'From' : 'To',
+      label: messageType === 'received' ? t('common.from') : t('common.to'),
     },
-    { key: 'subject', label: 'Subject' },
-    { key: 'message', label: 'Message' },
+    { key: 'subject', label: t('common.subject') },
+    { key: 'message', label: t('common.message') },
     {
       key: 'is_read',
-      label: 'Status',
+      label: t('common.status'),
       render: (value: number) => (
         <span className={value ? 'text-gray-500' : 'text-blue-600 font-semibold'}>
-          {value ? 'Read' : 'Unread'}
+          {value ? t('common.read') : t('common.unread')}
         </span>
       ),
     },
-    { key: 'created_at', label: 'Date' },
+    { key: 'created_at', label: t('common.date') },
   ];
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+    return <div className="flex justify-center items-center h-64">{t('common.loading')}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-          <p className="text-gray-600 mt-2">Communicate with teachers and admin</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t('parent.messages')}</h1>
+          <p className="text-gray-600 mt-2">{t('parent.messagesSubtitle')}</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>
           <Plus size={20} className="mr-2" />
-          New Message
+          {t('parent.newMessage')}
         </Button>
       </div>
 
@@ -108,7 +110,7 @@ const ParentMessages: React.FC = () => {
                 : 'bg-gray-200 text-gray-700'
             }`}
           >
-            Received
+            {t('parent.received')}
           </button>
           <button
             onClick={() => setMessageType('sent')}
@@ -118,7 +120,7 @@ const ParentMessages: React.FC = () => {
                 : 'bg-gray-200 text-gray-700'
             }`}
           >
-            Sent
+            {t('parent.sent')}
           </button>
         </div>
         <Table columns={columns} data={messages} />
@@ -127,23 +129,23 @@ const ParentMessages: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Send Message"
+        title={t('parent.sendMessage')}
       >
         <form onSubmit={handleSendMessage} className="space-y-4">
           <Select
-            label="To"
+            label={t('common.to')}
             value={formData.receiver_id}
             onChange={(e) => setFormData({ ...formData, receiver_id: e.target.value })}
             options={users.map((u) => ({ value: u.id, label: `${u.name} (${u.email})` }))}
             required
           />
           <Input
-            label="Subject"
+            label={t('common.subject')}
             value={formData.subject}
             onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
           />
           <Textarea
-            label="Message"
+            label={t('common.message')}
             value={formData.message}
             onChange={(e) => setFormData({ ...formData, message: e.target.value })}
             required
@@ -151,9 +153,9 @@ const ParentMessages: React.FC = () => {
           />
           <div className="flex justify-end space-x-3 pt-4">
             <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
-            <Button type="submit">Send</Button>
+            <Button type="submit">{t('common.send')}</Button>
           </div>
         </form>
       </Modal>
