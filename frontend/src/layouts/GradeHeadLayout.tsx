@@ -226,7 +226,7 @@ const GradeHeadLayout: React.FC = () => {
           {(sidebarOpen || isMobile) && (
             <div className="flex items-center space-x-2 overflow-hidden">
               <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                <img src="/classly_icon.PNG" alt="Classly" className="h-5 w-5 object-contain" />
+                <img src="/classly_icon.svg" alt="Classly" className="h-5 w-5 object-contain" />
               </div>
               <div className="overflow-hidden">
                 <p className="text-sm font-bold truncate">{t('gradeHead.portal')}</p>

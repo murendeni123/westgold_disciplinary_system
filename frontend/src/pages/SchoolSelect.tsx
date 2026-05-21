@@ -142,7 +142,7 @@ const SchoolSelect: React.FC = () => {
                 className="w-16 h-16 bg-surface/20 backdrop-blur-sm rounded-2xl flex items-center justify-center"
                 whileHover={{ scale: 1.05, rotate: 5 }}
               >
-                <img src="/classly_icon.PNG" alt="Classly" className="h-11 w-auto object-contain" />
+                <img src="/classly_icon.svg" alt="Classly" className="h-11 w-auto object-contain" />
               </motion.div>
               <div>
                 <h1 className="text-3xl font-bold text-primary">Classly</h1>
@@ -228,7 +228,7 @@ const SchoolSelect: React.FC = () => {
               className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-secondary to-secondary rounded-2xl mb-4 shadow-lg"
               whileHover={{ scale: 1.05 }}
             >
-              <img src="/classly_icon.PNG" alt="Classly" className="h-11 w-auto object-contain" />
+              <img src="/classly_icon.svg" alt="Classly" className="h-11 w-auto object-contain" />
             </motion.div>
             <h1 className="text-2xl font-bold text-primary">Classly</h1>
             <p className="text-muted text-sm">Select your school</p>

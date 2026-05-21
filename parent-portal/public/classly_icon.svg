@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+
+  <!-- ── Bottom navy swoosh ── -->
+  <path d="M24 158 C55 182 145 182 176 158"
+        stroke="#1B2C5E" stroke-width="9" stroke-linecap="round" fill="none"/>
+
+  <!-- ── Left arm (green ellipse, rotated outward) ── -->
+  <ellipse cx="57" cy="128" rx="16" ry="9"
+           fill="#72C830" stroke="#1B2C5E" stroke-width="3"
+           transform="rotate(-38 57 128)"/>
+
+  <!-- ── Right arm ── -->
+  <ellipse cx="143" cy="128" rx="16" ry="9"
+           fill="#72C830" stroke="#1B2C5E" stroke-width="3"
+           transform="rotate(38 143 128)"/>
+
+  <!-- ── Blue torso / shirt ── -->
+  <rect x="74" y="138" width="52" height="24" rx="12"
+        fill="#3090D5" stroke="#1B2C5E" stroke-width="2.5"/>
+
+  <!-- ── Main green body circle ── -->
+  <circle cx="100" cy="108" r="44"
+          fill="#72C830" stroke="#1B2C5E" stroke-width="4.5"/>
+
+  <!-- ── Speech bubble (upper-left) ── -->
+  <!-- Bubble body -->
+  <rect x="16" y="70" width="42" height="30" rx="9"
+        fill="#3090D5" stroke="#1B2C5E" stroke-width="2.5"/>
+  <!-- Tail pointing down-right toward character -->
+  <path d="M43 100 L52 114 L57 100Z"
+        fill="#3090D5"/>
+  <path d="M43 100 L52 114 L57 100"
+        stroke="#1B2C5E" stroke-width="2.5" stroke-linejoin="round" fill="none"/>
+  <!-- Two white lines inside bubble -->
+  <line x1="23" y1="80" x2="50" y2="80"
+        stroke="white" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="23" y1="90" x2="50" y2="90"
+        stroke="white" stroke-width="3.5" stroke-linecap="round"/>
+
+  <!-- ── Yellow 4-pointed star (upper-right) ── -->
+  <path d="M157 72 L161 85 L174 88.5 L161 92 L157 105 L153 92 L140 88.5 L153 85Z"
+        fill="#FFD000"/>
+  <!-- Smaller sparkle diamond -->
+  <path d="M174 75 L175.5 80.5 L181 82 L175.5 83.5 L174 89 L172.5 83.5 L167 82 L172.5 80.5Z"
+        fill="#FFD000"/>
+
+  <!-- ── Graduation cap ── -->
+  <!-- Mortarboard square top -->
+  <rect x="73" y="42" width="54" height="22" rx="3" fill="#1B2C5E"/>
+  <!-- Subtle highlight on cap top -->
+  <rect x="75" y="44" width="50" height="6" rx="2" fill="#2A3E80" opacity="0.5"/>
+  <!-- Wide flat brim -->
+  <rect x="60" y="62" width="80" height="9" rx="3" fill="#1B2C5E"/>
+  <!-- Tassel cord -->
+  <path d="M136 67 C140 67 143 72 141 80"
+        stroke="#1B2C5E" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <!-- Tassel ball -->
+  <circle cx="140" cy="82" r="5.5" fill="#1B2C5E"/>
+  <!-- Tassel fringe strings -->
+  <line x1="136" y1="87" x2="134" y2="96" stroke="#1B2C5E" stroke-width="2" stroke-linecap="round"/>
+  <line x1="140" y1="87" x2="140" y2="97" stroke="#1B2C5E" stroke-width="2" stroke-linecap="round"/>
+  <line x1="144" y1="87" x2="146" y2="96" stroke="#1B2C5E" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- ── Eyes ── -->
+  <circle cx="88"  cy="103" r="11" fill="white"/>
+  <circle cx="112" cy="103" r="11" fill="white"/>
+  <!-- Pupils -->
+  <circle cx="90"  cy="104" r="7"  fill="#1B2C5E"/>
+  <circle cx="114" cy="104" r="7"  fill="#1B2C5E"/>
+  <!-- Highlights -->
+  <circle cx="93"  cy="101" r="2.5" fill="white"/>
+  <circle cx="117" cy="101" r="2.5" fill="white"/>
+
+  <!-- ── Open mouth (pink) ── -->
+  <ellipse cx="100" cy="120" rx="13" ry="9" fill="#FF8090"/>
+
+</svg>
