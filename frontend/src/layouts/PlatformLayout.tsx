@@ -88,7 +88,7 @@ const PlatformLayout: React.FC = () => {
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl blur opacity-50"></div>
                 <div className="relative bg-gradient-to-r from-purple-600 to-pink-600 p-1.5 rounded-xl">
-                  <img src="/classly_icon.svg" alt="Classly" className="h-7 w-7 object-contain" />
+                  <img src="/classly_icon.PNG" alt="Classly" className="h-7 w-7 object-contain" />
                 </div>
               </div>
               <div>

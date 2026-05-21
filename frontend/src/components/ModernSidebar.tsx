@@ -111,7 +111,7 @@ const ModernSidebar: React.FC<ModernSidebarProps> = ({ isOpen, onToggle }) => {
                     </div>
                   ) : (
                     <motion.img
-                      src="/classly_icon.svg"
+                      src="/classly_icon.PNG"
                       alt="Classly"
                       className="w-9 h-9 sm:w-10 sm:h-10 object-contain drop-shadow-md"
                       whileHover={{ scale: 1.05, rotate: 5 }}

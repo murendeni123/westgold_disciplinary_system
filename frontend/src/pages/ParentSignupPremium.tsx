@@ -282,7 +282,7 @@ const ParentSignup: React.FC = () => {
               whileHover={{ scale: 1.05, rotate: 5 }}
               transition={{ type: 'spring', stiffness: 400 }}
             >
-              <img src="/classly_icon.svg" alt="Classly" className="h-11 w-auto object-contain" />
+              <img src="/classly_icon.PNG" alt="Classly" className="h-11 w-auto object-contain" />
             </motion.div>
             <div>
               <h1 className="text-3xl font-bold text-white">Classly</h1>
@@ -357,7 +357,7 @@ const ParentSignup: React.FC = () => {
               className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-2xl mb-4 shadow-2xl shadow-emerald-500/50"
               whileHover={{ scale: 1.05 }}
             >
-              <img src="/classly_icon.svg" alt="Classly" className="h-11 w-auto object-contain" />
+              <img src="/classly_icon.PNG" alt="Classly" className="h-11 w-auto object-contain" />
             </motion.div>
             <h1 className="text-2xl font-bold text-white">Classly</h1>
           </div>
