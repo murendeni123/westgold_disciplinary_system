@@ -155,6 +155,7 @@ const zu: TranslationKeys = {
     title: 'Izigaba', addClass: 'Engeza Isigaba', editClass: 'Hlela Isigaba', deleteClass: 'Susa Isigaba',
     className: 'Igama Lesigaba', classCode: 'Ikhodi Yesigaba', gradeLevel: 'Izinga Lebanga',
     homeroom: 'Othisha Wekilasi Wasekhaya', studentCount: 'Abafundi', noClasses: 'Awukho izigaba ezitholakele',
+    deleteError: 'Yehlulekile ukususa isigaba. Zama futhi.',
     deletedSuccess: 'Isigaba asiswe ngempumelelo', savedSuccess: 'Isigaba sigciniwe ngempumelelo',
     deleteConfirm: 'Uqinisekile ukuthi ufuna ukususa le sigaba?', viewClass: 'Buka Isigaba',
     searchPlaceholder: 'Sesha izigaba...', classDetails: 'Imininingwane Yesigaba', roster: 'Uhlu Lwesigaba',

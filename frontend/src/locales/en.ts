@@ -381,6 +381,7 @@ const en = {
     homeroom: 'Homeroom Teacher',
     studentCount: 'Students',
     noClasses: 'No classes found',
+    deleteError: 'Failed to delete class. Please try again.',
     deletedSuccess: 'Class deleted successfully',
     savedSuccess: 'Class saved successfully',
     deleteConfirm: 'Are you sure you want to delete this class?',

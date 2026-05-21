@@ -155,6 +155,7 @@ const xh: TranslationKeys = {
     title: 'Amabakala', addClass: 'Yongeza Ibakala', editClass: 'Hlela Ibakala', deleteClass: 'Cima Ibakala',
     className: 'Igama Lebakala', classCode: 'Ikhowudi Yebakala', gradeLevel: 'Izinga Lebanga',
     homeroom: 'Otitshala Webakala', studentCount: 'Abafundi', noClasses: 'Akukho mabakala afunyenweyo',
+    deleteError: 'Yehlulekile ukucima ibakala. Zama kwakhona.',
     deletedSuccess: 'Ibakala licimile ngempumelelo', savedSuccess: 'Ibakala ligciniwe ngempumelelo',
     deleteConfirm: 'Uqinisekile ukuba ufuna ukucima eli bakala?', viewClass: 'Jonga Ibakala',
     searchPlaceholder: 'Khangela amabakala...', classDetails: 'Iinkcukacha Zebakala', roster: 'Uluhlu Lwabafundi',

@@ -1,14 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
+const { pool } = require('../database/db');
 const { requireRole } = require('../middleware/auth');
-
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase') || process.env.DATABASE_URL?.includes('amazonaws.com')
-        ? { rejectUnauthorized: false }
-        : false
-});
 
 const SUPPORTED_LANGUAGES = ['en', 'af', 'zu', 'xh'];
 

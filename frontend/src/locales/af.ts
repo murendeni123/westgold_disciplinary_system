@@ -233,6 +233,7 @@ const af: TranslationKeys = {
     title: 'Klasse', addClass: 'Voeg Klas By', editClass: 'Wysig Klas', deleteClass: 'Verwyder Klas',
     className: 'Klasnaam', classCode: 'Klaskode', gradeLevel: 'Graadvlak',
     homeroom: 'Tuisklasonderwyser', studentCount: 'Leerders', noClasses: 'Geen klasse gevind nie',
+    deleteError: 'Kon nie klas verwyder nie. Probeer asseblief weer.',
     deletedSuccess: 'Klas suksesvol verwyder', savedSuccess: 'Klas suksesvol gestoor',
     deleteConfirm: 'Is u seker dat u hierdie klas wil verwyder?', viewClass: 'Bekyk Klas',
     searchPlaceholder: 'Soek klasse...', classDetails: 'Klasbesonderhede', roster: 'Klaslys',
