@@ -5,10 +5,12 @@ import Card from '../../components/Card';
 import Button from '../../components/Button';
 import { ArrowLeft } from 'lucide-react';
 import { decodeHtmlEntities } from '../../utils/htmlDecode';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const BehaviourDetails: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [incident, setIncident] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -30,11 +32,11 @@ const BehaviourDetails: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+    return <div className="flex justify-center items-center h-64">{t('common.loading')}</div>;
   }
 
   if (!incident) {
-    return <div>Incident not found</div>;
+    return <div>{t('errors.notFound') || 'Incident not found'}</div>;
   }
 
   return (
@@ -42,37 +44,37 @@ const BehaviourDetails: React.FC = () => {
       <div className="flex items-center space-x-4">
         <Button variant="secondary" onClick={() => navigate('/parent/behaviour')}>
           <ArrowLeft size={20} className="mr-2" />
-          Back
+          {t('common.back')}
         </Button>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Incident Details</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('parent.incidentDetails')}</h1>
           <p className="text-gray-600 mt-2">Date: {incident.incident_date}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card title="Incident Information">
+        <Card title={t('parent.incidentInfo')}>
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-gray-600">Student</p>
+              <p className="text-sm text-gray-600">{t('parent.student')}</p>
               <p className="text-lg font-semibold">{incident.student_name}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Class</p>
+              <p className="text-sm text-gray-600">{t('common.class')}</p>
               <p className="text-lg font-semibold">{incident.class_name || 'N/A'}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Date & Time</p>
+              <p className="text-sm text-gray-600">{t('parent.dateTime')}</p>
               <p className="text-lg font-semibold">
                 {incident.incident_date} {incident.incident_time || ''}
               </p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Type</p>
+              <p className="text-sm text-gray-600">{t('common.type')}</p>
               <p className="text-lg font-semibold">{incident.incident_type}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Severity</p>
+              <p className="text-sm text-gray-600">{t('behaviour.severity')}</p>
               <span
                 className={`px-3 py-1 rounded text-sm font-semibold ${
                   incident.severity === 'high'
@@ -86,7 +88,7 @@ const BehaviourDetails: React.FC = () => {
               </span>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Status</p>
+              <p className="text-sm text-gray-600">{t('common.status')}</p>
               <span
                 className={`px-3 py-1 rounded text-sm font-semibold ${
                   incident.status === 'pending'
@@ -103,10 +105,10 @@ const BehaviourDetails: React.FC = () => {
         </Card>
 
         <Card title="Description">
-          <p className="text-gray-700">{decodeHtmlEntities(incident.description) || 'No description provided'}</p>
+          <p className="text-gray-700">{decodeHtmlEntities(incident.description) || t('parent.noDescription')}</p>
           {incident.admin_notes && (
             <div className="mt-4 pt-4 border-t">
-              <p className="text-sm text-gray-600 mb-2">Admin Notes:</p>
+              <p className="text-sm text-gray-600 mb-2">{t('parent.adminNotes')}:</p>
               <p className="text-gray-700">{incident.admin_notes}</p>
             </div>
           )}

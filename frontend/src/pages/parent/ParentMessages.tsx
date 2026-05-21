@@ -8,8 +8,10 @@ import Textarea from '../../components/Textarea';
 import Input from '../../components/Input';
 import Select from '../../components/Select';
 import { Plus } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const ParentMessages: React.FC = () => {
+  const { t } = useLanguage();
   const [messages, setMessages] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,24 +67,24 @@ const ParentMessages: React.FC = () => {
   const columns = [
     {
       key: messageType === 'received' ? 'sender_name' : 'receiver_name',
-      label: messageType === 'received' ? 'From' : 'To',
+      label: messageType === 'received' ? t('common.from') : t('common.to'),
     },
-    { key: 'subject', label: 'Subject' },
-    { key: 'message', label: 'Message' },
+    { key: 'subject', label: t('common.subject') },
+    { key: 'message', label: t('common.message') },
     {
       key: 'is_read',
-      label: 'Status',
+      label: t('common.status'),
       render: (value: number) => (
         <span className={value ? 'text-gray-500' : 'text-blue-600 font-semibold'}>
-          {value ? 'Read' : 'Unread'}
+          {value ? t('common.read') : t('common.unread')}
         </span>
       ),
     },
-    { key: 'created_at', label: 'Date' },
+    { key: 'created_at', label: t('common.date') },
   ];
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+    return <div className="flex justify-center items-center h-64">{t('common.loading')}</div>;
   }
 
   return (
