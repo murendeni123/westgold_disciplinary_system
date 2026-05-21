@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { usePlatformAuth } from '../contexts/PlatformAuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -25,6 +26,7 @@ const PlatformLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const { user, logout } = usePlatformAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -39,18 +41,18 @@ const PlatformLayout: React.FC = () => {
   }, []);
 
   const menuItems = [
-    { path: '/platform', label: 'Dashboard', icon: LayoutDashboard, color: 'from-purple-500 to-pink-500' },
-    { path: '/platform/schools', label: 'Schools', icon: Building2, color: 'from-blue-500 to-cyan-500' },
-    { path: '/platform/users', label: 'Platform Users', icon: Shield, color: 'from-indigo-500 to-purple-500' },
-    { path: '/platform/subscriptions', label: 'Subscriptions', icon: CreditCard, color: 'from-green-500 to-emerald-500' },
-    { path: '/platform/invoice-templates', label: 'Invoice Templates', icon: FileStack, color: 'from-violet-500 to-fuchsia-500' },
-    { path: '/platform/invoices', label: 'Invoices', icon: Receipt, color: 'from-emerald-500 to-teal-500' },
-    { path: '/platform/analytics', label: 'Analytics', icon: BarChart3, color: 'from-orange-500 to-red-500' },
-    { path: '/platform/billing', label: 'Billing', icon: CreditCard, color: 'from-teal-500 to-blue-500' },
-    { path: '/platform/logs', label: 'Activity Logs', icon: FileText, color: 'from-gray-500 to-slate-500' },
-    { path: '/platform/feature-flags', label: 'Feature Flags', icon: ToggleLeft, color: 'from-amber-500 to-orange-500' },
-    { path: '/platform/notifications', label: 'Notifications', icon: Bell, color: 'from-blue-500 to-indigo-500' },
-    { path: '/platform/settings', label: 'Settings', icon: Settings, color: 'from-violet-500 to-purple-500' },
+    { path: '/platform', label: t('nav.dashboard'), icon: LayoutDashboard, color: 'from-purple-500 to-pink-500' },
+    { path: '/platform/schools', label: t('nav.schools'), icon: Building2, color: 'from-blue-500 to-cyan-500' },
+    { path: '/platform/users', label: t('nav.platformUsers'), icon: Shield, color: 'from-indigo-500 to-purple-500' },
+    { path: '/platform/subscriptions', label: t('nav.subscriptions'), icon: CreditCard, color: 'from-green-500 to-emerald-500' },
+    { path: '/platform/invoice-templates', label: t('nav.invoiceTemplates'), icon: FileStack, color: 'from-violet-500 to-fuchsia-500' },
+    { path: '/platform/invoices', label: t('nav.invoices'), icon: Receipt, color: 'from-emerald-500 to-teal-500' },
+    { path: '/platform/analytics', label: t('nav.analytics'), icon: BarChart3, color: 'from-orange-500 to-red-500' },
+    { path: '/platform/billing', label: t('nav.billing'), icon: CreditCard, color: 'from-teal-500 to-blue-500' },
+    { path: '/platform/logs', label: t('nav.activityLogs'), icon: FileText, color: 'from-gray-500 to-slate-500' },
+    { path: '/platform/feature-flags', label: t('nav.featureFlags'), icon: ToggleLeft, color: 'from-amber-500 to-orange-500' },
+    { path: '/platform/notifications', label: t('nav.notifications'), icon: Bell, color: 'from-blue-500 to-indigo-500' },
+    { path: '/platform/settings', label: t('nav.settings'), icon: Settings, color: 'from-violet-500 to-purple-500' },
   ];
 
   const isActive = (path: string) => {

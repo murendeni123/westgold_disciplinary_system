@@ -12,10 +12,12 @@ import {
   Shield,
   TrendingUp,
 } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const GradeHeadMyClass: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [myClass, setMyClass] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -58,16 +60,16 @@ const GradeHeadMyClass: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              My Class
+              {t('gradeHead.myClassTitle')}
             </h1>
             <p className="text-gray-600 mt-2 text-lg">
-              Your personally assigned class as a teacher
+              {t('gradeHead.myClassSubtitle')}
             </p>
           </div>
           {user?.gradeHeadFor && (
             <div className="flex items-center space-x-2 bg-amber-50 border border-amber-200 text-amber-700 px-4 py-2 rounded-xl text-sm font-medium">
               <Shield size={16} />
-              <span>Grade Head — Grade {user.gradeHeadFor}</span>
+              <span>{t('gradeHead.gradeHeadBadge')} {user.gradeHeadFor}</span>
             </div>
           )}
         </div>
@@ -81,9 +83,9 @@ const GradeHeadMyClass: React.FC = () => {
           className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-12 text-center"
         >
           <BookOpen className="mx-auto mb-4 text-gray-400" size={64} />
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">No Class Assigned</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('gradeHead.noClassAssignedTitle')}</h3>
           <p className="text-gray-600">
-            You don't have a class assigned to you as a teacher yet. Contact your administrator.
+            {t('gradeHead.noTeacherClass')}
           </p>
         </motion.div>
       ) : (
@@ -101,7 +103,7 @@ const GradeHeadMyClass: React.FC = () => {
                 <TrendingUp size={20} className="opacity-75" />
               </div>
               <p className="text-3xl font-bold">{myClass.class_name}</p>
-              <p className="text-sm opacity-90 mt-1">Class Name</p>
+              <p className="text-sm opacity-90 mt-1">{t('common.className')}</p>
             </motion.div>
 
             <motion.div
@@ -115,7 +117,7 @@ const GradeHeadMyClass: React.FC = () => {
                 <TrendingUp size={20} className="opacity-75" />
               </div>
               <p className="text-4xl font-bold">{myClass.student_count || 0}</p>
-              <p className="text-sm opacity-90 mt-1">Students</p>
+              <p className="text-sm opacity-90 mt-1">{t('common.students')}</p>
             </motion.div>
 
             <motion.div
@@ -129,7 +131,7 @@ const GradeHeadMyClass: React.FC = () => {
                 <TrendingUp size={20} className="opacity-75" />
               </div>
               <p className="text-4xl font-bold">Grade {myClass.grade_level}</p>
-              <p className="text-sm opacity-90 mt-1">Grade Level</p>
+              <p className="text-sm opacity-90 mt-1">{t('common.gradeLevel')}</p>
             </motion.div>
           </div>
 
@@ -168,7 +170,7 @@ const GradeHeadMyClass: React.FC = () => {
                 </div>
                 <div className="flex items-center space-x-3 text-gray-600">
                   <Users size={18} className="text-purple-600" />
-                  <span className="font-medium">{myClass.student_count || 0} Students</span>
+                  <span className="font-medium">{myClass.student_count || 0} {t('common.students')}</span>
                 </div>
                 <div className="flex items-center space-x-3 text-gray-600">
                   <Calendar size={18} className="text-blue-600" />
@@ -177,9 +179,9 @@ const GradeHeadMyClass: React.FC = () => {
               </div>
 
               <div className="pt-4 border-t border-gray-200 flex items-center justify-between">
-                <span className="text-sm text-gray-500 font-medium">Click to view full class details</span>
+                <span className="text-sm text-gray-500 font-medium">{t('gradeHead.clickToView')}</span>
                 <div className="flex items-center space-x-1 text-indigo-600">
-                  <span className="text-sm font-semibold">Open</span>
+                  <span className="text-sm font-semibold">{t('common.open')}</span>
                   <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>

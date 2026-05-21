@@ -4,15 +4,39 @@ import { usePlatformAuth } from '../../contexts/PlatformAuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
-import { Save, Settings, User, Lock, Sparkles } from 'lucide-react';
+import { Save, Settings, User, Lock, Sparkles, Globe } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
+import { useLanguage } from '../../contexts/LanguageContext';
+import LanguageSelector from '../../components/LanguageSelector';
+import { SupportedLanguage } from '../../locales';
 
 const PlatformSettings: React.FC = () => {
   const { user } = usePlatformAuth();
   const { success, error, ToastContainer } = useToast();
-  const [activeTab, setActiveTab] = useState<'platform' | 'profile' | 'password'>('platform');
+  const { userLanguage, setUserLanguage, t } = useLanguage();
+  const [activeTab, setActiveTab] = useState<'platform' | 'profile' | 'password' | 'language'>('platform');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [pendingUserLang, setPendingUserLang] = useState<SupportedLanguage | null>(userLanguage);
+  const [savingLang, setSavingLang] = useState(false);
+  const [langSaved, setLangSaved] = useState(false);
+
+  useEffect(() => {
+    setPendingUserLang(userLanguage);
+  }, [userLanguage]);
+
+  const handleSaveLanguage = async () => {
+    setSavingLang(true);
+    try {
+      await setUserLanguage(pendingUserLang);
+      setLangSaved(true);
+      setTimeout(() => setLangSaved(false), 2500);
+    } catch {
+      console.error('Failed to save language');
+    } finally {
+      setSavingLang(false);
+    }
+  };
 
   const [settings, setSettings] = useState({
     platform_name: '',
@@ -80,7 +104,7 @@ const PlatformSettings: React.FC = () => {
         max_schools: Number(settings.max_schools),
         max_students_per_school: Number(settings.max_students_per_school),
       });
-      success('Platform settings saved successfully');
+      success(t('platform.settingsSaved'));
     } catch (err: any) {
       error(err.response?.data?.error || 'Error saving settings');
     } finally {
@@ -93,7 +117,7 @@ const PlatformSettings: React.FC = () => {
     setSaving(true);
     try {
       await api.updatePlatformUserProfile(profileData);
-      success('Profile updated successfully');
+      success(t('platform.profileUpdated'));
       fetchProfile();
     } catch (err: any) {
       error(err.response?.data?.error || 'Error updating profile');
@@ -106,12 +130,12 @@ const PlatformSettings: React.FC = () => {
     e.preventDefault();
     
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      error('New passwords do not match');
+      error(t('platform.passwordMismatch'));
       return;
     }
 
     if (passwordData.newPassword.length < 6) {
-      error('Password must be at least 6 characters');
+      error(t('platform.passwordTooShort'));
       return;
     }
 
@@ -121,7 +145,7 @@ const PlatformSettings: React.FC = () => {
         passwordData.currentPassword,
         passwordData.newPassword
       );
-      success('Password changed successfully');
+      success(t('platform.passwordChanged'));
       setPasswordData({
         currentPassword: '',
         newPassword: '',
@@ -147,9 +171,10 @@ const PlatformSettings: React.FC = () => {
   }
 
   const tabs = [
-    { id: 'platform', label: 'Platform Config', icon: Settings, color: 'from-purple-500 to-pink-500' },
-    { id: 'profile', label: 'Profile', icon: User, color: 'from-blue-500 to-cyan-500' },
-    { id: 'password', label: 'Password', icon: Lock, color: 'from-teal-500 to-blue-500' },
+    { id: 'platform', label: t('platform.config'), icon: Settings, color: 'from-purple-500 to-pink-500' },
+    { id: 'profile', label: t('settings.profile'), icon: User, color: 'from-blue-500 to-cyan-500' },
+    { id: 'password', label: t('settings.password'), icon: Lock, color: 'from-teal-500 to-blue-500' },
+    { id: 'language', label: t('settings.language'), icon: Globe, color: 'from-green-500 to-teal-500' },
   ];
 
   return (
@@ -162,9 +187,9 @@ const PlatformSettings: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
       >
         <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-          Platform Settings
+          {t('platform.settings')}
         </h1>
-        <p className="text-gray-600 mt-2 text-lg">Configure platform-wide settings and manage your profile</p>
+        <p className="text-gray-600 mt-2 text-lg">{t('platform.settingsSubtitle')}</p>
       </motion.div>
 
       {/* Tabs */}
@@ -223,14 +248,14 @@ const PlatformSettings: React.FC = () => {
                 </div>
               </div>
               <Input
-                label="Platform Name"
+                label={t('platform.platformName')}
                 value={settings.platform_name}
                 onChange={(e) => setSettings({ ...settings, platform_name: e.target.value })}
                 required
                 className="rounded-xl"
               />
               <Input
-                label="Support Email"
+                label={t('platform.supportEmail')}
                 type="email"
                 value={settings.support_email}
                 onChange={(e) => setSettings({ ...settings, support_email: e.target.value })}
@@ -238,7 +263,7 @@ const PlatformSettings: React.FC = () => {
                 className="rounded-xl"
               />
               <Input
-                label="Max Schools"
+                label={t('platform.maxSchools')}
                 type="number"
                 value={settings.max_schools}
                 onChange={(e) => setSettings({ ...settings, max_schools: e.target.value })}
@@ -246,7 +271,7 @@ const PlatformSettings: React.FC = () => {
                 className="rounded-xl"
               />
               <Input
-                label="Max Students per School"
+                label={t('platform.maxStudentsPerSchool')}
                 type="number"
                 value={settings.max_students_per_school}
                 onChange={(e) => setSettings({ ...settings, max_students_per_school: e.target.value })}
@@ -261,7 +286,7 @@ const PlatformSettings: React.FC = () => {
                     className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 rounded-xl shadow-lg hover:shadow-xl"
                   >
                     <Save size={20} className="mr-2" />
-                    {saving ? 'Saving...' : 'Save Settings'}
+                    {saving ? t('platform.saving') : t('platform.saveSettings')}
                   </Button>
                 </motion.div>
               </div>
@@ -289,14 +314,14 @@ const PlatformSettings: React.FC = () => {
                 </div>
               </div>
               <Input
-                label="Name"
+                label={t('common.name')}
                 value={profileData.name}
                 onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
                 required
                 className="rounded-xl"
               />
               <Input
-                label="Email"
+                label={t('common.email')}
                 type="email"
                 value={profileData.email}
                 onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
@@ -311,7 +336,7 @@ const PlatformSettings: React.FC = () => {
                     className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0 rounded-xl shadow-lg hover:shadow-xl"
                   >
                     <Save size={20} className="mr-2" />
-                    {saving ? 'Saving...' : 'Save Profile'}
+                    {saving ? t('platform.saving') : t('platform.saveProfile')}
                   </Button>
                 </motion.div>
               </div>
@@ -339,7 +364,7 @@ const PlatformSettings: React.FC = () => {
                 </div>
               </div>
               <Input
-                label="Current Password"
+                label={t('password.currentPassword') || 'Current Password'}
                 type="password"
                 value={passwordData.currentPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
@@ -347,7 +372,7 @@ const PlatformSettings: React.FC = () => {
                 className="rounded-xl"
               />
               <Input
-                label="New Password"
+                label={t('password.newPassword') || 'New Password'}
                 type="password"
                 value={passwordData.newPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
@@ -356,7 +381,7 @@ const PlatformSettings: React.FC = () => {
                 className="rounded-xl"
               />
               <Input
-                label="Confirm New Password"
+                label={t('password.confirmPassword') || 'Confirm New Password'}
                 type="password"
                 value={passwordData.confirmPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
@@ -372,12 +397,59 @@ const PlatformSettings: React.FC = () => {
                     className="bg-gradient-to-r from-teal-500 to-blue-500 text-white border-0 rounded-xl shadow-lg hover:shadow-xl"
                   >
                     <Save size={20} className="mr-2" />
-                    {saving ? 'Changing...' : 'Change Password'}
+                    {saving ? t('platform.changing') : t('password.changePassword') || 'Change Password'}
                   </Button>
                 </motion.div>
               </div>
             </div>
           </motion.form>
+        )}
+        {activeTab === 'language' && (
+          <motion.div
+            key="language"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-8"
+          >
+            <div className="space-y-6">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="p-3 rounded-xl bg-gradient-to-r from-green-500 to-teal-500">
+                  <Globe className="text-white" size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">{t('platform.myLanguage')}</h3>
+                  <p className="text-sm text-gray-500">{t('platform.myLanguageDesc')}</p>
+                </div>
+              </div>
+              {langSaved && (
+                <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
+                  <span className="text-sm text-green-700 font-medium">{t('language.savedSuccess')}</span>
+                </div>
+              )}
+              <LanguageSelector
+                value={pendingUserLang}
+                onChange={(lang) => setPendingUserLang(lang)}
+                accentColor="green"
+                allowReset={false}
+                label={t('platform.myLanguage')}
+                description={t('platform.myLanguageDesc')}
+              />
+              <div className="flex justify-end pt-4">
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button
+                    type="button"
+                    onClick={handleSaveLanguage}
+                    disabled={savingLang || pendingUserLang === userLanguage}
+                    className="bg-gradient-to-r from-green-500 to-teal-500 text-white border-0 rounded-xl shadow-lg hover:shadow-xl"
+                  >
+                    <Save size={20} className="mr-2" />
+                    {savingLang ? t('platform.saving') : t('platform.saveMyLanguage')}
+                  </Button>
+                </motion.div>
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

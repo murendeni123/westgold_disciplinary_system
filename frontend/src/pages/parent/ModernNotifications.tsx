@@ -120,7 +120,7 @@ const ModernNotifications: React.FC = () => {
               className="flex items-center space-x-3"
             >
               <Bell className="text-yellow-300" size={32} />
-              <h1 className="text-4xl font-bold">Notifications</h1>
+              <h1 className="text-4xl font-bold">{t('parent.notificationsTitle')}</h1>
             </motion.div>
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -129,11 +129,11 @@ const ModernNotifications: React.FC = () => {
               className="px-6 py-3 bg-white/20 backdrop-blur-sm rounded-xl font-semibold shadow-lg hover:bg-white/30 transition-all flex items-center space-x-2"
             >
               <CheckCircle2 size={20} />
-              <span>Mark All Read</span>
+              <span>{t('common.markAllRead')}</span>
             </motion.button>
           </div>
           <p className="text-xl text-white/90 mt-4">
-            Stay updated with important school notifications
+            {t('parent.notificationsSubtitle')}
           </p>
         </div>
       </motion.div>
@@ -143,11 +143,11 @@ const ModernNotifications: React.FC = () => {
         <ModernCard title="Filters" variant="glass">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Select
-              label="Type"
+              label={t('common.type')}
               value={filters.type}
               onChange={(e) => setFilters({ ...filters, type: e.target.value })}
               options={[
-                { value: '', label: 'All Types' },
+                { value: '', label: t('common.all') },
                 { value: 'incident', label: 'Incident' },
                 { value: 'merit', label: 'Merit' },
                 { value: 'detention', label: 'Detention' },
@@ -158,13 +158,13 @@ const ModernNotifications: React.FC = () => {
               ]}
             />
             <Select
-              label="Status"
+              label={t('common.status')}
               value={filters.is_read}
               onChange={(e) => setFilters({ ...filters, is_read: e.target.value })}
               options={[
-                { value: '', label: 'All' },
-                { value: 'false', label: 'Unread' },
-                { value: 'true', label: 'Read' },
+                { value: '', label: t('common.all') },
+                { value: 'false', label: t('common.unread') },
+                { value: 'true', label: t('common.read') },
               ]}
             />
             <Input
@@ -195,8 +195,8 @@ const ModernNotifications: React.FC = () => {
               >
                 <Bell className="text-white" size={40} />
               </motion.div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">No Notifications</h3>
-              <p className="text-gray-600">No notifications found</p>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('parent.noNotificationsTitle')}</h3>
+              <p className="text-gray-600">{t('parent.noNotificationsDesc')}</p>
             </div>
           </ModernCard>
         </motion.div>
@@ -228,7 +228,7 @@ const ModernNotifications: React.FC = () => {
                               animate={{ scale: 1 }}
                               className="px-3 py-1 text-xs font-bold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full shadow-lg"
                             >
-                              New
+                              {t('common.new') || 'New'}
                             </motion.span>
                           )}
                         </div>
