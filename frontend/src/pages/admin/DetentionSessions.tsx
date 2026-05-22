@@ -1276,15 +1276,17 @@ const SessionDetailsModal: React.FC<{
               <span className="text-sm text-gray-400 italic">No primary teacher assigned</span>
             )}
 
-            {/* Co-teachers */}
+            {/* Co-teachers / secondary invigilators */}
             {coTeachers.map(ct => (
               <span key={ct.id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
                 <UserCheck size={13} />
                 {ct.name}
+                <span className="ml-1 text-blue-600 text-xs">(Secondary)</span>
                 {session.status !== 'completed' && (
                   <button
                     onClick={() => handleRemoveCoTeacher(ct.id)}
                     className="ml-1 text-blue-500 hover:text-red-600 transition-colors"
+                    title="Remove invigilator"
                   >
                     <RemoveIcon size={12} />
                   </button>

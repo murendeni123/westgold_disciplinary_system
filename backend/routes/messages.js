@@ -103,6 +103,20 @@ router.post('/', authenticateToken, async (req, res) => {
         );
 
         const newMessage = await schemaGet(req, 'SELECT * FROM messages WHERE id = $1', [result.id]);
+
+        // Notify receiver in real-time if they are online
+        const userSockets = req.app.get('userSockets');
+        const recipientSocket = userSockets && userSockets.get(receiver_id);
+        if (recipientSocket) {
+            recipientSocket.emit('notification', {
+                type: 'message',
+                title: 'New Message',
+                message: `You have a new message${subject ? `: ${subject}` : ''}`,
+                is_read: false,
+                created_at: new Date().toISOString(),
+            });
+        }
+
         res.status(201).json(newMessage);
     } catch (error) {
         console.error('Error creating message:', error);

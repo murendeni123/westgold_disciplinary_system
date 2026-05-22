@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { api } from '../services/api';
 import { useAuth } from './AuthContext';
 import { useSocket } from '../hooks/useSocket';
+import { playNotificationPing } from '../utils/notificationSound';
 
 interface Notification {
   id: number;
@@ -87,6 +88,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const handleNotification = (notification: Notification) => {
         setNotifications((prev) => [notification, ...prev]);
         setUnreadCount((prev) => prev + 1);
+        playNotificationPing();
       };
 
       socket.on('notification', handleNotification);
