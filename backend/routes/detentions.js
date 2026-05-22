@@ -623,21 +623,31 @@ router.get('/:id/teachers', authenticateToken, async (req, res) => {
   try {
     const schema = getSchema(req);
     if (!schema) return res.status(403).json({ error: 'School context required' });
-    try {
-      const teachers = await schemaAll(req, `
-        SELECT dst.teacher_id as id, u.name, u.email,
-               t.subject_taught
-        FROM detention_session_teachers dst
-        JOIN teachers t  ON dst.teacher_id  = t.id
-        JOIN public.users u ON t.user_id = u.id
-        WHERE dst.session_id = $1
-        ORDER BY u.name
-      `, [req.params.id]);
-      res.json(teachers);
-    } catch { res.json([]); }  // table not yet created
+
+    // Ensure junction table exists before querying it
+    await schemaRun(req, `
+      CREATE TABLE IF NOT EXISTS detention_session_teachers (
+        id         SERIAL PRIMARY KEY,
+        session_id INTEGER NOT NULL REFERENCES detention_sessions(id) ON DELETE CASCADE,
+        teacher_id INTEGER NOT NULL REFERENCES teachers(id)           ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (session_id, teacher_id)
+      )
+    `);
+
+    const teachers = await schemaAll(req, `
+      SELECT dst.teacher_id as id, u.name, u.email,
+             t.subject_taught
+      FROM detention_session_teachers dst
+      JOIN teachers t  ON dst.teacher_id  = t.id
+      JOIN public.users u ON t.user_id = u.id
+      WHERE dst.session_id = $1
+      ORDER BY u.name
+    `, [req.params.id]);
+    res.json(teachers);
   } catch (err) {
     console.error('Error fetching session teachers:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.json([]); // Graceful fallback
   }
 });
 
