@@ -72,6 +72,7 @@ const DetentionSessions: React.FC = () => {
   const [queuedStudents, setQueuedStudents] = useState<any[]>([]);
   const [qualifyingStudents, setQualifyingStudents] = useState<any[]>([]);
   const [showQueueModal, setShowQueueModal] = useState(false);
+  const [showQualifyingModal, setShowQualifyingModal] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -375,14 +376,7 @@ const DetentionSessions: React.FC = () => {
         <motion.div
           whileHover={{ scale: 1.02 }}
           className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 shadow-lg text-white cursor-pointer"
-          onClick={() => {
-            if (qualifyingStudents.length > 0) {
-              setMessage({
-                type: 'success',
-                text: `${qualifyingStudents.length} students currently qualify for detention (10+ demerit points since last detention)`
-              });
-            }
-          }}
+          onClick={() => setShowQualifyingModal(true)}
         >
           <div className="flex items-center justify-between mb-4">
             <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
@@ -690,6 +684,16 @@ const DetentionSessions: React.FC = () => {
             isOpen={showQueueModal}
             onClose={() => setShowQueueModal(false)}
             queuedStudents={queuedStudents}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showQualifyingModal && (
+          <QualifyingStudentsModal
+            isOpen={showQualifyingModal}
+            onClose={() => setShowQualifyingModal(false)}
+            qualifyingStudents={qualifyingStudents}
           />
         )}
       </AnimatePresence>
@@ -1673,6 +1677,109 @@ const QueueModal: React.FC<{
             <button
               onClick={onClose}
               className="px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-600 text-white rounded-xl font-medium hover:shadow-lg transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// Qualifying Students Modal Component
+const QualifyingStudentsModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  qualifyingStudents: any[];
+}> = ({ isOpen, onClose, qualifyingStudents }) => {
+  if (!isOpen) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden"
+      >
+        <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">Qualifying Students</h2>
+              <p className="text-white/80 text-sm mt-1">
+                Students eligible for detention (10+ demerit points since last detention)
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+            >
+              <X size={24} />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
+          {qualifyingStudents.length === 0 ? (
+            <div className="text-center py-12">
+              <AlertTriangle className="mx-auto text-gray-300 mb-4" size={64} />
+              <p className="text-gray-500 text-lg font-medium">No qualifying students</p>
+              <p className="text-gray-400 text-sm mt-2">
+                Students will appear here once they accumulate 10+ demerit points
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {qualifyingStudents.map((student, index) => (
+                <motion.div
+                  key={student.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-200"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{student.student_name}</h3>
+                          <p className="text-sm text-gray-600">
+                            {student.student_number} • {student.class_name || 'No class'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-bold">
+                        {student.total_points} points
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-gray-50 p-6 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-600">
+              <strong>{qualifyingStudents.length}</strong> student{qualifyingStudents.length !== 1 ? 's' : ''} qualifying
+            </p>
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl font-medium hover:shadow-lg transition-all"
             >
               Close
             </button>

@@ -165,3 +165,11 @@ VAPID_PRIVATE_KEY=...
 - **School customizations** (colors, logos, feature flags) are fetched on login and stored in `SchoolThemeContext`
 - **Billing**: `jobs/billingScheduler.js` runs cron jobs for subscription management; `enforceActivePlan` middleware blocks write operations on expired plans
 - CORS allows `localhost:*`, `192.168.*`, `*.vercel.app`, and `*.onrender.com` — update `allowedOriginPatterns` in `server.js` when deploying to new domains
+
+## Admin Detention Sessions Page (`frontend/src/pages/admin/DetentionSessions.tsx`)
+
+The dashboard cards at the top trigger modals:
+- **Qualifying Students card** (amber/orange): opens `QualifyingStudentsModal` showing students with 10+ demerit points since last detention. Data from `GET /api/detentions/qualifying-students` — fields: `id`, `student_number`, `student_name`, `class_name`, `total_points`.
+- **Queued Students card** (purple/pink): opens `QueueModal` showing students waiting for a session. Data from the detention queue endpoint — fields: `id`, `student_number`, `student_name`, `class_name`, `points_at_queue`, `queued_at`.
+
+Both modals are defined as standalone components at the bottom of the file and rendered inside `<AnimatePresence>` blocks.
