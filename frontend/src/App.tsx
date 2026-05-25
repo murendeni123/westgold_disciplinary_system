@@ -87,6 +87,7 @@ const TeacherReports = lazy(() => import('./pages/teacher/TeacherReports'));
 const GradeHeadSettings = lazy(() => import('./pages/grade-head/GradeHeadSettings'));
 const GradeHeadMyClass = lazy(() => import('./pages/grade-head/GradeHeadMyClass'));
 const GradeHeadMyDashboard = lazy(() => import('./pages/grade-head/GradeHeadMyDashboard'));
+const GradeHeadMyTeachings = lazy(() => import('./pages/grade-head/GradeHeadMyTeachings'));
 
 // Parent pages — lazy loaded
 const ModernParentDashboard = lazy(() => import('./pages/parent/ModernParentDashboard'));
@@ -210,6 +211,7 @@ function App() {
             <Route path="reports" element={<ReportsAnalytics />} />
             <Route path="bulk-import" element={<BulkImport />} />
             <Route path="my-dashboard" element={<GradeHeadMyDashboard />} />
+            <Route path="my-teachings" element={<GradeHeadMyTeachings />} />
             <Route path="my-class" element={<GradeHeadMyClass />} />
             <Route path="settings" element={<GradeHeadSettings />} />
             <Route path="notifications" element={<AdminNotifications />} />
