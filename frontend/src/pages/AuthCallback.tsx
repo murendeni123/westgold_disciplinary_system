@@ -146,8 +146,9 @@ const AuthCallback: React.FC = () => {
           console.log('AuthCallback: Redirecting to parent onboarding (isSignup:', isSignup, 'needsOnboarding:', needsOnboarding, ')');
           navigate('/parent/onboarding', { replace: true });
         } else {
-          console.log('AuthCallback: Redirecting to dashboard:', `/${user.role}`);
-          navigate(`/${user.role}`, { replace: true });
+          const rolePath = user.role === 'grade_head' ? '/grade-head' : `/${user.role}`;
+          console.log('AuthCallback: Redirecting to dashboard:', rolePath);
+          navigate(rolePath, { replace: true });
         }
         
         // Clear the flag after navigation

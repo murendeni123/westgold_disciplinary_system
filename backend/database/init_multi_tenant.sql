@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS public.users (
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     name TEXT NOT NULL,
-    role TEXT NOT NULL CHECK(role IN ('admin', 'teacher', 'parent')),
+    role TEXT NOT NULL CHECK(role IN ('admin', 'teacher', 'parent', 'grade_head')),
     primary_school_id INTEGER,
     is_active BOOLEAN DEFAULT true,
     email_verified BOOLEAN DEFAULT false,

@@ -169,8 +169,8 @@ const authenticateToken = async (req, res, next) => {
         req.schemaName = schemaName;
         req.schoolId = schoolId;
         
-        // Fetch grade head information for teachers
-        if (user.role === 'teacher' && schemaName) {
+        // Fetch grade head information for teachers and grade heads
+        if ((user.role === 'teacher' || user.role === 'grade_head') && schemaName) {
             try {
                 const { schemaGet } = require('../utils/schemaHelper');
                 const teacher = await schemaGet(

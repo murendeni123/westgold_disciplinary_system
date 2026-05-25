@@ -128,11 +128,14 @@ router.get('/analytics', authenticateToken, async (req, res) => {
         `;
         const analyticsParams = [startDate.toISOString().split('T')[0], endDate.toISOString().split('T')[0]];
         
-        // Add teacher access control
-        if (req.user.role === 'teacher') {
-            analyticsQuery += ` AND (bi.teacher_id IN (SELECT id FROM teachers WHERE user_id = $3) 
-                               OR s.class_id IN (SELECT c.id FROM classes c 
-                                                JOIN teachers t ON c.teacher_id = t.id 
+        // Add access control based on role
+        if (req.user.isGradeHead && req.user.gradeHeadFor) {
+            analyticsQuery += ` AND s.class_id IN (SELECT id FROM classes WHERE grade_level = $3)`;
+            analyticsParams.push(req.user.gradeHeadFor);
+        } else if (req.user.role === 'teacher') {
+            analyticsQuery += ` AND (bi.teacher_id IN (SELECT id FROM teachers WHERE user_id = $3)
+                               OR s.class_id IN (SELECT c.id FROM classes c
+                                                JOIN teachers t ON c.teacher_id = t.id
                                                 WHERE t.user_id = $3))`;
             analyticsParams.push(req.user.id);
         }

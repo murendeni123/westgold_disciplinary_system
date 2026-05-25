@@ -10,7 +10,7 @@ interface User {
   id: number;
   email: string;
   name: string;
-  role: 'admin' | 'teacher' | 'parent' | 'platform_admin';
+  role: 'admin' | 'teacher' | 'parent' | 'platform_admin' | 'grade_head';
   school_id?: number;
   teacher?: any;
   children?: any[];

@@ -193,7 +193,7 @@ function App() {
             <Route path="reports" element={<TeacherReports />} />
           </Route>
 
-          <Route path="/grade-head" element={<ProtectedRoute allowedRoles={['teacher', 'admin']}><GradeHeadLayout /></ProtectedRoute>}>
+          <Route path="/grade-head" element={<ProtectedRoute allowedRoles={['grade_head', 'admin']}><GradeHeadLayout /></ProtectedRoute>}>
             <Route index element={<AdminDashboard />} />
             <Route path="students" element={<Students />} />
             <Route path="students/:id" element={<StudentProfile />} />

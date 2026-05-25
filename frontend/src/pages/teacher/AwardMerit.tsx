@@ -10,10 +10,12 @@ import { motion } from 'framer-motion';
 import { Award, CheckCircle, User, Calendar, Star, FileText } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { usePortalPrefix } from '../../hooks/usePortalPrefix';
 import BadgeStatusModal from '../../components/BadgeStatusModal';
 
 const AwardMerit: React.FC = () => {
   const navigate = useNavigate();
+  const portal = usePortalPrefix();
   const { success, error, ToastContainer } = useToast();
   const { t } = useLanguage();
   const [classes, setClasses] = useState<any[]>([]);
@@ -461,7 +463,7 @@ const AwardMerit: React.FC = () => {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => navigate('/teacher')}
+              onClick={() => navigate(portal)}
               className="rounded-xl"
             >
               Cancel

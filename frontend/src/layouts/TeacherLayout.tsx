@@ -17,7 +17,7 @@ const TeacherLayout: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
 
-  if (user?.isGradeHead) {
+  if (user?.role === 'grade_head') {
     return <Navigate to="/grade-head" replace />;
   }
 
