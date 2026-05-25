@@ -51,7 +51,7 @@ const GradeHeadMyDashboard: React.FC = () => {
         setRecentMerits(merits.slice(0, 5));
 
         // Activity from OTHER teachers — filter out logs by the current grade head
-        const myTeacherId = user?.teacherId;
+        const myTeacherId = user?.teacher?.id;
         const otherIncidents = incidents
           .filter((i: any) => !myTeacherId || Number(i.teacher_id) !== Number(myTeacherId))
           .map((i: any) => ({ ...i, _type: 'incident' }));
