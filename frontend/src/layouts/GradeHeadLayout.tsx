@@ -43,8 +43,10 @@ const GradeHeadLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Block regular teachers (non-grade-heads) from entering the grade-head portal
-  if (user && user.role === 'teacher') {
+  // Block regular teachers (non-grade-heads) from entering the grade-head portal.
+  // Allow users who have isGradeHead=true but still have an old role='teacher' token
+  // (transitional state after DB role promotion) — they'll get role='grade_head' on next login.
+  if (user && user.role === 'teacher' && !user.isGradeHead) {
     return <Navigate to="/teacher" replace />;
   }
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
