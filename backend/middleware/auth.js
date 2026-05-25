@@ -175,15 +175,18 @@ const authenticateToken = async (req, res, next) => {
                 const { schemaGet } = require('../utils/schemaHelper');
                 const teacher = await schemaGet(
                     { schemaName },
-                    'SELECT id, is_grade_head, grade_head_for, has_class FROM teachers WHERE user_id = $1',
+                    `SELECT t.id, t.is_grade_head, t.grade_head_for, t.has_class,
+                            EXISTS(SELECT 1 FROM classes WHERE teacher_id = t.id AND is_active = true) AS actually_has_class
+                     FROM teachers t WHERE t.user_id = $1`,
                     [user.id]
                 );
-                
+
                 if (teacher) {
                     req.user.teacherId = teacher.id;
                     req.user.isGradeHead = teacher.is_grade_head || false;
                     req.user.gradeHeadFor = teacher.grade_head_for;
-                    req.user.hasClass = teacher.has_class !== false;
+                    // Use actual class assignment as the truth — stored flag may be stale
+                    req.user.hasClass = teacher.has_class !== false || teacher.actually_has_class === true;
                     
                     // Add permissions based on role
                     const { getUserPermissions } = require('./permissions');

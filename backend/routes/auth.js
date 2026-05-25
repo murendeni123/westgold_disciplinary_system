@@ -271,7 +271,9 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
         try {
             if (user.role === 'teacher' || user.role === 'admin') {
                 const teacher = await dbGet(
-                    'SELECT * FROM teachers WHERE user_id = $1',
+                    `SELECT t.*,
+                            EXISTS(SELECT 1 FROM classes WHERE teacher_id = t.id AND is_active = true) AS actually_has_class
+                     FROM teachers t WHERE t.user_id = $1`,
                     [user.id],
                     selectedSchool.schema_name
                 );
@@ -279,7 +281,8 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
                 if (teacher) {
                     userInfo.isGradeHead = teacher.is_grade_head || false;
                     userInfo.gradeHeadFor = teacher.grade_head_for || null;
-                    userInfo.hasClass = teacher.has_class !== false;
+                    // Derive hasClass from actual class assignment — stored flag may be stale
+                    userInfo.hasClass = teacher.has_class !== false || teacher.actually_has_class === true;
                 }
             }
         } catch (error) {
@@ -514,7 +517,9 @@ router.get('/me', async (req, res) => {
 
         if ((user.role === 'teacher' || user.role === 'admin') && schemaName) {
             const teacher = await dbGet(
-                'SELECT * FROM teachers WHERE user_id = $1',
+                `SELECT t.*,
+                        EXISTS(SELECT 1 FROM classes WHERE teacher_id = t.id AND is_active = true) AS actually_has_class
+                 FROM teachers t WHERE t.user_id = $1`,
                 [user.id],
                 schemaName
             );
@@ -522,7 +527,7 @@ router.get('/me', async (req, res) => {
             if (teacher) {
                 userInfo.isGradeHead = teacher.is_grade_head || false;
                 userInfo.gradeHeadFor = teacher.grade_head_for || null;
-                userInfo.hasClass = teacher.has_class !== false;
+                userInfo.hasClass = teacher.has_class !== false || teacher.actually_has_class === true;
             }
         }
 
