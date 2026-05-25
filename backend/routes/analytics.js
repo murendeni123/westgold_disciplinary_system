@@ -463,38 +463,60 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
             // Top performing students by net points (merit - demerit)
             const topStudents = await schemaAll(req, `
                 SELECT s.id, s.student_id,
-                       s.first_name || ' ' || s.last_name as name,
+                       s.first_name || ' ' || s.last_name AS name,
                        c.class_name,
-                       COALESCE(SUM(m.points), 0) as merit_points,
-                       COALESCE(SUM(bi.points_deducted), 0) as demerit_points,
-                       (COALESCE(SUM(m.points), 0) - COALESCE(SUM(bi.points_deducted), 0)) as net_points,
-                       COUNT(DISTINCT m.id) as merit_count
+                       COALESCE(m.merit_points, 0) AS merit_points,
+                       COALESCE(bi.demerit_points, 0) AS demerit_points,
+                       (COALESCE(m.merit_points, 0) - COALESCE(bi.demerit_points, 0)) AS net_points,
+                       COALESCE(m.merit_count, 0) AS merit_count
                 FROM students s
                 LEFT JOIN classes c ON s.class_id = c.id
-                LEFT JOIN merits m ON s.id = m.student_id
-                LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id AND bi.status != 'resolved'
+                LEFT JOIN (
+                    SELECT student_id,
+                           SUM(points) AS merit_points,
+                           COUNT(*) AS merit_count
+                    FROM merits
+                    GROUP BY student_id
+                ) m ON s.id = m.student_id
+                LEFT JOIN (
+                    SELECT student_id,
+                           SUM(points_deducted) AS demerit_points
+                    FROM behaviour_incidents
+                    WHERE status != 'resolved'
+                    GROUP BY student_id
+                ) bi ON s.id = bi.student_id
                 WHERE s.is_active = true
-                GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
-                HAVING COALESCE(SUM(m.points), 0) > 0
-                ORDER BY net_points DESC, merit_count DESC
+                  AND COALESCE(m.merit_points, 0) > 0
+                ORDER BY net_points DESC, merit_points DESC
                 LIMIT 8
             `);
 
             // Top performing classes by net points
             const topClasses = await schemaAll(req, `
                 SELECT c.id, c.class_name,
-                       COUNT(DISTINCT s.id) as student_count,
-                       COALESCE(SUM(m.points), 0) as total_merit_points,
-                       COALESCE(SUM(bi.points_deducted), 0) as total_demerit_points,
-                       (COALESCE(SUM(m.points), 0) - COALESCE(SUM(bi.points_deducted), 0)) as net_class_points,
-                       COUNT(DISTINCT CASE WHEN m.id IS NOT NULL THEN m.student_id END) as students_earning_merits
+                       COUNT(DISTINCT s.id) AS student_count,
+                       COALESCE(SUM(ms.merit_points), 0) AS total_merit_points,
+                       COALESCE(SUM(bis.demerit_points), 0) AS total_demerit_points,
+                       (COALESCE(SUM(ms.merit_points), 0) - COALESCE(SUM(bis.demerit_points), 0)) AS net_class_points,
+                       COUNT(DISTINCT CASE WHEN COALESCE(ms.merit_points, 0) > 0 THEN s.id END) AS students_earning_merits
                 FROM classes c
                 LEFT JOIN students s ON c.id = s.class_id AND s.is_active = true
-                LEFT JOIN merits m ON s.id = m.student_id
-                LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id AND bi.status != 'resolved'
+                LEFT JOIN (
+                    SELECT student_id,
+                           SUM(points) AS merit_points
+                    FROM merits
+                    GROUP BY student_id
+                ) ms ON s.id = ms.student_id
+                LEFT JOIN (
+                    SELECT student_id,
+                           SUM(points_deducted) AS demerit_points
+                    FROM behaviour_incidents
+                    WHERE status != 'resolved'
+                    GROUP BY student_id
+                ) bis ON s.id = bis.student_id
                 WHERE c.is_active = true
                 GROUP BY c.id, c.class_name
-                HAVING COALESCE(SUM(m.points), 0) > 0
+                HAVING COALESCE(SUM(ms.merit_points), 0) > 0
                 ORDER BY net_class_points DESC, total_merit_points DESC
                 LIMIT 5
             `);
