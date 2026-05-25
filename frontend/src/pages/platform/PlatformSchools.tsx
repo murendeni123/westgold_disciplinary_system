@@ -71,9 +71,7 @@ const PlatformSchools: React.FC = () => {
       if (filters.status) params.status = filters.status;
       if (filters.search) params.search = filters.search;
 
-      console.log('Fetching schools with params:', params);
       const response = await api.getPlatformSchools(params);
-      console.log('Schools response:', response.data);
       setSchools(response.data || []);
     } catch (err: any) {
       console.error('Error fetching schools:', err);

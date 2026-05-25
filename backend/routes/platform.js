@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { dbAll, dbGet, dbRun, pool } = require('../database/db');
 const { authenticateToken } = require('../middleware/auth');
+const { loginLimiter } = require('../middleware/rateLimiter');
 const { createSchoolSchema, generateSchemaName } = require('../database/schemaManager');
 const { seedDefaultTypes } = require('../database/seedDefaultTypes');
 const { FREE_PLAN_LIMITS } = require('../utils/planEnforcement');
@@ -13,7 +14,7 @@ const PLATFORM_ADMIN_EMAIL = process.env.PLATFORM_ADMIN_EMAIL || 'superadmin@pds
 const PLATFORM_ADMIN_PASSWORD = process.env.PLATFORM_ADMIN_PASSWORD || 'superadmin123';
 
 // Platform login (separate from regular auth)
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
     try {
         const { email, password } = req.body;
 
@@ -30,7 +31,6 @@ router.post('/login', async (req, res) => {
             );
         } catch (dbError) {
             // If platform_users table doesn't exist yet, fall back to env vars
-            console.log('platform_users table not found, using environment variables');
         }
 
         if (platformUser) {

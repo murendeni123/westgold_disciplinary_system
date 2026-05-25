@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
+import { useToast } from '../../contexts/ToastContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -57,6 +58,7 @@ import {
 
 const PlatformDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const { showError } = useToast();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [timeframe, setTimeframe] = useState<'today' | '7d' | '30d'>('7d');
@@ -72,7 +74,7 @@ const PlatformDashboard: React.FC = () => {
       setStats(response.data);
       setLastSync(new Date());
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      showError('Failed to load dashboard analytics. Please try refreshing.');
     } finally {
       setLoading(false);
     }
