@@ -3,10 +3,10 @@ import { api } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval';
 import { 
-  Users, AlertTriangle, Clock, Calendar, Award, Gavel, TrendingDown, Bell, 
-  UserCheck, BookOpen, ArrowRight, AlertCircle, XCircle, MessageSquare, 
+  Users, AlertTriangle, Clock, Calendar, Award, Gavel, TrendingDown, Bell,
+  UserCheck, BookOpen, ArrowRight, AlertCircle, XCircle, MessageSquare,
   ClipboardList, ChevronRight, Zap, Shield, FileText, X, RefreshCw, Target,
-  Copy, Check, Key
+  Copy, Check, Key, Star
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { usePortalPrefix } from '../../hooks/usePortalPrefix';
@@ -57,6 +57,8 @@ const AdminDashboard: React.FC = () => {
   const [behaviorTrendData, setBehaviorTrendData] = useState<any[]>([]);
   const [recentIncidents, setRecentIncidents] = useState<any[]>([]);
   const [recentMerits, setRecentMerits] = useState<any[]>([]);
+  const [goldieBadgeHolders, setGoldieBadgeHolders] = useState<any[]>([]);
+  const [goldieBadgeThreshold, setGoldieBadgeThreshold] = useState<number>(10);
 
   const copySchoolCode = () => {
     if (schoolInfo?.school_code) {
@@ -104,7 +106,7 @@ const AdminDashboard: React.FC = () => {
       
       // Fetch school info and dashboard data in parallel
       // The x-school-id header from token is sufficient for API calls
-      const [statsRes, schoolInfoRes, alertsRes, riskRes, notifsRes, countRes, incRes, merRes] = await Promise.all([
+      const [statsRes, schoolInfoRes, alertsRes, riskRes, notifsRes, countRes, incRes, merRes, goldieBadgeRes] = await Promise.all([
         api.getDashboardStats().catch((err) => {
           console.error('Error fetching dashboard stats:', err);
           return { data: null };
@@ -131,17 +133,20 @@ const AdminDashboard: React.FC = () => {
         }),
         api.getIncidents().catch(() => ({ data: [] })),
         api.getMerits().catch(() => ({ data: [] })),
+        api.getGoldieBadgeLeaderboard().catch(() => ({ data: { holders: [], threshold: 10 } })),
       ]);
-      
+
       console.log('Dashboard stats response:', statsRes?.data);
       console.log('School info response:', schoolInfoRes?.data);
-      
+
       setStats(statsRes.data);
       setSchoolInfo(schoolInfoRes.data);
       setCriticalAlerts(alertsRes.data);
       setAtRiskStudents(riskRes.data);
       setNotifications(notifsRes.data?.slice(0, 5) || []);
       setUnreadCount(countRes.data?.count || 0);
+      setGoldieBadgeHolders(goldieBadgeRes.data?.holders || []);
+      setGoldieBadgeThreshold(goldieBadgeRes.data?.threshold || 10);
 
       // Build 6-month trend from incidents + merits
       const allInc: any[] = incRes.data || [];
@@ -788,40 +793,55 @@ const AdminDashboard: React.FC = () => {
             </motion.div>
           )}
 
-          {/* Notifications */}
+          {/* Goldie Badge Leaderboard */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
+            className="bg-white rounded-2xl shadow-xl border border-amber-100 overflow-hidden"
           >
-            <div className="p-4 border-b border-gray-100">
+            <div className="p-4 border-b border-amber-100 bg-gradient-to-r from-amber-50 to-yellow-50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Bell className="text-indigo-500" size={20} />
-                  <h3 className="font-bold text-gray-900">Notifications</h3>
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center shadow-sm">
+                    <Star className="text-white" size={16} fill="white" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-sm">Goldie Badge Holders</h3>
+                    <p className="text-xs text-amber-600">≥ {goldieBadgeThreshold} clean points</p>
+                  </div>
                 </div>
-                {unreadCount > 0 && (
-                  <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold">
-                    {unreadCount} new
+                {goldieBadgeHolders.length > 0 && (
+                  <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold">
+                    {goldieBadgeHolders.length}
                   </span>
                 )}
               </div>
             </div>
-            {notifications.length === 0 ? (
+            {goldieBadgeHolders.length === 0 ? (
               <div className="p-6 text-center text-gray-400">
-                <Bell size={32} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No new notifications</p>
+                <Star size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm font-medium">No badge holders yet</p>
+                <p className="text-xs mt-1">Students need {goldieBadgeThreshold}+ clean points</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100 max-h-64 overflow-y-auto">
-                {notifications.map((notif: any, idx: number) => (
-                  <div key={idx} className="p-3 hover:bg-gray-50 transition-colors">
-                    <p className="font-medium text-gray-900 text-sm">{notif.title}</p>
-                    <p className="text-xs text-gray-500 truncate">{notif.message}</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {new Date(notif.created_at).toLocaleString()}
-                    </p>
+              <div className="divide-y divide-amber-50 max-h-64 overflow-y-auto">
+                {goldieBadgeHolders.map((holder: any, idx: number) => (
+                  <div key={holder.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 transition-colors">
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                      idx === 0 ? 'bg-amber-400 text-white' :
+                      idx === 1 ? 'bg-gray-300 text-gray-700' :
+                      idx === 2 ? 'bg-orange-300 text-white' :
+                      'bg-gray-100 text-gray-500'
+                    }`}>
+                      {idx + 1}
+                    </span>
+                    <Star size={13} className="text-amber-400 shrink-0" fill="#fbbf24" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{holder.student_name}</p>
+                      <p className="text-xs text-gray-400 truncate">{holder.class_name}</p>
+                    </div>
+                    <span className="text-xs font-bold text-amber-600 shrink-0">{holder.clean_points} pts</span>
                   </div>
                 ))}
               </div>
