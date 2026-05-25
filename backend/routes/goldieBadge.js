@@ -108,15 +108,13 @@ router.get('/check-eligibility/:studentId', authenticateToken, async (req, res) 
 // Get Goldie Badge leaderboard — all current badge holders ordered by clean points
 router.get('/leaderboard', async (req, res) => {
   try {
-    const schoolId = req.schoolId || req.user.schoolId;
-    if (!schoolId) return res.status(400).json({ error: 'School context required' });
+    if (!req.schemaName && !(req.user && req.user.schemaName)) {
+      return res.status(400).json({ error: 'School context required' });
+    }
 
-    const config = await dbGet(
-      'SELECT points_threshold FROM goldie_badge_config WHERE school_id = $1',
-      [schoolId],
-      'public'
-    );
-    const threshold = config?.points_threshold || 10;
+    // Use the same eligibility criteria as calculateBadgeEligibility:
+    // totalMerits >= 10 AND (totalMerits - totalDemerits) >= 10
+    const BADGE_THRESHOLD = 10;
 
     const holders = await schemaAll(req, `
       SELECT
@@ -130,20 +128,23 @@ router.get('/leaderboard', async (req, res) => {
       FROM students s
       LEFT JOIN classes c ON s.class_id = c.id
       LEFT JOIN (
-        SELECT student_id, SUM(points) AS total_merits FROM merits GROUP BY student_id
+        SELECT student_id, SUM(points) AS total_merits
+        FROM merits
+        GROUP BY student_id
       ) m ON s.id = m.student_id
       LEFT JOIN (
         SELECT student_id, SUM(points_deducted) AS total_demerits
-        FROM behaviour_incidents GROUP BY student_id
+        FROM behaviour_incidents
+        GROUP BY student_id
       ) bi ON s.id = bi.student_id
       WHERE s.is_active = true
         AND COALESCE(m.total_merits, 0) >= $1
         AND (COALESCE(m.total_merits, 0) - COALESCE(bi.total_demerits, 0)) >= $1
       ORDER BY clean_points DESC, merit_points DESC
       LIMIT 20
-    `, [threshold]);
+    `, [BADGE_THRESHOLD]);
 
-    res.json({ holders, threshold });
+    res.json({ holders, threshold: BADGE_THRESHOLD });
   } catch (error) {
     console.error('Error fetching Goldie Badge leaderboard:', error);
     res.status(500).json({ error: 'Failed to fetch leaderboard' });
