@@ -653,57 +653,96 @@ const AdminDashboard: React.FC = () => {
 
         {/* Right Column */}
         <div className="space-y-6">
-          {/* Today's Attendance */}
+          {/* Students Doing Great */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="bg-white rounded-2xl shadow-xl border border-gray-100 p-5"
+            className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
           >
-            <div className="flex items-center space-x-3 mb-4">
-              <Calendar className="text-emerald-500" size={24} />
-              <h2 className="text-lg font-bold text-gray-900">Today's Attendance</h2>
+            <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-emerald-50 to-green-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Award className="text-emerald-500" size={20} />
+                  <h2 className="text-lg font-bold text-gray-900">Students Doing Great</h2>
+                </div>
+                <span className="text-xs text-emerald-600 font-medium bg-emerald-100 px-2 py-1 rounded-full">
+                  Top Performers
+                </span>
+              </div>
             </div>
-            {attendanceData.length > 0 && (stats?.todayAttendance?.total || 0) > 0 ? (
-              <div className="flex items-center justify-center">
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={attendanceData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {attendanceData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
+            {(stats?.topStudents || []).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                <Award size={32} className="mb-2" />
+                <p className="text-sm">No merit data yet</p>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-[200px] text-gray-400">
-                <Calendar size={48} className="mb-2" />
-                <p>No attendance data</p>
+              <div className="divide-y divide-gray-50 max-h-64 overflow-y-auto">
+                {(stats?.topStudents || []).map((student: any, idx: number) => (
+                  <div key={student.id} className="flex items-center justify-between p-3 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">{student.name}</p>
+                        <p className="text-xs text-gray-500">{student.class_name || 'No class'}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-emerald-600">+{student.net_points} pts</span>
+                      <p className="text-xs text-gray-400">{student.merit_count} merits</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-            <div className="grid grid-cols-3 gap-2 mt-4">
-              <div className="text-center p-2 bg-emerald-50 rounded-lg">
-                <p className="text-lg font-bold text-emerald-600">{stats?.todayAttendance?.present || 0}</p>
-                <p className="text-xs text-gray-500">Present</p>
-              </div>
-              <div className="text-center p-2 bg-red-50 rounded-lg">
-                <p className="text-lg font-bold text-red-600">{stats?.todayAttendance?.absent || 0}</p>
-                <p className="text-xs text-gray-500">Absent</p>
-              </div>
-              <div className="text-center p-2 bg-amber-50 rounded-lg">
-                <p className="text-lg font-bold text-amber-600">{stats?.todayAttendance?.late || 0}</p>
-                <p className="text-xs text-gray-500">Late</p>
+          </motion.div>
+
+          {/* Classes Doing Well */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+            className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
+          >
+            <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <BookOpen className="text-blue-500" size={20} />
+                  <h2 className="text-lg font-bold text-gray-900">Classes Doing Well</h2>
+                </div>
+                <span className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded-full">
+                  Top Classes
+                </span>
               </div>
             </div>
+            {(stats?.topClasses || []).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                <BookOpen size={32} className="mb-2" />
+                <p className="text-sm">No class data yet</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-50">
+                {(stats?.topClasses || []).map((cls: any, idx: number) => (
+                  <div key={cls.id} className="flex items-center justify-between p-3 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                        {idx + 1}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">{cls.class_name}</p>
+                        <p className="text-xs text-gray-500">{cls.student_count} students · {cls.students_earning_merits} earning merits</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-bold text-blue-600">+{cls.net_class_points} pts</span>
+                      <p className="text-xs text-gray-400">{cls.total_merit_points} merit pts</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </motion.div>
 
           {/* Pending Approvals */}

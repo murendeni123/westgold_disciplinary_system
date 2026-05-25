@@ -570,6 +570,10 @@ export const api = {
   getPlatformAnalytics: (params?: any) => axiosInstance.get('/platform/analytics', { params }),
   getPlatformBilling: (params?: any) => axiosInstance.get('/platform/billing', { params }),
   getPlatformLogs: (params?: any) => axiosInstance.get('/platform/logs', { params }),
+  // Platform Security
+  getSecurityStatus: () => axiosInstance.get('/platform/security/status'),
+  runSecurityScan: () => axiosInstance.post('/platform/security/scan'),
+  getSecurityScans: () => axiosInstance.get('/platform/security/scans'),
   // Platform User Management
   getPlatformUsers: () => axiosInstance.get('/platform/users'),
   getPlatformUserProfile: () => axiosInstance.get('/platform/users/profile'),

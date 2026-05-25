@@ -50,6 +50,7 @@ const PlatformLayout: React.FC = () => {
     { path: '/platform/analytics', label: t('nav.analytics'), icon: BarChart3, color: 'from-orange-500 to-red-500' },
     { path: '/platform/billing', label: t('nav.billing'), icon: CreditCard, color: 'from-teal-500 to-blue-500' },
     { path: '/platform/logs', label: t('nav.activityLogs'), icon: FileText, color: 'from-gray-500 to-slate-500' },
+    { path: '/platform/security', label: 'Security', icon: Shield, color: 'from-red-500 to-pink-500' },
     { path: '/platform/feature-flags', label: t('nav.featureFlags'), icon: ToggleLeft, color: 'from-amber-500 to-orange-500' },
     { path: '/platform/notifications', label: t('nav.notifications'), icon: Bell, color: 'from-blue-500 to-indigo-500' },
     { path: '/platform/settings', label: t('nav.settings'), icon: Settings, color: 'from-violet-500 to-purple-500' },
