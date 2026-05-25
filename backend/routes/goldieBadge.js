@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { dbGet, dbRun } = require('../database/db');
-const { schemaGet } = require('../utils/schemaHelper');
+const { schemaGet, schemaAll } = require('../utils/schemaHelper');
 const { authenticateToken } = require('../middleware/auth');
 const { calculateBadgeEligibility } = require('../utils/goldieBadgeHelper');
 
@@ -102,6 +102,51 @@ router.get('/check-eligibility/:studentId', authenticateToken, async (req, res) 
   } catch (error) {
     console.error('Error checking badge eligibility:', error);
     res.status(500).json({ error: 'Failed to check eligibility' });
+  }
+});
+
+// Get Goldie Badge leaderboard — all current badge holders ordered by clean points
+router.get('/leaderboard', async (req, res) => {
+  try {
+    const schoolId = req.schoolId || req.user.schoolId;
+    if (!schoolId) return res.status(400).json({ error: 'School context required' });
+
+    const config = await dbGet(
+      'SELECT points_threshold FROM goldie_badge_config WHERE school_id = $1',
+      [schoolId],
+      'public'
+    );
+    const threshold = config?.points_threshold || 10;
+
+    const holders = await schemaAll(req, `
+      SELECT
+        s.id,
+        s.student_id AS student_number,
+        s.first_name || ' ' || s.last_name AS student_name,
+        c.class_name,
+        COALESCE(m.total_merits, 0) AS merit_points,
+        COALESCE(bi.total_demerits, 0) AS demerit_points,
+        (COALESCE(m.total_merits, 0) - COALESCE(bi.total_demerits, 0)) AS clean_points
+      FROM students s
+      LEFT JOIN classes c ON s.class_id = c.id
+      LEFT JOIN (
+        SELECT student_id, SUM(points) AS total_merits FROM merits GROUP BY student_id
+      ) m ON s.id = m.student_id
+      LEFT JOIN (
+        SELECT student_id, SUM(points_deducted) AS total_demerits
+        FROM behaviour_incidents GROUP BY student_id
+      ) bi ON s.id = bi.student_id
+      WHERE s.is_active = true
+        AND COALESCE(m.total_merits, 0) >= $1
+        AND (COALESCE(m.total_merits, 0) - COALESCE(bi.total_demerits, 0)) >= $1
+      ORDER BY clean_points DESC, merit_points DESC
+      LIMIT 20
+    `, [threshold]);
+
+    res.json({ holders, threshold });
+  } catch (error) {
+    console.error('Error fetching Goldie Badge leaderboard:', error);
+    res.status(500).json({ error: 'Failed to fetch leaderboard' });
   }
 });
 

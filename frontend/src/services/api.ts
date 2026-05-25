@@ -676,6 +676,7 @@ export const api = {
 
   // Goldie Badge Configuration
   getGoldieBadgeConfig: () => axiosInstance.get('/goldie-badge/config'),
+  getGoldieBadgeLeaderboard: () => axiosInstance.get('/goldie-badge/leaderboard'),
   updateGoldieBadgeConfig: (pointsThreshold: number) => 
     axiosInstance.put('/goldie-badge/config', { points_threshold: pointsThreshold }),
   checkBadgeEligibility: (studentId: number) => 
