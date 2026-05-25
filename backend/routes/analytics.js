@@ -393,6 +393,56 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 LIMIT 10
             `, [grade]);
 
+            // Top performing students in this grade (same pre-aggregated pattern to avoid Cartesian product)
+            const topStudents = await schemaAll(req, `
+                SELECT s.id, s.student_id,
+                       s.first_name || ' ' || s.last_name AS name,
+                       c.class_name,
+                       COALESCE(m.merit_points, 0) AS merit_points,
+                       COALESCE(bi.demerit_points, 0) AS demerit_points,
+                       (COALESCE(m.merit_points, 0) - COALESCE(bi.demerit_points, 0)) AS net_points,
+                       COALESCE(m.merit_count, 0) AS merit_count
+                FROM students s
+                LEFT JOIN classes c ON s.class_id = c.id
+                LEFT JOIN (
+                    SELECT student_id, SUM(points) AS merit_points, COUNT(*) AS merit_count
+                    FROM merits GROUP BY student_id
+                ) m ON s.id = m.student_id
+                LEFT JOIN (
+                    SELECT student_id, SUM(points_deducted) AS demerit_points
+                    FROM behaviour_incidents WHERE status != 'resolved' GROUP BY student_id
+                ) bi ON s.id = bi.student_id
+                WHERE s.is_active = true AND c.grade_level = $1
+                  AND COALESCE(m.merit_points, 0) > 0
+                ORDER BY net_points DESC, merit_points DESC
+                LIMIT 8
+            `, [grade]);
+
+            // Top performing classes in this grade
+            const topClasses = await schemaAll(req, `
+                SELECT c.id, c.class_name,
+                       COUNT(DISTINCT s.id) AS student_count,
+                       COALESCE(SUM(ms.merit_points), 0) AS total_merit_points,
+                       COALESCE(SUM(bis.demerit_points), 0) AS total_demerit_points,
+                       (COALESCE(SUM(ms.merit_points), 0) - COALESCE(SUM(bis.demerit_points), 0)) AS net_class_points,
+                       COUNT(DISTINCT CASE WHEN COALESCE(ms.merit_points, 0) > 0 THEN s.id END) AS students_earning_merits
+                FROM classes c
+                LEFT JOIN students s ON c.id = s.class_id AND s.is_active = true
+                LEFT JOIN (
+                    SELECT student_id, SUM(points) AS merit_points
+                    FROM merits GROUP BY student_id
+                ) ms ON s.id = ms.student_id
+                LEFT JOIN (
+                    SELECT student_id, SUM(points_deducted) AS demerit_points
+                    FROM behaviour_incidents WHERE status != 'resolved' GROUP BY student_id
+                ) bis ON s.id = bis.student_id
+                WHERE c.is_active = true AND c.grade_level = $1
+                GROUP BY c.id, c.class_name
+                HAVING COALESCE(SUM(ms.merit_points), 0) > 0
+                ORDER BY net_class_points DESC, total_merit_points DESC
+                LIMIT 5
+            `, [grade]);
+
             stats = {
                 totalStudents: parseInt(totalStudents?.count) || 0,
                 totalIncidents: parseInt(totalIncidents?.count) || 0,
@@ -402,6 +452,8 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                 todayAttendance: todayAttendance || { total: 0, present: 0, absent: 0, late: 0 },
                 worstStudents,
                 worstClasses,
+                topStudents,
+                topClasses,
                 topTeachers: [],
                 isGradeHead: true,
                 gradeHeadFor: grade

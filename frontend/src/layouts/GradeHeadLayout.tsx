@@ -61,8 +61,8 @@ const GradeHeadLayout: React.FC = () => {
       icon: LayoutDashboard
     },
     {
-      name: t('nav.myClass'),
-      path: '/grade-head/my-class',
+      name: 'My Teachings',
+      path: '/grade-head/my-teachings',
       icon: BookOpen
     }
   ];

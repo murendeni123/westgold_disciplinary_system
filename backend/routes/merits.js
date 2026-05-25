@@ -15,7 +15,7 @@ router.get('/', authenticateToken, async (req, res) => {
     console.log('req.user:', req.user ? { id: req.user.id, email: req.user.email, schemaName: req.user.schemaName } : 'undefined');
     console.log('req.schemaName:', req.schemaName);
     
-    const { student_id, teacher_id, start_date, end_date } = req.query;
+    const { student_id, teacher_id, start_date, end_date, class_id, limit } = req.query;
     const schema = getSchema(req);
     
     console.log('getSchema returned:', schema);
@@ -80,8 +80,16 @@ router.get('/', authenticateToken, async (req, res) => {
       query += ` AND COALESCE(m.merit_date, m.date, m.date_awarded::date) <= $${paramIndex++}`;
       params.push(end_date);
     }
+    if (class_id) {
+      query += ` AND s.class_id = $${paramIndex++}`;
+      params.push(class_id);
+    }
 
     query += ' ORDER BY COALESCE(m.merit_date, m.date, m.date_awarded::date) DESC NULLS LAST';
+    if (limit) {
+      query += ` LIMIT $${paramIndex++}`;
+      params.push(parseInt(limit));
+    }
 
     console.log('Executing merits query in schema:', schema);
     const merits = await schemaAll(req, query, params);

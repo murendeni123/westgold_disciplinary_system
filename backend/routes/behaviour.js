@@ -11,7 +11,7 @@ const router = express.Router();
 // Get all behaviour incidents
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const { student_id, teacher_id, status, severity, start_date, end_date } = req.query;
+        const { student_id, teacher_id, status, severity, start_date, end_date, class_id, limit } = req.query;
         const schema = getSchema(req);
         
         if (!schema) {
@@ -83,8 +83,16 @@ router.get('/', authenticateToken, async (req, res) => {
             query += ` AND bi.date <= $${paramIndex++}`;
             params.push(end_date);
         }
+        if (class_id) {
+            query += ` AND s.class_id = $${paramIndex++}`;
+            params.push(class_id);
+        }
 
         query += ' ORDER BY bi.date DESC, bi.time DESC';
+        if (limit) {
+            query += ` LIMIT $${paramIndex++}`;
+            params.push(parseInt(limit));
+        }
 
         const incidents = await schemaAll(req, query, params);
         res.json(incidents);
