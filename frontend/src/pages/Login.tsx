@@ -99,13 +99,8 @@ const Login: React.FC = () => {
         }
       }
       
-      // Handle Grade Head redirection — always go to grade-head portal
-      if (user.isGradeHead) {
-        navigate('/grade-head');
-      } else {
-        // Regular users go to their role-based portal
-        navigate(`/${role}`);
-      }
+      const rolePath = role === 'grade_head' ? '/grade-head' : `/${role}`;
+      navigate(rolePath);
     } catch (err: any) {
       setError(err.message || 'Login failed');
     } finally {

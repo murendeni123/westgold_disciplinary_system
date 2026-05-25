@@ -7,7 +7,7 @@ const { createNotification, notifySchoolAdmins } = require('./notifications');
 const router = express.Router();
 
 // Get all consequence definitions (admin and teacher)
-router.get('/definitions', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
+router.get('/definitions', authenticateToken, requireRole('admin', 'teacher', 'grade_head'), async (req, res) => {
   try {
     const schema = getSchema(req);
     if (!schema) {
@@ -207,7 +207,7 @@ router.get('/student/:studentId', authenticateToken, async (req, res) => {
 });
 
 // Assign consequence to student (admin and teacher)
-router.post('/assign', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
+router.post('/assign', authenticateToken, requireRole('admin', 'teacher', 'grade_head'), async (req, res) => {
   try {
     const { student_id, consequence_id, incident_id, assigned_date, due_date, notes } = req.body;
     const schema = getSchema(req);

@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import { Save, AlertTriangle } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { usePortalPrefix } from '../../hooks/usePortalPrefix';
 import BadgeStatusModal from '../../components/BadgeStatusModal';
 
 // Static consequence options for teachers to select when logging an incident.
@@ -29,6 +30,7 @@ const CONSEQUENCE_OPTIONS: string[] = [
 
 const LogIncident: React.FC = () => {
   const navigate = useNavigate();
+  const portal = usePortalPrefix();
   const { success, error, ToastContainer } = useToast();
   const { t } = useLanguage();
   const [classes, setClasses] = useState<any[]>([]);
@@ -463,7 +465,7 @@ const LogIncident: React.FC = () => {
             <Button
               type="button"
               variant="secondary"
-              onClick={() => navigate('/teacher/behaviour')}
+              onClick={() => navigate(`${portal}/behaviour`)}
               className="rounded-xl"
             >
               Cancel

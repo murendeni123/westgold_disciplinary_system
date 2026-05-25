@@ -1,5 +1,6 @@
 const express = require('express');
 const { schemaGet, schemaRun, schemaAll } = require('../utils/schemaHelper');
+const { dbRun } = require('../database/db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 const { requireAdminOnly } = require('../middleware/permissions');
 const { checkResourceLimit } = require('../utils/planEnforcement');
@@ -70,12 +71,18 @@ router.post('/assign', requireAdminOnly, async (req, res) => {
 
     // Update teacher record
     await schemaRun(req,
-      `UPDATE teachers 
-       SET is_grade_head = TRUE, 
+      `UPDATE teachers
+       SET is_grade_head = TRUE,
            grade_head_for = $1,
            has_class = $2
        WHERE id = $3`,
       [gradeStr, hasClass, teacherId]
+    );
+
+    // Promote the user's role to grade_head in public.users
+    await dbRun(
+      `UPDATE public.users SET role = 'grade_head' WHERE id = $1`,
+      [teacher.user_id]
     );
 
     console.log(`✅ Grade Head assigned successfully: Teacher ${teacherId} for Grade ${gradeStr}`);
@@ -145,12 +152,18 @@ router.post('/remove', requireAdminOnly, async (req, res) => {
 
     // Remove grade head assignment
     await schemaRun(req,
-      `UPDATE teachers 
-       SET is_grade_head = FALSE, 
+      `UPDATE teachers
+       SET is_grade_head = FALSE,
            grade_head_for = NULL,
            has_class = $1
        WHERE id = $2`,
       [!!teacherClass, teacherId]
+    );
+
+    // Revert user role back to teacher in public.users
+    await dbRun(
+      `UPDATE public.users SET role = 'teacher' WHERE id = $1`,
+      [teacher.user_id]
     );
 
     console.log(`✅ Grade Head removed: Teacher ${teacherId} (was Grade ${previousGrade})`);

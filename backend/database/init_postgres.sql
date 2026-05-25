@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
-    role TEXT NOT NULL CHECK(role IN ('admin', 'teacher', 'parent')),
+    role TEXT NOT NULL CHECK(role IN ('admin', 'teacher', 'parent', 'grade_head')),
     name TEXT NOT NULL,
     school_id INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

@@ -102,6 +102,7 @@ const QuickStudentSearch: React.FC = () => {
   const handleSelect = (student: any) => {
     const role = user?.role;
     if (role === 'admin') navigate(`/admin/students/${student.id}`);
+    else if (role === 'grade_head') navigate(`/grade-head/students/${student.id}`);
     else if (role === 'teacher') navigate(`/teacher/students/${student.id}`);
     else if (role === 'parent') navigate(`/parent/children/${student.id}`);
     setQuery('');

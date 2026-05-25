@@ -4,7 +4,7 @@ import { usePlatformAuth } from '../contexts/PlatformAuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles: ('admin' | 'teacher' | 'parent' | 'platform_admin')[];
+  allowedRoles: ('admin' | 'teacher' | 'parent' | 'platform_admin' | 'grade_head')[];
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
@@ -40,9 +40,21 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
     return <Navigate to="/login" replace />;
   }
 
-  const userRole = currentUser.role as 'admin' | 'teacher' | 'parent' | 'platform_admin';
+  const userRole = currentUser.role as 'admin' | 'teacher' | 'parent' | 'platform_admin' | 'grade_head';
+
+  // Grade heads trying to access /teacher routes → redirect to grade-head portal
+  if (userRole === 'grade_head' && !allowedRoles.includes('grade_head')) {
+    return <Navigate to="/grade-head" replace />;
+  }
+
+  // Regular teachers trying to access /grade-head routes → redirect to teacher portal
+  if (userRole === 'teacher' && allowedRoles.includes('grade_head') && !allowedRoles.includes('teacher')) {
+    return <Navigate to="/teacher" replace />;
+  }
+
+  const redirectPath = userRole === 'grade_head' ? '/grade-head' : `/${userRole}`;
   if (!allowedRoles.includes(userRole)) {
-    return <Navigate to={`/${currentUser.role}`} replace />;
+    return <Navigate to={redirectPath} replace />;
   }
 
   return <>{children}</>;

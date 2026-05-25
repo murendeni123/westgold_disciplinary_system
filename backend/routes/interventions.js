@@ -99,7 +99,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
 // Create intervention (admin and teacher)
 // Teachers can assign interventions to their students; admins can assign for any.
-router.post('/', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
+router.post('/', authenticateToken, requireRole('admin', 'teacher', 'grade_head'), async (req, res) => {
   try {
     const { student_id, type, description, start_date, end_date, notes } = req.body;
     const schema = getSchema(req);
@@ -350,7 +350,7 @@ router.post('/:id/sessions', authenticateToken, requireRole('admin'), async (req
 });
 
 // Update intervention progress (admin and teacher)
-router.put('/:id/progress', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
+router.put('/:id/progress', authenticateToken, requireRole('admin', 'teacher', 'grade_head'), async (req, res) => {
   try {
     const { 
       progress_status, 
@@ -425,7 +425,7 @@ router.put('/:id/progress', authenticateToken, requireRole('admin', 'teacher'), 
 });
 
 // Record intervention outcome (admin and teacher)
-router.put('/:id/outcome', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
+router.put('/:id/outcome', authenticateToken, requireRole('admin', 'teacher', 'grade_head'), async (req, res) => {
   try {
     const { 
       outcome, 

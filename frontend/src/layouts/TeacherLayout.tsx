@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, Navigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import QuickStudentSearch from '../components/QuickStudentSearch';
 import NotificationBell from '../components/NotificationBell';
 import TokenExpirationWarning from '../components/TokenExpirationWarning';
 import { useSchoolTheme } from '../contexts/SchoolThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Menu, X, GraduationCap, Search } from 'lucide-react';
 
 const TeacherLayout: React.FC = () => {
@@ -14,6 +15,11 @@ const TeacherLayout: React.FC = () => {
   const location = useLocation();
   const { customizations } = useSchoolTheme();
   const { t } = useLanguage();
+  const { user } = useAuth();
+
+  if (user?.role === 'grade_head') {
+    return <Navigate to="/grade-head" replace />;
+  }
 
   useEffect(() => {
     const handleResize = () => {

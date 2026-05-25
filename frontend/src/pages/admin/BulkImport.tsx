@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Upload, Download, FileSpreadsheet, CheckCircle, XCircle, AlertCircle, ArrowLeft, Sparkles } from 'lucide-react';
 import { useToast } from '../../hooks/useToast';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { usePortalPrefix } from '../../hooks/usePortalPrefix';
 
 interface ImportResult {
   total: number;
@@ -19,6 +20,7 @@ const BulkImport: React.FC = () => {
   const navigate = useNavigate();
   const { success, error: showError, ToastContainer } = useToast();
   const { t } = useLanguage();
+  const portal = usePortalPrefix();
   const [activeTab, setActiveTab] = useState<'students' | 'teachers' | 'classes'>('students');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -95,11 +97,11 @@ const BulkImport: React.FC = () => {
         success(`Successfully imported ${response.data.results.successful} ${activeTab}!`);
         setTimeout(() => {
           if (activeTab === 'students') {
-            navigate('/admin/students');
+            navigate(`${portal}/students`);
           } else if (activeTab === 'teachers') {
-            navigate('/admin/teachers');
+            navigate(`${portal}/teachers`);
           } else {
-            navigate('/admin/classes');
+            navigate(`${portal}/classes`);
           }
         }, 3000);
       } else {

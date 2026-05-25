@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -42,6 +42,11 @@ const GradeHeadLayout: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Block regular teachers (non-grade-heads) from entering the grade-head portal
+  if (user && user.role === 'teacher') {
+    return <Navigate to="/teacher" replace />;
+  }
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [searchOpen, setSearchOpen] = useState(false);

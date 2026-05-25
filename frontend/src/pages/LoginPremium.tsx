@@ -99,7 +99,8 @@ const LoginPremium: React.FC = () => {
         }
       }
       
-      navigate(`/${role}`);
+      const rolePath = role === 'grade_head' ? '/grade-head' : `/${role}`;
+      navigate(rolePath);
     } catch (err: any) {
       setError(err.message || 'Login failed');
     } finally {

@@ -134,7 +134,7 @@ router.get('/available-consequences', authenticateToken, async (req, res) => {
 });
 
 // Assign consequence (role-based restrictions)
-router.post('/assign', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
+router.post('/assign', authenticateToken, requireRole('admin', 'teacher', 'grade_head'), async (req, res) => {
   try {
     const schema = getSchema(req);
     if (!schema) {
@@ -290,7 +290,7 @@ router.post('/assign', authenticateToken, requireRole('admin', 'teacher'), async
 });
 
 // Update consequence assignment status
-router.put('/:id', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
+router.put('/:id', authenticateToken, requireRole('admin', 'teacher', 'grade_head'), async (req, res) => {
   try {
     const schema = getSchema(req);
     if (!schema) {
@@ -342,7 +342,7 @@ router.put('/:id', authenticateToken, requireRole('admin', 'teacher'), async (re
 });
 
 // Delete consequence assignment (admin or teacher who assigned it)
-router.delete('/:id', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
+router.delete('/:id', authenticateToken, requireRole('admin', 'teacher', 'grade_head'), async (req, res) => {
   try {
     const schema = getSchema(req);
     if (!schema) {
@@ -509,7 +509,7 @@ router.post('/evaluate-student', authenticateToken, async (req, res) => {
 });
 
 // Get consequence statistics for dashboard
-router.get('/statistics', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
+router.get('/statistics', authenticateToken, requireRole('admin', 'teacher', 'grade_head'), async (req, res) => {
   try {
     const schema = getSchema(req);
     if (!schema) {
