@@ -246,7 +246,7 @@ const ClassDetail: React.FC = () => {
     return (
       <div className="text-center py-12">
         <p className="text-gray-500 text-lg">Class not found</p>
-        <Button onClick={() => navigate('/admin/classes')} className="mt-4">
+        <Button onClick={() => navigate(`${portal}/classes`)} className="mt-4">
           Back to Classes
         </Button>
       </div>
@@ -265,7 +265,7 @@ const ClassDetail: React.FC = () => {
       >
         <div className="flex items-center space-x-4">
           <button
-            onClick={() => navigate('/admin/classes')}
+            onClick={() => navigate(`${portal}/classes`)}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <ArrowLeft size={24} className="text-gray-600" />

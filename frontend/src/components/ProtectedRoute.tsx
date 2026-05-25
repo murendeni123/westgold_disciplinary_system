@@ -45,6 +45,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles 
     return <Navigate to={`/${currentUser.role}`} replace />;
   }
 
+  // Grade heads must stay in /grade-head; block them from entering /teacher routes
+  if ((currentUser as any).isGradeHead && !allowedRoles.includes('admin')) {
+    return <Navigate to="/grade-head" replace />;
+  }
+
   return <>{children}</>;
 };
 
