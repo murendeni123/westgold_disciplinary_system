@@ -998,7 +998,7 @@ router.put('/:id', authenticateToken, requireRole('admin'), async (req, res) => 
 });
 
 // Assign student to detention
-router.post('/:id/assign', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
+router.post('/:id/assign', authenticateToken, requireRole('admin', 'teacher', 'grade_head'), async (req, res) => {
   try {
     const schema = getSchema(req);
     if (!schema) {
@@ -1671,7 +1671,7 @@ router.post('/recurring', authenticateToken, requireRole('admin'), async (req, r
 });
 
 // Remove a student from a detention session
-router.delete('/assignments/:assignmentId', authenticateToken, requireRole('admin', 'teacher'), async (req, res) => {
+router.delete('/assignments/:assignmentId', authenticateToken, requireRole('admin', 'teacher', 'grade_head'), async (req, res) => {
   try {
     const schema = getSchema(req);
     if (!schema) return res.status(403).json({ error: 'School context required' });

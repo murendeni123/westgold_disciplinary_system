@@ -174,8 +174,8 @@ router.post('/', authenticateToken, async (req, res) => {
     const teacher = await schemaGet(req, 'SELECT id FROM teachers WHERE user_id = $1', [req.user.id]);
     console.log('Teacher record:', teacher);
     
-    if (!teacher && req.user.role !== 'admin') {
-      console.log('ERROR: No teacher record and user is not admin');
+    if (!teacher && !['admin', 'grade_head'].includes(req.user.role)) {
+      console.log('ERROR: No teacher record and user is not admin or grade head');
       return res.status(403).json({ error: 'Teacher record not found. Only teachers and admins can award merits.' });
     }
     
