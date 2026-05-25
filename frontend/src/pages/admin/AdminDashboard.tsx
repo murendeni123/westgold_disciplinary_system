@@ -695,8 +695,10 @@ const AdminDashboard: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-sm font-bold text-emerald-600">+{student.net_points} pts</span>
-                      <p className="text-xs text-gray-400">{student.merit_count} merits</p>
+                      <span className={`text-sm font-bold ${Number(student.net_points) >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                        {Number(student.net_points) >= 0 ? '+' : ''}{student.net_points} net pts
+                      </span>
+                      <p className="text-xs text-gray-400">{student.merit_points} merit pts · {student.merit_count} awards</p>
                     </div>
                   </div>
                 ))}
@@ -737,11 +739,13 @@ const AdminDashboard: React.FC = () => {
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900 text-sm">{cls.class_name}</p>
-                        <p className="text-xs text-gray-500">{cls.student_count} students · {cls.students_earning_merits} earning merits</p>
+                        <p className="text-xs text-gray-500">{cls.student_count} students · {cls.students_earning_merits} with merits</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <span className="text-sm font-bold text-blue-600">+{cls.net_class_points} pts</span>
+                      <span className={`text-sm font-bold ${Number(cls.net_class_points) >= 0 ? 'text-blue-600' : 'text-red-500'}`}>
+                        {Number(cls.net_class_points) >= 0 ? '+' : ''}{cls.net_class_points} net pts
+                      </span>
                       <p className="text-xs text-gray-400">{cls.total_merit_points} merit pts</p>
                     </div>
                   </div>
