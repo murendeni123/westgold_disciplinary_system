@@ -18,6 +18,10 @@ interface NotificationDetailModalProps {
   } | null;
 }
 
+const decodeHtml = (s: string) =>
+  s.replace(/&#x2F;/g, '/').replace(/&#x27;/g, "'").replace(/&amp;/g, '&')
+   .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+
 const NotificationDetailModal: React.FC<NotificationDetailModalProps> = ({
   isOpen,
   onClose,
@@ -57,6 +61,9 @@ const NotificationDetailModal: React.FC<NotificationDetailModalProps> = ({
           break;
         case 'consequence':
           response = await api.getConsequence(notification.related_id);
+          break;
+        case 'consequence_assignment':
+          response = await api.getConsequenceAssignment(notification.related_id);
           break;
         case 'student':
           response = await api.getStudent(notification.related_id);
@@ -285,6 +292,40 @@ const NotificationDetailModal: React.FC<NotificationDetailModalProps> = ({
     </div>
   );
 
+  const renderStudentDetails = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="p-3 bg-gray-50 rounded-lg">
+          <p className="text-xs text-gray-600 mb-1">Student</p>
+          <p className="font-semibold text-gray-900">
+            {details.first_name} {details.last_name}
+          </p>
+        </div>
+        <div className="p-3 bg-gray-50 rounded-lg">
+          <p className="text-xs text-gray-600 mb-1">Student ID</p>
+          <p className="font-semibold text-gray-900">{details.student_id || 'N/A'}</p>
+        </div>
+        {details.class_name && (
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <p className="text-xs text-gray-600 mb-1">Class</p>
+            <p className="font-semibold text-gray-900">{details.class_name}</p>
+          </div>
+        )}
+        {details.grade_level && (
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <p className="text-xs text-gray-600 mb-1">Grade</p>
+            <p className="font-semibold text-gray-900">{details.grade_level}</p>
+          </div>
+        )}
+      </div>
+      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+        <p className="text-sm text-amber-800">
+          Review their behaviour record for the full incident history.
+        </p>
+      </div>
+    </div>
+  );
+
   const renderDetails = () => {
     if (!details) return null;
 
@@ -297,6 +338,10 @@ const NotificationDetailModal: React.FC<NotificationDetailModalProps> = ({
         return renderDetentionDetails();
       case 'consequence':
         return renderConsequenceDetails();
+      case 'consequence_assignment':
+        return renderConsequenceDetails();
+      case 'student':
+        return renderStudentDetails();
       default:
         return (
           <div className="p-4 bg-gray-50 rounded-lg">
@@ -321,8 +366,8 @@ const NotificationDetailModal: React.FC<NotificationDetailModalProps> = ({
           <div className="bg-gradient-to-r from-blue-500 to-purple-500 p-6 text-white">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h2 className="text-2xl font-bold mb-2">{notification.title}</h2>
-                <p className="text-white/90">{notification.message}</p>
+                <h2 className="text-2xl font-bold mb-2">{decodeHtml(notification.title)}</h2>
+                <p className="text-white/90">{decodeHtml(notification.message)}</p>
                 <p className="text-xs text-white/70 mt-2">
                   {new Date(notification.created_at).toLocaleString()}
                 </p>
@@ -347,9 +392,12 @@ const NotificationDetailModal: React.FC<NotificationDetailModalProps> = ({
                 />
               </div>
             ) : error ? (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-center">
-                <AlertTriangle className="mx-auto mb-2 text-red-600" size={32} />
-                <p className="text-red-800">{error}</p>
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                <AlertTriangle className="mx-auto mb-2 text-amber-500" size={32} />
+                <p className="text-amber-800 font-medium mb-1">Details unavailable</p>
+                <p className="text-sm text-amber-700">
+                  The full record could not be loaded. The summary above has all the key information.
+                </p>
               </div>
             ) : (
               renderDetails()
