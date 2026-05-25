@@ -237,7 +237,7 @@ router.post('/assign', authenticateToken, requireRole('admin', 'teacher', 'grade
         `${consequenceLabel} Assigned`,
         `${student.student_name} has been assigned a ${consequenceLabel}. Reason: ${reason}`,
         result.id,
-        'consequence'
+        'consequence_assignment'
       );
     }
 
@@ -256,7 +256,7 @@ router.post('/assign', authenticateToken, requireRole('admin', 'teacher', 'grade
         `${consequenceLabel} Logged for Your Student`,
         `${student.student_name} has been assigned a ${consequenceLabel}. Reason: ${reason}. Assigned by: ${req.user.name || 'Staff'}.`,
         result.id,
-        'consequence'
+        'consequence_assignment'
       );
     }
 
@@ -268,7 +268,7 @@ router.post('/assign', authenticateToken, requireRole('admin', 'teacher', 'grade
       adminTitle,
       `${student.student_name} has been assigned a ${consequenceLabel}. Reason: ${reason}. Assigned by: ${req.user.name || 'Staff'}.`,
       result.id,
-      'consequence'
+      'consequence_assignment'
     );
 
     // Confirm to the person who logged it
@@ -279,7 +279,7 @@ router.post('/assign', authenticateToken, requireRole('admin', 'teacher', 'grade
       `Consequence Logged Successfully`,
       `You have logged a ${consequenceLabel} for ${student.student_name}. Reason: ${reason}.`,
       result.id,
-      'consequence'
+      'consequence_assignment'
     );
 
     res.status(201).json(assignment);
@@ -539,6 +539,43 @@ router.get('/statistics', authenticateToken, requireRole('admin', 'teacher', 'gr
     res.json(stats);
   } catch (error) {
     console.error('Error fetching consequence statistics:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get a single consequence assignment by ID (used by notification detail modal)
+router.get('/:id', authenticateToken, async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+
+    const assignment = await schemaGet(req, `
+      SELECT
+        ca.*,
+        s.first_name || ' ' || s.last_name as student_name,
+        s.student_id as student_number,
+        u.name as assigned_by_name,
+        COALESCE(c_def.name, ca.consequence_type) as consequence_name,
+        c_def.severity,
+        ca.start_date as assigned_date,
+        ca.end_date as due_date,
+        ca.reason as notes
+      FROM consequence_assignments ca
+      INNER JOIN students s ON ca.student_id = s.id
+      LEFT JOIN public.users u ON ca.assigned_by = u.id
+      LEFT JOIN consequences c_def ON ca.consequence_id = c_def.id
+      WHERE ca.id = $1
+    `, [req.params.id]);
+
+    if (!assignment) {
+      return res.status(404).json({ error: 'Consequence assignment not found' });
+    }
+
+    res.json(assignment);
+  } catch (error) {
+    console.error('Error fetching consequence assignment:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

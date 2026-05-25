@@ -536,6 +536,7 @@ export const api = {
 
   // Consequence Assignments (Role-based)
   getConsequenceAssignments: (params?: any) => axiosInstance.get('/consequence-assignments', { params }),
+  getConsequenceAssignment: (id: number) => axiosInstance.get(`/consequence-assignments/${id}`),
   getAvailableConsequences: () => axiosInstance.get('/consequence-assignments/available-consequences'),
   assignConsequenceToStudent: (data: any) => axiosInstance.post('/consequence-assignments/assign', data),
   updateConsequenceAssignment: (id: number, data: any) => axiosInstance.put(`/consequence-assignments/${id}`, data),
