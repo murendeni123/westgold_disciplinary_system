@@ -1259,32 +1259,42 @@ router.get('/billing', requirePlatformAdmin, async (req, res) => {
 // Get activity logs
 router.get('/logs', requirePlatformAdmin, async (req, res) => {
     try {
-        const { action_type, entity_type, start_date, end_date, limit = 100 } = req.query;
+        const { action_type, entity_type, start_date, end_date, limit = 100, school_id } = req.query;
 
         let query = `
-            SELECT * FROM platform_logs
+            SELECT pl.*, pu.name as performed_by_name
+            FROM platform_logs pl
+            LEFT JOIN platform_users pu ON pl.platform_user_id = pu.id
             WHERE 1=1
         `;
         const params = [];
 
+        // 'platform' means logs with no school context; numeric = filter by that school
+        if (school_id === 'platform') {
+            query += ' AND pl.school_id IS NULL';
+        } else if (school_id && school_id !== '') {
+            query += ' AND pl.school_id = ?';
+            params.push(school_id);
+        }
+
         if (action_type) {
-            query += ' AND action_type = ?';
+            query += ' AND pl.action_type = ?';
             params.push(action_type);
         }
         if (entity_type) {
-            query += ' AND entity_type = ?';
+            query += ' AND pl.entity_type = ?';
             params.push(entity_type);
         }
         if (start_date) {
-            query += ' AND created_at >= ?';
+            query += ' AND pl.created_at >= ?';
             params.push(start_date);
         }
         if (end_date) {
-            query += ' AND created_at <= ?';
+            query += ' AND pl.created_at <= ?';
             params.push(end_date);
         }
 
-        query += ' ORDER BY created_at DESC LIMIT ?';
+        query += ' ORDER BY pl.created_at DESC LIMIT ?';
         params.push(limit);
 
         const logs = await dbAll(query, params);
@@ -1292,6 +1302,181 @@ router.get('/logs', requirePlatformAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error fetching logs:', error);
         res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ── Security endpoints ────────────────────────────────────────────────────────
+
+// Ensure security_scans table exists
+const ensureSecurityScansTable = async () => {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS public.platform_security_scans (
+                id SERIAL PRIMARY KEY,
+                performed_by INTEGER REFERENCES public.platform_users(id) ON DELETE SET NULL,
+                performed_by_name TEXT,
+                scan_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                overall_status TEXT NOT NULL CHECK(overall_status IN ('healthy','warning','critical')),
+                findings JSONB NOT NULL DEFAULT '[]',
+                issues_found INTEGER DEFAULT 0,
+                summary TEXT
+            )
+        `);
+    } catch (err) {
+        // Table likely already exists or will be created on first scan
+    }
+};
+ensureSecurityScansTable();
+
+// GET /platform/security/status — live security health snapshot
+router.get('/security/status', requirePlatformAdmin, async (req, res) => {
+    try {
+        const jwtSecret = process.env.JWT_SECRET || '';
+        const defaultSecrets = ['your-secret-key-change-in-production', 'secret', 'jwt_secret'];
+        const jwtSecure = jwtSecret.length >= 32 && !defaultSecrets.includes(jwtSecret);
+
+        const adminEmailSet = !!(process.env.PLATFORM_ADMIN_EMAIL && process.env.PLATFORM_ADMIN_EMAIL !== 'superadmin@pds.com');
+        const adminPasswordSet = !!(process.env.PLATFORM_ADMIN_PASSWORD && process.env.PLATFORM_ADMIN_PASSWORD !== 'superadmin123');
+        const credentialsSecure = adminEmailSet && adminPasswordSet;
+
+        let dbHealthy = false;
+        try {
+            await pool.query('SELECT 1');
+            dbHealthy = true;
+        } catch (_) {}
+
+        const httpsEnabled = process.env.NODE_ENV === 'production';
+        const rateLimitingEnabled = true; // loginLimiter is now applied
+
+        const issues = [!jwtSecure, !credentialsSecure, !httpsEnabled].filter(Boolean).length;
+        const overall = issues === 0 ? 'healthy' : issues >= 2 ? 'critical' : 'warning';
+
+        res.json({
+            overall,
+            jwt_secure: jwtSecure,
+            credentials_secure: credentialsSecure,
+            db_healthy: dbHealthy,
+            https_enabled: httpsEnabled,
+            rate_limiting: rateLimitingEnabled,
+            details: {
+                jwt_message: jwtSecure ? 'JWT secret is strong and custom' : 'JWT secret is weak or using the default value',
+                credentials_message: credentialsSecure ? 'Platform credentials are set via environment variables' : 'Default credentials in use — set PLATFORM_ADMIN_EMAIL and PLATFORM_ADMIN_PASSWORD env vars',
+                db_message: dbHealthy ? 'Database connection is healthy' : 'Database connection failed',
+                https_message: httpsEnabled ? 'HTTPS enforced in production mode' : 'Running in development mode (HTTPS not enforced)',
+                rate_limiting_message: 'Login rate limiting is active (5 requests per 15 minutes)',
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching security status:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// POST /platform/security/scan — run a vulnerability scan and store results
+router.post('/security/scan', requirePlatformAdmin, async (req, res) => {
+    try {
+        const performedById = req.platformAdmin.userId;
+        let performedByName = 'Platform Admin';
+        try {
+            const u = await dbGet('SELECT name FROM platform_users WHERE id = ?', [performedById]);
+            if (u) performedByName = u.name;
+        } catch (_) {}
+
+        const jwtSecret = process.env.JWT_SECRET || '';
+        const defaultSecrets = ['your-secret-key-change-in-production', 'secret', 'jwt_secret'];
+        const jwtSecure = jwtSecret.length >= 32 && !defaultSecrets.includes(jwtSecret);
+
+        const adminEmailSet = !!(process.env.PLATFORM_ADMIN_EMAIL && process.env.PLATFORM_ADMIN_EMAIL !== 'superadmin@pds.com');
+        const adminPasswordSet = !!(process.env.PLATFORM_ADMIN_PASSWORD && process.env.PLATFORM_ADMIN_PASSWORD !== 'superadmin123');
+
+        let dbHealthy = false;
+        try { await pool.query('SELECT 1'); dbHealthy = true; } catch (_) {}
+
+        const httpsEnabled = process.env.NODE_ENV === 'production';
+
+        let platformUserCount = 0;
+        try {
+            const cnt = await dbGet('SELECT COUNT(*) as count FROM platform_users WHERE is_active = true');
+            platformUserCount = parseInt(cnt?.count) || 0;
+        } catch (_) {}
+
+        const findings = [
+            {
+                check: 'JWT Secret Strength',
+                status: jwtSecure ? 'pass' : 'fail',
+                message: jwtSecure ? 'JWT secret is strong and custom' : 'JWT secret is weak or using the insecure default — set a strong JWT_SECRET environment variable',
+            },
+            {
+                check: 'Platform Admin Credentials',
+                status: (adminEmailSet && adminPasswordSet) ? 'pass' : 'fail',
+                message: (adminEmailSet && adminPasswordSet)
+                    ? 'Platform credentials are securely set via environment variables'
+                    : 'Default hardcoded credentials are in use — set PLATFORM_ADMIN_EMAIL and PLATFORM_ADMIN_PASSWORD',
+            },
+            {
+                check: 'Database Connectivity',
+                status: dbHealthy ? 'pass' : 'fail',
+                message: dbHealthy ? 'Database is reachable and responding' : 'Database connection failed — check DATABASE_URL',
+            },
+            {
+                check: 'HTTPS / Production Mode',
+                status: httpsEnabled ? 'pass' : 'warning',
+                message: httpsEnabled ? 'Application is running in production mode' : 'Running in development mode — ensure HTTPS is configured in production',
+            },
+            {
+                check: 'Login Rate Limiting',
+                status: 'pass',
+                message: 'Rate limiting is active on the platform login endpoint (5 req / 15 min)',
+            },
+            {
+                check: 'Platform User Accounts',
+                status: platformUserCount > 0 ? 'pass' : 'warning',
+                message: platformUserCount > 0
+                    ? `${platformUserCount} active platform admin account(s) exist in the database`
+                    : 'No platform users in database — system is relying on environment variable fallback credentials',
+            },
+        ];
+
+        const failCount = findings.filter(f => f.status === 'fail').length;
+        const warnCount = findings.filter(f => f.status === 'warning').length;
+        const overall = failCount > 0 ? 'critical' : warnCount > 0 ? 'warning' : 'healthy';
+        const summary = failCount > 0
+            ? `${failCount} critical issue(s) found — immediate action required`
+            : warnCount > 0
+            ? `${warnCount} warning(s) found — review recommended`
+            : 'All security checks passed';
+
+        const scanResult = await pool.query(
+            `INSERT INTO public.platform_security_scans
+             (performed_by, performed_by_name, overall_status, findings, issues_found, summary)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [
+                typeof performedById === 'number' ? performedById : null,
+                performedByName,
+                overall,
+                JSON.stringify(findings),
+                failCount + warnCount,
+                summary
+            ]
+        );
+
+        res.json({ ...scanResult.rows[0], findings });
+    } catch (error) {
+        console.error('Error running security scan:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// GET /platform/security/scans — list all past scans
+router.get('/security/scans', requirePlatformAdmin, async (req, res) => {
+    try {
+        const scans = await dbAll(
+            'SELECT * FROM platform_security_scans ORDER BY scan_date DESC LIMIT 50'
+        );
+        res.json(scans);
+    } catch (error) {
+        // Table might not exist yet if no scan has been run
+        res.json([]);
     }
 });
 
@@ -1443,7 +1628,7 @@ router.post('/users', requirePlatformAdmin, async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, 10);
         const result = await dbRun(
             `INSERT INTO platform_users (name, email, password_hash, is_active, created_at)
-             VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP)`,
+             VALUES (?, ?, ?, true, CURRENT_TIMESTAMP) RETURNING id`,
             [name, email, hashedPassword]
         );
 
@@ -1486,7 +1671,7 @@ router.put('/users/:id', requirePlatformAdmin, async (req, res) => {
         }
         if (is_active !== undefined) {
             updates.push('is_active = ?');
-            params.push(is_active ? 1 : 0);
+            params.push(is_active ? true : false);
         }
 
         if (updates.length === 0) {

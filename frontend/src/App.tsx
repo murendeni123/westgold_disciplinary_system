@@ -59,6 +59,7 @@ const PlatformSubscriptions = lazy(() => import('./pages/platform/PlatformSubscr
 const PlatformAnalytics = lazy(() => import('./pages/platform/PlatformAnalytics'));
 const PlatformBilling = lazy(() => import('./pages/platform/PlatformBilling'));
 const PlatformLogs = lazy(() => import('./pages/platform/PlatformLogs'));
+const PlatformSecurity = lazy(() => import('./pages/platform/PlatformSecurity'));
 const PlatformUsers = lazy(() => import('./pages/platform/PlatformUsers'));
 const SchoolOnboardingWizard = lazy(() => import('./pages/platform/SchoolOnboardingWizard'));
 const PlatformNotifications = lazy(() => import('./pages/platform/NotificationsPage'));
@@ -247,6 +248,7 @@ function App() {
             <Route path="analytics" element={<PlatformAnalytics />} />
             <Route path="billing" element={<PlatformBilling />} />
             <Route path="logs" element={<PlatformLogs />} />
+            <Route path="security" element={<PlatformSecurity />} />
             <Route path="notifications" element={<PlatformNotifications />} />
             <Route path="feature-flags" element={<FeatureFlagsManagement />} />
             <Route path="invoice-templates" element={<PlatformInvoiceTemplates />} />
