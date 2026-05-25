@@ -4,11 +4,13 @@ import { api } from '../../services/api';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
+import { useToast } from '../../contexts/ToastContext';
 import { ArrowLeft, Save, Upload, X, Palette, Type, Layout, Image, Mail, Code, Eye, FileText } from 'lucide-react';
 
 const SchoolCustomizations: React.FC = () => {
   const { schoolId } = useParams();
   const navigate = useNavigate();
+  const { showSuccess, showError } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'branding' | 'colors' | 'typography' | 'ui' | 'login' | 'content' | 'email' | 'advanced'>('branding');
@@ -67,16 +69,16 @@ const SchoolCustomizations: React.FC = () => {
         ...prev,
         [fieldName]: pathValue,
       }));
-      alert('File uploaded successfully!');
+      showSuccess('File uploaded successfully!');
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Error uploading file');
+      showError(error.response?.data?.error || 'Error uploading file');
     } finally {
       setSaving(false);
     }
   };
 
   const handleDeleteFile = async (type: 'logo' | 'favicon' | 'login-background' | 'dashboard-background') => {
-    if (!confirm('Are you sure you want to delete this file?')) return;
+    if (!window.confirm('Are you sure you want to delete this file?')) return;
 
     try {
       setSaving(true);
@@ -93,9 +95,9 @@ const SchoolCustomizations: React.FC = () => {
         await api.deleteDashboardBackground(Number(schoolId));
         setCustomizations((prev: any) => ({ ...prev, dashboard_background_path: null }));
       }
-      alert('File deleted successfully!');
+      showSuccess('File deleted successfully!');
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Error deleting file');
+      showError(error.response?.data?.error || 'Error deleting file');
     } finally {
       setSaving(false);
     }
@@ -105,28 +107,23 @@ const SchoolCustomizations: React.FC = () => {
     try {
       setSaving(true);
       await api.updateSchoolCustomizations(Number(schoolId), customizations);
-      alert('Customizations saved successfully!');
+      showSuccess('Customizations saved successfully!');
     } catch (error: any) {
-      alert(error.response?.data?.error || 'Error saving customizations');
+      showError(error.response?.data?.error || 'Error saving customizations');
     } finally {
       setSaving(false);
     }
   };
 
-  const getImageUrl = (path: string | null) => {
+  const getImageUrl = (path: string | null): string | null => {
     if (!path) return null;
-    // Use the same base URL logic as the API service
-    const getApiBaseUrl = () => {
-      if (typeof window !== 'undefined') {
-        const hostname = window.location.hostname;
-        if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-          return 'http://192.168.18.160:5000';
-        }
-      }
-      return 'http://localhost:5000';
-    };
-    const baseUrl = getApiBaseUrl();
-    return `${baseUrl}${path}`;
+    if (path.startsWith('http')) return path;
+    // Derive backend server root from VITE_API_URL (strips /api suffix if present)
+    const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
+    if (apiUrl && apiUrl.startsWith('http')) {
+      return `${apiUrl.replace(/\/api\/?$/, '')}${path}`;
+    }
+    return path;
   };
 
   if (loading) {

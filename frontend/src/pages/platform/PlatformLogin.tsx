@@ -132,7 +132,7 @@ const PlatformLogin: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="superadmin@dms.com"
+                  placeholder="Enter your email"
                   className="pl-12 bg-white/10 border-white/20 text-white placeholder:text-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500"
                 />
               </div>
@@ -182,16 +182,6 @@ const PlatformLogin: React.FC = () => {
             </motion.div>
           </form>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            className="mt-6 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10"
-          >
-            <p className="text-xs text-purple-200 text-center">
-              Default: superadmin@dms.com / superadmin123
-            </p>
-          </motion.div>
         </motion.div>
       </motion.div>
     </div>
