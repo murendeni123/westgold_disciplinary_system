@@ -269,7 +269,7 @@ router.post('/login', loginLimiter, validateLogin, async (req, res) => {
 
         // Get role-specific info from school schema
         try {
-            if (user.role === 'teacher' || user.role === 'admin') {
+            if (user.role === 'teacher' || user.role === 'admin' || user.role === 'grade_head') {
                 const teacher = await dbGet(
                     `SELECT t.*,
                             EXISTS(SELECT 1 FROM classes WHERE teacher_id = t.id AND is_active = true) AS actually_has_class
@@ -515,7 +515,7 @@ router.get('/me', async (req, res) => {
             schoolCode: school?.code || school?.school_code || decoded.schoolCode
         };
 
-        if ((user.role === 'teacher' || user.role === 'admin') && schemaName) {
+        if ((user.role === 'teacher' || user.role === 'admin' || user.role === 'grade_head') && schemaName) {
             const teacher = await dbGet(
                 `SELECT t.*,
                         EXISTS(SELECT 1 FROM classes WHERE teacher_id = t.id AND is_active = true) AS actually_has_class
