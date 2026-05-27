@@ -41,11 +41,12 @@ router.post('/rules', authenticateToken, requireRole('admin', 'grade_head'), asy
     const ruleName = name || (severity ? `${severity} Severity Detention` : `${min_points}+ Points Detention`);
 
     if (id) {
+      // Full update — all fields required (called from the edit modal)
       await schemaRun(req,
         `UPDATE detention_rules
          SET name = $1, action_type = $2, min_points = $3, max_points = $4, severity = $5, detention_duration = $6, is_active = $7
          WHERE id = $8`,
-        [ruleName, action_type, min_points, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : true, id]
+        [ruleName, action_type || 'detention', min_points || 0, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : true, id]
       );
       const rule = await schemaGet(req, 'SELECT * FROM detention_rules WHERE id = $1', [id]);
       res.json(rule);
@@ -53,13 +54,52 @@ router.post('/rules', authenticateToken, requireRole('admin', 'grade_head'), asy
       const result = await schemaRun(req,
         `INSERT INTO detention_rules (name, action_type, min_points, max_points, severity, detention_duration, is_active)
          VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-        [ruleName, action_type, min_points, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : true]
+        [ruleName, action_type || 'detention', min_points || 0, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : true]
       );
       const rule = await schemaGet(req, 'SELECT * FROM detention_rules WHERE id = $1', [result.id]);
       res.status(201).json(rule);
     }
   } catch (error) {
     console.error('Error saving detention rule:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Toggle or partial-update a detention rule (safe for is_active-only updates)
+router.patch('/rules/:id', authenticateToken, requireRole('admin', 'grade_head'), async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+    const { is_active } = req.body;
+    if (is_active === undefined) {
+      return res.status(400).json({ error: 'No updatable fields provided' });
+    }
+    await schemaRun(req,
+      `UPDATE detention_rules SET is_active = $1 WHERE id = $2`,
+      [is_active, req.params.id]
+    );
+    const rule = await schemaGet(req, 'SELECT * FROM detention_rules WHERE id = $1', [req.params.id]);
+    if (!rule) return res.status(404).json({ error: 'Rule not found' });
+    res.json(rule);
+  } catch (error) {
+    console.error('Error updating detention rule:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete a detention rule permanently
+router.delete('/rules/:id', authenticateToken, requireRole('admin', 'grade_head'), async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+    await schemaRun(req, 'DELETE FROM detention_rules WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting detention rule:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

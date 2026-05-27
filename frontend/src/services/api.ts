@@ -298,6 +298,8 @@ export const api = {
   // Detentions
   getDetentionRules: () => axiosInstance.get('/detentions/rules'),
   saveDetentionRule: (data: any) => axiosInstance.post('/detentions/rules', data),
+  toggleDetentionRule: (id: number, is_active: boolean) => axiosInstance.patch(`/detentions/rules/${id}`, { is_active }),
+  deleteDetentionRule: (id: number) => axiosInstance.delete(`/detentions/rules/${id}`),
   getDetentions: (params?: any) => axiosInstance.get('/detentions', { params }),
   getDetention: (id: number) => axiosInstance.get(`/detentions/${id}`),
   createDetention: (data: any) => axiosInstance.post('/detentions', data),
