@@ -126,26 +126,25 @@ const DisciplineRules: React.FC = () => {
       setInterventionTypes(interventionTypesRes.data || []);
       setConsequences(consequencesRes.data || []);
 
-      // Map database rules to frontend format — use stored name/description where available
+      // Map database rules to frontend format
       const mappedRules = (detentionRulesRes.data || []).map((rule: any) => {
-        const inferredTriggerType = rule.severity
-          ? 'incident_type'
-          : (rule.min_points || 0) >= 10
-          ? 'points_threshold'
-          : 'incident_count';
+        // Use stored trigger_type; fall back to inferring from legacy columns
+        const triggerType = rule.trigger_type ||
+          (rule.severity ? 'incident_type' : (rule.min_points || 0) >= 10 ? 'points_threshold' : 'incident_count');
         const fallbackName = rule.severity
           ? `${rule.severity.charAt(0).toUpperCase() + rule.severity.slice(1)} Severity Detention`
-          : `${rule.min_points || 0}+ ${inferredTriggerType === 'points_threshold' ? 'Points' : 'Incidents'} Detention`;
+          : `${rule.min_points || 0}+ ${triggerType === 'points_threshold' ? 'Points' : 'Incidents'} Detention`;
         return {
           id: rule.id,
           name: rule.name || fallbackName,
           description: rule.description || (rule.severity
             ? `Automatic detention for ${rule.severity} severity incidents`
-            : `Detention after accumulating ${rule.min_points || 0}+ ${inferredTriggerType === 'points_threshold' ? 'demerit points' : 'incidents'}`),
-          trigger_type: inferredTriggerType,
-          trigger_value: rule.min_points || 0,
+            : `Detention after ${rule.min_points || 0}+ ${triggerType === 'points_threshold' ? 'demerit points' : 'incidents'}`),
+          trigger_type: triggerType,
+          // For incident_type rules the threshold value is the occurrence count, not min_points
+          trigger_value: triggerType === 'incident_type' ? (rule.occurrence_count || 1) : (rule.min_points || 0),
           trigger_incident_type: rule.severity || '',
-          time_period_days: 30,
+          time_period_days: rule.time_period_days || 30,
           is_active: rule.is_active === 1 || rule.is_active === true,
         };
       });
@@ -301,11 +300,16 @@ const DisciplineRules: React.FC = () => {
         id: editingDetentionRule?.id,
         name: rule.name?.trim() || defaultName,
         action_type: 'detention',
-        min_points: triggerVal,
+        // For incident_type rules min_points tracks occurrences (default 1)
+        min_points: rule.trigger_type === 'incident_type' ? 1 : triggerVal,
         max_points: null,
+        // severity stores incident level for incident_type trigger
         severity: rule.trigger_type === 'incident_type' ? (rule.trigger_incident_type || null) : null,
         detention_duration: 60,
         is_active: rule.is_active !== undefined ? rule.is_active : true,
+        description: rule.description || '',
+        trigger_type: rule.trigger_type || 'incident_count',
+        time_period_days: rule.time_period_days || 30,
       };
 
       // Call API to save rule
@@ -329,6 +333,7 @@ const DisciplineRules: React.FC = () => {
   };
 
   const handleDeleteDetentionRule = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this detention rule? This cannot be undone.')) return;
     try {
       await api.deleteDetentionRule(id);
       await fetchRules();

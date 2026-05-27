@@ -37,24 +37,32 @@ router.post('/rules', authenticateToken, requireRole('admin', 'grade_head'), asy
     if (!schema) {
       return res.status(403).json({ error: 'School context required' });
     }
-    const { id, name, action_type, min_points, max_points, severity, detention_duration, is_active } = req.body;
+    const {
+      id, name, action_type, min_points, max_points, severity,
+      detention_duration, is_active, description, trigger_type, time_period_days
+    } = req.body;
     const ruleName = name || (severity ? `${severity} Severity Detention` : `${min_points}+ Points Detention`);
 
     if (id) {
-      // Full update — all fields required (called from the edit modal)
       await schemaRun(req,
         `UPDATE detention_rules
-         SET name = $1, action_type = $2, min_points = $3, max_points = $4, severity = $5, detention_duration = $6, is_active = $7
-         WHERE id = $8`,
-        [ruleName, action_type || 'detention', min_points || 0, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : true, id]
+         SET name = $1, action_type = $2, min_points = $3, max_points = $4, severity = $5,
+             detention_duration = $6, is_active = $7, description = $8, trigger_type = $9, time_period_days = $10
+         WHERE id = $11`,
+        [ruleName, action_type || 'detention', min_points || 0, max_points || null, severity || null,
+         detention_duration || 60, is_active !== undefined ? is_active : true,
+         description || null, trigger_type || null, time_period_days || 30, id]
       );
       const rule = await schemaGet(req, 'SELECT * FROM detention_rules WHERE id = $1', [id]);
       res.json(rule);
     } else {
       const result = await schemaRun(req,
-        `INSERT INTO detention_rules (name, action_type, min_points, max_points, severity, detention_duration, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
-        [ruleName, action_type || 'detention', min_points || 0, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : true]
+        `INSERT INTO detention_rules
+         (name, action_type, min_points, max_points, severity, detention_duration, is_active, description, trigger_type, time_period_days)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+        [ruleName, action_type || 'detention', min_points || 0, max_points || null, severity || null,
+         detention_duration || 60, is_active !== undefined ? is_active : true,
+         description || null, trigger_type || null, time_period_days || 30]
       );
       const rule = await schemaGet(req, 'SELECT * FROM detention_rules WHERE id = $1', [result.id]);
       res.status(201).json(rule);
@@ -1506,46 +1514,53 @@ router.post('/evaluate-rules', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Student ID is required' });
     }
 
-    // Get active detention rules (is_active is INTEGER in detention_rules table)
-    const rules = await schemaAll(req, 
-      'SELECT * FROM detention_rules WHERE is_active = 1 ORDER BY min_points'
+    // Get active detention rules — handle both BOOLEAN (true) and INTEGER (1) is_active
+    const rules = await schemaAll(req,
+      `SELECT * FROM detention_rules
+       WHERE (is_active = true OR is_active = 1) AND action_type = 'detention'
+       ORDER BY min_points`
     );
 
     const triggeredRules = [];
 
     for (const rule of rules) {
       let meetsRule = false;
+      // Use stored trigger_type; fall back to inferring from legacy columns
+      const triggerType = rule.trigger_type ||
+        (rule.severity ? 'incident_type' : (rule.min_points >= 10 ? 'points_threshold' : 'incident_count'));
+      const periodDays = rule.time_period_days || 30;
 
-      if (rule.action_type === 'points_threshold') {
+      if (triggerType === 'points_threshold') {
         const result = await schemaGet(req, `
           SELECT COALESCE(SUM(i.points_deducted), 0) as total_points
           FROM behaviour_incidents i
           WHERE i.student_id = $1
-            AND i.date >= CURRENT_DATE - INTERVAL '${rule.time_period_days || 30} days'
+            AND i.status != 'resolved'
+            AND i.date >= CURRENT_DATE - INTERVAL '${periodDays} days'
         `, [student_id]);
-        
-        const points = result?.total_points || 0;
+        const points = Number(result?.total_points || 0);
         meetsRule = points >= rule.min_points && (!rule.max_points || points <= rule.max_points);
-      } else if (rule.action_type === 'incident_count') {
+      } else if (triggerType === 'incident_type' && rule.severity) {
         const result = await schemaGet(req, `
-          SELECT COUNT(i.id) as incident_count
-          FROM behaviour_incidents i
-          WHERE i.student_id = $1
-            AND i.date >= CURRENT_DATE - INTERVAL '${rule.time_period_days || 30} days'
-        `, [student_id]);
-        
-        const count = result?.incident_count || 0;
-        meetsRule = count >= rule.min_points && (!rule.max_points || count <= rule.max_points);
-      } else if (rule.action_type === 'severity' && rule.severity) {
-        const result = await schemaGet(req, `
-          SELECT COUNT(i.id) as count
+          SELECT COUNT(i.id) as cnt
           FROM behaviour_incidents i
           WHERE i.student_id = $1
             AND i.severity = $2
-            AND i.date >= CURRENT_DATE - INTERVAL '${rule.time_period_days || 30} days'
+            AND i.status != 'resolved'
+            AND i.date >= CURRENT_DATE - INTERVAL '${periodDays} days'
         `, [student_id, rule.severity]);
-        
-        meetsRule = (result?.count || 0) > 0;
+        meetsRule = Number(result?.cnt || 0) >= (rule.min_points || 1);
+      } else {
+        // incident_count
+        const result = await schemaGet(req, `
+          SELECT COUNT(i.id) as cnt
+          FROM behaviour_incidents i
+          WHERE i.student_id = $1
+            AND i.status != 'resolved'
+            AND i.date >= CURRENT_DATE - INTERVAL '${periodDays} days'
+        `, [student_id]);
+        const count = Number(result?.cnt || 0);
+        meetsRule = count >= rule.min_points && (!rule.max_points || count <= rule.max_points);
       }
 
       if (meetsRule) {

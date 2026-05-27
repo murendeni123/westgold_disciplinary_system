@@ -252,6 +252,33 @@ const repairSchema = async (schemaName) => {
             } catch (e) { /* already correct type or column absent */ }
         }
 
+        // Ensure detention_rules has all required columns (migration-created tables lack
+        // name, description, trigger_type, time_period_days).
+        await client.query(`ALTER TABLE detention_rules ADD COLUMN IF NOT EXISTS name TEXT;`);
+        await client.query(`ALTER TABLE detention_rules ADD COLUMN IF NOT EXISTS description TEXT;`);
+        await client.query(`ALTER TABLE detention_rules ADD COLUMN IF NOT EXISTS trigger_type TEXT;`);
+        await client.query(`ALTER TABLE detention_rules ADD COLUMN IF NOT EXISTS time_period_days INTEGER DEFAULT 30;`);
+        // Back-fill name for rows that have none (migration-seeded rows)
+        await client.query(`
+            UPDATE detention_rules
+            SET name = CASE
+                WHEN severity IS NOT NULL THEN initcap(severity) || ' Severity Detention'
+                WHEN min_points >= 10 THEN min_points::text || '+ Points Detention'
+                ELSE min_points::text || '+ Incidents Detention'
+            END
+            WHERE name IS NULL;
+        `);
+        // Back-fill trigger_type for rows that have none
+        await client.query(`
+            UPDATE detention_rules
+            SET trigger_type = CASE
+                WHEN severity IS NOT NULL THEN 'incident_type'
+                WHEN min_points >= 10 THEN 'points_threshold'
+                ELSE 'incident_count'
+            END
+            WHERE trigger_type IS NULL;
+        `);
+
         console.log(`  ✓ Schema ${schemaName} repaired`);
     } catch (error) {
         console.error(`  ✗ Error repairing schema ${schemaName}:`, error.message);
