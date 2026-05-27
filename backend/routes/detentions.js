@@ -144,7 +144,7 @@ router.get('/', authenticateToken, async (req, res) => {
     
     let query = `
       SELECT d.*, u.name as teacher_name,
-             (SELECT COUNT(*) FROM detention_assignments WHERE detention_session_id = d.id) as student_count
+             (SELECT COUNT(*) FROM detention_assignments WHERE detention_id = d.id) as student_count
       FROM detention_sessions d
       LEFT JOIN teachers t ON d.teacher_on_duty_id = t.id
       LEFT JOIN public.users u ON t.user_id = u.id
@@ -686,7 +686,7 @@ router.get('/:id/teachers', authenticateToken, async (req, res) => {
 
     const teachers = await schemaAll(req, `
       SELECT dst.teacher_id as id, u.name, u.email,
-             t.subject_taught
+             t.subjects
       FROM detention_session_teachers dst
       JOIN teachers t  ON dst.teacher_id  = t.id
       JOIN public.users u ON t.user_id = u.id
@@ -799,7 +799,7 @@ router.get('/:id/report/excel', authenticateToken, async (req, res) => {
       FROM detention_assignments da
       INNER JOIN students s ON da.student_id = s.id
       LEFT JOIN  classes  c ON s.class_id    = c.id
-      WHERE da.detention_session_id = $1
+      WHERE da.detention_id = $1
       ORDER BY s.last_name, s.first_name
     `, [req.params.id]);
 
@@ -945,7 +945,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       FROM detention_assignments da
       INNER JOIN students s ON da.student_id = s.id
       LEFT  JOIN classes  c ON s.class_id    = c.id
-      WHERE da.detention_session_id = $1
+      WHERE da.detention_id = $1
       ORDER BY da.created_at DESC
     `, [req.params.id]);
 
@@ -1056,8 +1056,8 @@ router.post('/:id/assign', authenticateToken, requireRole('admin', 'teacher', 'g
     const { student_id, incident_id, reason } = req.body;
 
     const result = await schemaRun(req,
-      `INSERT INTO detention_assignments (detention_session_id, detention_id, student_id, incident_id, notes, assigned_by, status)
-       VALUES ($1, $1, $2, $3, $4, $5, 'assigned') RETURNING id`,
+      `INSERT INTO detention_assignments (detention_id, student_id, incident_id, notes, assigned_by, status)
+       VALUES ($1, $2, $3, $4, $5, 'assigned') RETURNING id`,
       [req.params.id, student_id, incident_id || null, reason || null, req.user.id]
     );
 
@@ -1182,7 +1182,7 @@ router.put('/assignments/:id', authenticateToken, async (req, res) => {
       // Find the next available detention session with capacity
       const nextSession = await schemaGet(req, `
         SELECT ds.id, ds.detention_date, ds.detention_time, ds.max_capacity,
-               (SELECT COUNT(*) FROM detention_assignments WHERE detention_session_id = ds.id) as current_count
+               (SELECT COUNT(*) FROM detention_assignments WHERE detention_id = ds.id) as current_count
         FROM detention_sessions ds
         WHERE ds.detention_date > $1
           AND ds.status = 'scheduled'
@@ -1194,9 +1194,9 @@ router.put('/assignments/:id', authenticateToken, async (req, res) => {
         // Auto-assign to next session
         try {
           await schemaRun(req,
-            `INSERT INTO detention_assignments 
-             (detention_session_id, detention_id, student_id, notes, assigned_by, status)
-             VALUES ($1, $1, $2, $3, $4, 'assigned')`,
+            `INSERT INTO detention_assignments
+             (detention_id, student_id, notes, assigned_by, status)
+             VALUES ($1, $2, $3, $4, 'assigned')`,
             [
               nextSession.id,
               assignment.student_id,
@@ -1408,7 +1408,7 @@ router.post('/auto-assign', authenticateToken, requireRole('admin'), async (req,
     const studentsWithUpcomingDetention = await schemaAll(req, `
       SELECT DISTINCT da.student_id
       FROM detention_assignments da
-      INNER JOIN detention_sessions ds ON da.detention_session_id = ds.id
+      INNER JOIN detention_sessions ds ON da.detention_id = ds.id
       WHERE ds.detention_date >= CURRENT_DATE
         AND da.status IN ('assigned', 'late')
     `);
@@ -1426,12 +1426,12 @@ router.post('/auto-assign', authenticateToken, requireRole('admin'), async (req,
         try {
           // Assign to current detention session
           await schemaRun(req,
-            `INSERT INTO detention_assignments 
-             (detention_session_id, detention_id, student_id, notes, assigned_by, status)
-             VALUES ($1, $1, $2, $3, $4, 'assigned')`,
+            `INSERT INTO detention_assignments
+             (detention_id, student_id, notes, assigned_by, status)
+             VALUES ($1, $2, $3, $4, 'assigned')`,
             [
-              detention_id, 
-              student.id, 
+              detention_id,
+              student.id,
               `Auto-assigned: ${student.total_points} demerit points`, 
               req.user.id
             ]
@@ -1553,13 +1553,13 @@ router.post('/evaluate-rules', authenticateToken, async (req, res) => {
         
         // Find next available detention session
         const nextDetention = await schemaGet(req, `
-          SELECT d.*, 
-                 (SELECT COUNT(*) FROM detention_assignments WHERE detention_session_id = d.id) as current_count
+          SELECT d.*,
+                 (SELECT COUNT(*) FROM detention_assignments WHERE detention_id = d.id) as current_count
           FROM detention_sessions d
           WHERE d.detention_date >= CURRENT_DATE
             AND d.status = 'scheduled'
-            AND (d.max_capacity IS NULL OR 
-                 (SELECT COUNT(*) FROM detention_assignments WHERE detention_session_id = d.id) < d.max_capacity)
+            AND (d.max_capacity IS NULL OR
+                 (SELECT COUNT(*) FROM detention_assignments WHERE detention_id = d.id) < d.max_capacity)
           ORDER BY d.detention_date, d.detention_time
           LIMIT 1
         `);
@@ -1567,15 +1567,15 @@ router.post('/evaluate-rules', authenticateToken, async (req, res) => {
         if (nextDetention) {
           // Check if student is already assigned to this detention
           const existing = await schemaGet(req,
-            'SELECT id FROM detention_assignments WHERE detention_session_id = $1 AND student_id = $2',
+            'SELECT id FROM detention_assignments WHERE detention_id = $1 AND student_id = $2',
             [nextDetention.id, student_id]
           );
 
           if (!existing) {
             // Assign student to detention
             await schemaRun(req,
-              `INSERT INTO detention_assignments (detention_session_id, detention_id, student_id, notes, assigned_by)
-               VALUES ($1, $1, $2, $3, $4)`,
+              `INSERT INTO detention_assignments (detention_id, student_id, notes, assigned_by)
+               VALUES ($1, $2, $3, $4)`,
               [nextDetention.id, student_id, `Auto-assigned: ${rule.name}`, req.user.id]
             );
 
@@ -1797,8 +1797,8 @@ router.post('/:id/process-queue', authenticateToken, requireRole('admin'), async
         // Assign to detention
         await schemaRun(req,
           `INSERT INTO detention_assignments 
-           (detention_session_id, detention_id, student_id, notes, assigned_by, status)
-           VALUES ($1, $1, $2, $3, $4, 'assigned')`,
+           (detention_id, student_id, notes, assigned_by, status)
+           VALUES ($1, $2, $3, $4, 'assigned')`,
           [
             req.params.id,
             queuedStudent.student_id,
