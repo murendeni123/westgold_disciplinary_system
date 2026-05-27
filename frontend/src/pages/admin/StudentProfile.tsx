@@ -900,6 +900,7 @@ const StudentProfile: React.FC = () => {
         isOpen={isParentModalOpen}
         onClose={() => setIsParentModalOpen(false)}
         parent={parentData}
+        student={student}
       />
     </div>
   );
