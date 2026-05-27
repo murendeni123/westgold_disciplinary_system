@@ -678,10 +678,14 @@ export const api = {
   // Goldie Badge Configuration
   getGoldieBadgeConfig: () => axiosInstance.get('/goldie-badge/config'),
   getGoldieBadgeLeaderboard: () => axiosInstance.get('/goldie-badge/leaderboard'),
-  updateGoldieBadgeConfig: (pointsThreshold: number) => 
+  updateGoldieBadgeConfig: (pointsThreshold: number) =>
     axiosInstance.put('/goldie-badge/config', { points_threshold: pointsThreshold }),
-  checkBadgeEligibility: (studentId: number) => 
+  checkBadgeEligibility: (studentId: number) =>
     axiosInstance.get(`/goldie-badge/check-eligibility/${studentId}`),
+  getGoldieBadgeAwards: (studentId: number) =>
+    axiosInstance.get(`/goldie-badge/awards/student/${studentId}`),
+  recordGoldieBadgeAward: (data: { student_id: number; award_date: string; notes?: string }) =>
+    axiosInstance.post('/goldie-badge/awards', data),
 
   // Invoice Templates
   getInvoiceTemplates: () => axiosInstance.get('/invoices/templates'),

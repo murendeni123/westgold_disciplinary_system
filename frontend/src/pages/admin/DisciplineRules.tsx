@@ -285,6 +285,7 @@ const DisciplineRules: React.FC = () => {
       // Map frontend rule format to backend format
       const backendRule = {
         id: editingDetentionRule?.id,
+        name: rule.name || '',
         action_type: 'detention',
         min_points: rule.trigger_value || 3,
         max_points: null,

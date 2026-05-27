@@ -207,6 +207,18 @@ const repairSchema = async (schemaName) => {
             WHERE NOT EXISTS (SELECT 1 FROM goldie_badge_config);
         `);
 
+        // Create goldie_badge_awards table for manual award records
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS goldie_badge_awards (
+                id SERIAL PRIMARY KEY,
+                student_id INTEGER NOT NULL,
+                awarded_by INTEGER NOT NULL,
+                award_date DATE NOT NULL,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
         // Create import_history table if it doesn't exist
         await client.query(`
             CREATE TABLE IF NOT EXISTS import_history (

@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { dbGet, dbRun } = require('../database/db');
-const { schemaGet, schemaAll } = require('../utils/schemaHelper');
-const { authenticateToken } = require('../middleware/auth');
+const { schemaGet, schemaAll, schemaRun } = require('../utils/schemaHelper');
+const { authenticateToken, requireRole } = require('../middleware/auth');
 const { calculateBadgeEligibility } = require('../utils/goldieBadgeHelper');
 
 // Get Goldie Badge configuration for the current school
@@ -148,6 +148,49 @@ router.get('/leaderboard', async (req, res) => {
   } catch (error) {
     console.error('Error fetching Goldie Badge leaderboard:', error);
     res.status(500).json({ error: 'Failed to fetch leaderboard' });
+  }
+});
+
+// Get Goldie badge award history for a specific student
+router.get('/awards/student/:studentId', authenticateToken, async (req, res) => {
+  try {
+    const awards = await schemaAll(req, `
+      SELECT gba.*, u.name as awarded_by_name
+      FROM goldie_badge_awards gba
+      LEFT JOIN public.users u ON gba.awarded_by = u.id
+      WHERE gba.student_id = $1
+      ORDER BY gba.award_date DESC, gba.created_at DESC
+    `, [req.params.studentId]);
+    res.json(awards);
+  } catch (error) {
+    console.error('Error fetching Goldie badge awards:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Record a manual Goldie badge award
+router.post('/awards', authenticateToken, requireRole('admin', 'grade_head'), async (req, res) => {
+  try {
+    const { student_id, award_date, notes } = req.body;
+    if (!student_id || !award_date) {
+      return res.status(400).json({ error: 'student_id and award_date are required' });
+    }
+    const result = await schemaRun(req, `
+      INSERT INTO goldie_badge_awards (student_id, awarded_by, award_date, notes)
+      VALUES ($1, $2, $3, $4) RETURNING id
+    `, [student_id, req.user.id, award_date, notes || null]);
+
+    const award = await schemaGet(req, `
+      SELECT gba.*, u.name as awarded_by_name
+      FROM goldie_badge_awards gba
+      LEFT JOIN public.users u ON gba.awarded_by = u.id
+      WHERE gba.id = $1
+    `, [result.id]);
+
+    res.status(201).json(award);
+  } catch (error) {
+    console.error('Error recording Goldie badge award:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

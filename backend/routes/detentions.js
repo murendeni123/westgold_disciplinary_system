@@ -16,7 +16,7 @@ function isSessionFrozen(session) {
 }
 
 // Get detention rules
-router.get('/rules', authenticateToken, requireRole('admin'), async (req, res) => {
+router.get('/rules', authenticateToken, requireRole('admin', 'grade_head'), async (req, res) => {
   try {
     const schema = getSchema(req);
     if (!schema) {
@@ -31,28 +31,29 @@ router.get('/rules', authenticateToken, requireRole('admin'), async (req, res) =
 });
 
 // Create/update detention rule
-router.post('/rules', authenticateToken, requireRole('admin'), async (req, res) => {
+router.post('/rules', authenticateToken, requireRole('admin', 'grade_head'), async (req, res) => {
   try {
     const schema = getSchema(req);
     if (!schema) {
       return res.status(403).json({ error: 'School context required' });
     }
-    const { id, action_type, min_points, max_points, severity, detention_duration, is_active } = req.body;
+    const { id, name, action_type, min_points, max_points, severity, detention_duration, is_active } = req.body;
+    const ruleName = name || (severity ? `${severity} Severity Detention` : `${min_points}+ Points Detention`);
 
     if (id) {
       await schemaRun(req,
-        `UPDATE detention_rules 
-         SET action_type = $1, min_points = $2, max_points = $3, severity = $4, detention_duration = $5, is_active = $6
-         WHERE id = $7`,
-        [action_type, min_points, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : true, id]
+        `UPDATE detention_rules
+         SET name = $1, action_type = $2, min_points = $3, max_points = $4, severity = $5, detention_duration = $6, is_active = $7
+         WHERE id = $8`,
+        [ruleName, action_type, min_points, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : true, id]
       );
       const rule = await schemaGet(req, 'SELECT * FROM detention_rules WHERE id = $1', [id]);
       res.json(rule);
     } else {
       const result = await schemaRun(req,
-        `INSERT INTO detention_rules (action_type, min_points, max_points, severity, detention_duration, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-        [action_type, min_points, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : true]
+        `INSERT INTO detention_rules (name, action_type, min_points, max_points, severity, detention_duration, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+        [ruleName, action_type, min_points, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : true]
       );
       const rule = await schemaGet(req, 'SELECT * FROM detention_rules WHERE id = $1', [result.id]);
       res.status(201).json(rule);
@@ -536,8 +537,16 @@ router.get('/qualifying-students', authenticateToken, requireRole('admin'), asyn
       return res.status(403).json({ error: 'School context required' });
     }
 
+    // Read the points threshold from detention_rules; fall back to 10 if no active rule exists
+    const thresholdRule = await schemaGet(req,
+      `SELECT MIN(min_points) as threshold FROM detention_rules
+       WHERE (is_active = true OR is_active = 1) AND action_type = 'detention'`
+    );
+    const pointsThreshold = (thresholdRule && thresholdRule.threshold != null)
+      ? Number(thresholdRule.threshold) : 10;
+
     const qualifyingStudents = await schemaAll(req, `
-      SELECT 
+      SELECT
         s.id,
         s.student_id as student_number,
         s.first_name || ' ' || s.last_name as student_name,
@@ -557,9 +566,9 @@ router.get('/qualifying-students', authenticateToken, requireRole('admin'), asyn
             AND da.status IN ('assigned', 'late', 'attended')
         )
       GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
-      HAVING COALESCE(SUM(bi.points_deducted), 0) >= 10
+      HAVING COALESCE(SUM(bi.points_deducted), 0) >= $1
       ORDER BY COALESCE(SUM(bi.points_deducted), 0) DESC
-    `);
+    `, [pointsThreshold]);
 
     res.json(qualifyingStudents);
   } catch (error) {
