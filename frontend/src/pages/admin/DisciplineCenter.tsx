@@ -24,9 +24,11 @@ import {
   ThumbsDown,
   X,
   Award,
+  Medal,
+  Sparkles,
 } from 'lucide-react';
 
-type TabType = 'behaviour' | 'detentions' | 'interventions' | 'consequences' | 'merits';
+type TabType = 'behaviour' | 'detentions' | 'interventions' | 'consequences' | 'merits' | 'goldie';
 
 interface Incident {
   id: number;
@@ -92,6 +94,16 @@ interface Merit {
   created_at: string;
 }
 
+interface GoldieCandidate {
+  id: number;
+  student_number: string;
+  student_name: string;
+  class_name: string;
+  merit_points: number;
+  demerit_points: number;
+  clean_points: number;
+}
+
 const DisciplineCenter: React.FC = () => {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>('behaviour');
@@ -105,6 +117,14 @@ const DisciplineCenter: React.FC = () => {
   const [interventions, setInterventions] = useState<Intervention[]>([]);
   const [consequences, setConsequences] = useState<Consequence[]>([]);
   const [merits, setMerits] = useState<Merit[]>([]);
+  const [goldieCandidates, setGoldieCandidates] = useState<GoldieCandidate[]>([]);
+
+  // Goldie award modal state
+  const [showAwardModal, setShowAwardModal] = useState(false);
+  const [selectedGoldieStudent, setSelectedGoldieStudent] = useState<GoldieCandidate | null>(null);
+  const [awardForm, setAwardForm] = useState({ award_date: new Date().toISOString().split('T')[0], notes: '' });
+  const [savingAward, setSavingAward] = useState(false);
+  const [awardSuccess, setAwardSuccess] = useState<string | null>(null);
 
   // Stats
   const [stats, setStats] = useState({
@@ -212,11 +232,45 @@ const DisciplineCenter: React.FC = () => {
           setMerits(meritsRes.data || []);
           break;
         }
+        case 'goldie': {
+          const goldieRes = await api.getGoldieBadgeLeaderboard();
+          setGoldieCandidates(goldieRes.data?.holders || []);
+          break;
+        }
       }
     } catch (error) {
       console.error('Error fetching tab data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getBadgeTier = (cleanPoints: number) => {
+    if (cleanPoints >= 50) return { label: 'Platinum', color: 'bg-purple-100 text-purple-800 border-purple-200', dot: 'bg-purple-500' };
+    if (cleanPoints >= 30) return { label: 'Gold', color: 'bg-yellow-100 text-yellow-800 border-yellow-200', dot: 'bg-yellow-500' };
+    if (cleanPoints >= 15) return { label: 'Silver', color: 'bg-gray-100 text-gray-700 border-gray-300', dot: 'bg-gray-400' };
+    return { label: 'Bronze', color: 'bg-amber-100 text-amber-800 border-amber-200', dot: 'bg-amber-600' };
+  };
+
+  const handleRecordAward = async () => {
+    if (!selectedGoldieStudent || !awardForm.award_date) return;
+    setSavingAward(true);
+    try {
+      await api.recordGoldieBadgeAward({
+        student_id: selectedGoldieStudent.id,
+        award_date: awardForm.award_date,
+        notes: awardForm.notes || undefined,
+      });
+      setShowAwardModal(false);
+      setSelectedGoldieStudent(null);
+      setAwardForm({ award_date: new Date().toISOString().split('T')[0], notes: '' });
+      setAwardSuccess(`Goldie Badge awarded to ${selectedGoldieStudent.student_name}!`);
+      setTimeout(() => setAwardSuccess(null), 4000);
+    } catch (error) {
+      console.error('Error recording badge award:', error);
+      alert('Failed to record badge award. Please try again.');
+    } finally {
+      setSavingAward(false);
     }
   };
 
@@ -275,6 +329,7 @@ const DisciplineCenter: React.FC = () => {
     { id: 'interventions' as TabType, label: 'Interventions', icon: Shield, color: 'from-blue-500 to-cyan-500' },
     { id: 'consequences' as TabType, label: 'Consequences', icon: FileText, color: 'from-purple-500 to-pink-500' },
     { id: 'merits' as TabType, label: 'Merits', icon: Award, color: 'from-green-500 to-emerald-500' },
+    { id: 'goldie' as TabType, label: 'Goldie Badges', icon: Medal, color: 'from-yellow-400 to-amber-500' },
   ];
 
   const statCards = [
@@ -633,6 +688,88 @@ const DisciplineCenter: React.FC = () => {
     </table>
   );
 
+  const renderGoldieTable = () => (
+    <table className="w-full">
+      <thead className="bg-amber-50 border-b border-amber-100">
+        <tr>
+          <th className="px-6 py-4 text-left text-xs font-semibold text-amber-700 uppercase">Student</th>
+          <th className="px-6 py-4 text-left text-xs font-semibold text-amber-700 uppercase">Class</th>
+          <th className="px-6 py-4 text-left text-xs font-semibold text-amber-700 uppercase">Clean Points</th>
+          <th className="px-6 py-4 text-left text-xs font-semibold text-amber-700 uppercase">Merits</th>
+          <th className="px-6 py-4 text-left text-xs font-semibold text-amber-700 uppercase">Demerits</th>
+          <th className="px-6 py-4 text-left text-xs font-semibold text-amber-700 uppercase">Badge Tier</th>
+          <th className="px-6 py-4 text-right text-xs font-semibold text-amber-700 uppercase">Actions</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-amber-50">
+        {filteredGoldie.map((candidate, index) => {
+          const tier = getBadgeTier(candidate.clean_points);
+          return (
+            <motion.tr
+              key={candidate.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.03 }}
+              className="hover:bg-amber-50/60 transition-colors"
+            >
+              <td className="px-6 py-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-xl flex items-center justify-center text-white font-bold shadow-sm">
+                    {candidate.student_name?.charAt(0) || 'S'}
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{candidate.student_name}</p>
+                    {candidate.student_number && (
+                      <p className="text-xs text-gray-400">#{candidate.student_number}</p>
+                    )}
+                  </div>
+                </div>
+              </td>
+              <td className="px-6 py-4 text-gray-600">{candidate.class_name || 'N/A'}</td>
+              <td className="px-6 py-4">
+                <div className="flex items-center space-x-1.5">
+                  <Sparkles size={14} className="text-yellow-500" />
+                  <span className="font-bold text-yellow-700 text-lg">{candidate.clean_points}</span>
+                </div>
+              </td>
+              <td className="px-6 py-4">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                  +{candidate.merit_points}
+                </span>
+              </td>
+              <td className="px-6 py-4">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                  -{candidate.demerit_points}
+                </span>
+              </td>
+              <td className="px-6 py-4">
+                <div className="flex items-center space-x-1.5">
+                  <span className={`w-2 h-2 rounded-full ${tier.dot}`} />
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${tier.color}`}>
+                    {tier.label}
+                  </span>
+                </div>
+              </td>
+              <td className="px-6 py-4 text-right">
+                <button
+                  onClick={() => {
+                    setSelectedGoldieStudent(candidate);
+                    setAwardForm({ award_date: new Date().toISOString().split('T')[0], notes: '' });
+                    setShowAwardModal(true);
+                  }}
+                  className="inline-flex items-center space-x-1.5 px-3 py-2 bg-gradient-to-r from-yellow-400 to-amber-500 text-white rounded-xl text-xs font-semibold hover:shadow-md hover:from-yellow-500 hover:to-amber-600 transition-all"
+                >
+                  <Medal size={13} />
+                  <span>Record Award</span>
+                </button>
+              </td>
+            </motion.tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+
   const renderTable = () => {
     switch (activeTab) {
       case 'behaviour':
@@ -645,6 +782,8 @@ const DisciplineCenter: React.FC = () => {
         return renderConsequencesTable();
       case 'merits':
         return renderMeritsTable();
+      case 'goldie':
+        return renderGoldieTable();
     }
   };
 
@@ -659,6 +798,9 @@ const DisciplineCenter: React.FC = () => {
   };
 
   const filteredIncidents = applyFilters(incidents);
+  const filteredGoldie = goldieCandidates.filter(c =>
+    !searchTerm || c.student_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
   const filteredDetentions = detentions.filter((d: any) => {
     const term = searchTerm.toLowerCase();
     const matchesSearch = !term ||
@@ -688,6 +830,8 @@ const DisciplineCenter: React.FC = () => {
         return filteredConsequences;
       case 'merits':
         return filteredMerits;
+      case 'goldie':
+        return filteredGoldie;
     }
   };
 
@@ -734,6 +878,23 @@ const DisciplineCenter: React.FC = () => {
           </button>
         </motion.div>
       )}
+
+      {/* Goldie Award Success Banner */}
+      <AnimatePresence>
+        {awardSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center space-x-3"
+          >
+            <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Medal size={18} className="text-white" />
+            </div>
+            <p className="font-semibold text-amber-900">{awardSuccess}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Stats Cards */}
       <motion.div
@@ -828,6 +989,29 @@ const DisciplineCenter: React.FC = () => {
         </div>
       </motion.div>
 
+      {/* Goldie Badge Info Banner */}
+      {activeTab === 'goldie' && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between"
+        >
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Medal size={18} className="text-white" />
+            </div>
+            <div>
+              <p className="font-semibold text-amber-900">
+                {goldieCandidates.length} student{goldieCandidates.length !== 1 ? 's' : ''} currently eligible for the Goldie Badge
+              </p>
+              <p className="text-sm text-amber-700">
+                Eligible students have ≥ 10 merit points and positive clean points. Click "Record Award" to approve and log when a student receives their badge.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Data Table */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -846,7 +1030,9 @@ const DisciplineCenter: React.FC = () => {
         ) : getCurrentData().length === 0 ? (
           <div className="p-12 text-center">
             <UserX size={48} className="mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-500">No {activeTab} records found</p>
+            <p className="text-gray-500">
+            {activeTab === 'goldie' ? 'No badge-eligible students at the moment' : `No ${activeTab} records found`}
+          </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -921,6 +1107,124 @@ const DisciplineCenter: React.FC = () => {
                 >
                   {processing ? 'Declining...' : 'Decline Incident'}
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Goldie Badge Award Modal */}
+      <AnimatePresence>
+        {showAwardModal && selectedGoldieStudent && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => !savingAward && setShowAwardModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+            >
+              {/* Modal header */}
+              <div className="bg-gradient-to-r from-yellow-400 to-amber-500 p-6 text-white">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                      <Medal size={22} className="text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold">Record Goldie Badge Award</h3>
+                      <p className="text-white/80 text-sm">{selectedGoldieStudent.student_name}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => !savingAward && setShowAwardModal(false)}
+                    className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                    disabled={savingAward}
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Student summary */}
+              <div className="px-6 pt-4 pb-2">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-green-50 rounded-xl p-3 text-center border border-green-100">
+                    <p className="text-xs text-green-600 font-medium">Merits</p>
+                    <p className="text-xl font-bold text-green-700">+{selectedGoldieStudent.merit_points}</p>
+                  </div>
+                  <div className="bg-red-50 rounded-xl p-3 text-center border border-red-100">
+                    <p className="text-xs text-red-600 font-medium">Demerits</p>
+                    <p className="text-xl font-bold text-red-700">-{selectedGoldieStudent.demerit_points}</p>
+                  </div>
+                  <div className="bg-amber-50 rounded-xl p-3 text-center border border-amber-100">
+                    <p className="text-xs text-amber-600 font-medium">Clean Pts</p>
+                    <p className="text-xl font-bold text-amber-700">{selectedGoldieStudent.clean_points}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Form */}
+              <div className="px-6 pb-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Award Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={awardForm.award_date}
+                    onChange={(e) => setAwardForm(f => ({ ...f, award_date: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all"
+                    disabled={savingAward}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Notes <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <textarea
+                    value={awardForm.notes}
+                    onChange={(e) => setAwardForm(f => ({ ...f, notes: e.target.value }))}
+                    placeholder="e.g. Awarded at assembly on Friday…"
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-400 focus:border-transparent resize-none transition-all"
+                    disabled={savingAward}
+                  />
+                </div>
+
+                <div className="flex space-x-3 pt-2">
+                  <button
+                    onClick={() => !savingAward && setShowAwardModal(false)}
+                    disabled={savingAward}
+                    className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleRecordAward}
+                    disabled={savingAward || !awardForm.award_date}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-yellow-400 to-amber-500 text-white rounded-xl hover:from-yellow-500 hover:to-amber-600 transition-all font-semibold shadow-md disabled:opacity-50 flex items-center justify-center space-x-2"
+                  >
+                    {savingAward ? (
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                      />
+                    ) : (
+                      <>
+                        <Medal size={16} />
+                        <span>Record Award</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
