@@ -298,6 +298,8 @@ export const api = {
   // Detentions
   getDetentionRules: () => axiosInstance.get('/detentions/rules'),
   saveDetentionRule: (data: any) => axiosInstance.post('/detentions/rules', data),
+  toggleDetentionRule: (id: number, is_active: boolean) => axiosInstance.patch(`/detentions/rules/${id}`, { is_active }),
+  deleteDetentionRule: (id: number) => axiosInstance.delete(`/detentions/rules/${id}`),
   getDetentions: (params?: any) => axiosInstance.get('/detentions', { params }),
   getDetention: (id: number) => axiosInstance.get(`/detentions/${id}`),
   createDetention: (data: any) => axiosInstance.post('/detentions', data),
@@ -678,10 +680,14 @@ export const api = {
   // Goldie Badge Configuration
   getGoldieBadgeConfig: () => axiosInstance.get('/goldie-badge/config'),
   getGoldieBadgeLeaderboard: () => axiosInstance.get('/goldie-badge/leaderboard'),
-  updateGoldieBadgeConfig: (pointsThreshold: number) => 
+  updateGoldieBadgeConfig: (pointsThreshold: number) =>
     axiosInstance.put('/goldie-badge/config', { points_threshold: pointsThreshold }),
-  checkBadgeEligibility: (studentId: number) => 
+  checkBadgeEligibility: (studentId: number) =>
     axiosInstance.get(`/goldie-badge/check-eligibility/${studentId}`),
+  getGoldieBadgeAwards: (studentId: number) =>
+    axiosInstance.get(`/goldie-badge/awards/student/${studentId}`),
+  recordGoldieBadgeAward: (data: { student_id: number; award_date: string; notes?: string }) =>
+    axiosInstance.post('/goldie-badge/awards', data),
 
   // Invoice Templates
   getInvoiceTemplates: () => axiosInstance.get('/invoices/templates'),

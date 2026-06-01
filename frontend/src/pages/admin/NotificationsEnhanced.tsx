@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Bell, 
-  Check, 
-  Trash2, 
-  Filter, 
+import {
+  Bell,
+  Check,
+  Trash2,
+  Filter,
   Search,
   CheckCheck,
   Archive,
@@ -20,6 +20,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
+import NotificationDetailModal from '../../components/NotificationDetailModal';
 
 interface Notification {
   id: number;
@@ -48,6 +49,8 @@ const NotificationsEnhanced: React.FC = () => {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [stats, setStats] = useState({ total: 0, unread: 0, read: 0 });
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
     fetchNotifications();
@@ -143,36 +146,29 @@ const NotificationsEnhanced: React.FC = () => {
     if (!notification.is_read) {
       handleMarkRead(notification.id);
     }
-
-    if (notification.related_type && notification.related_id) {
-      switch (notification.related_type) {
-        case 'incident':
-          navigate(`${portalBase}/behaviour`);
-          break;
-        case 'merit':
-          navigate(`${portalBase}/merits`);
-          break;
-        case 'detention':
-          navigate(`${portalBase}/detention-sessions`);
-          break;
-        default:
-          break;
-      }
-    }
+    setSelectedNotification(notification);
+    setShowDetailModal(true);
   };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'incident':
+      case 'high_severity_incident':
         return <AlertCircle className="text-red-500" size={24} />;
       case 'merit':
+      case 'goldie_badge_earned':
+      case 'goldie_badge_lost':
         return <Award className="text-green-500" size={24} />;
       case 'detention':
+      case 'detention_attendance':
         return <Clock className="text-orange-500" size={24} />;
       case 'intervention':
         return <Shield className="text-blue-500" size={24} />;
       case 'consequence':
+      case 'consequence_assigned':
         return <Archive className="text-purple-500" size={24} />;
+      case 'demerit_threshold':
+        return <AlertCircle className="text-amber-500" size={24} />;
       default:
         return <Bell className="text-gray-500" size={24} />;
     }
@@ -224,6 +220,11 @@ const NotificationsEnhanced: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <NotificationDetailModal
+        isOpen={showDetailModal}
+        onClose={() => { setShowDetailModal(false); setSelectedNotification(null); }}
+        notification={selectedNotification}
+      />
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -318,10 +319,16 @@ const NotificationsEnhanced: React.FC = () => {
               >
                 <option value="all">All Types</option>
                 <option value="incident">Incidents</option>
+                <option value="high_severity_incident">High Severity Incidents</option>
                 <option value="merit">Merits</option>
                 <option value="detention">Detentions</option>
+                <option value="detention_attendance">Detention Attendance</option>
                 <option value="intervention">Interventions</option>
                 <option value="consequence">Consequences</option>
+                <option value="consequence_assigned">Consequence Assigned</option>
+                <option value="demerit_threshold">Demerit Threshold</option>
+                <option value="goldie_badge_earned">Goldie Badge Earned</option>
+                <option value="goldie_badge_lost">Goldie Badge Lost</option>
               </select>
             </div>
 

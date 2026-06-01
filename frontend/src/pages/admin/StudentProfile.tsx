@@ -11,11 +11,12 @@ import GoldenDotIndicator from '../../components/GoldenDotIndicator';
 import StudentDetailedHistory from '../../components/StudentDetailedHistory';
 import StudentAnalytics from '../../components/StudentAnalytics';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Copy, Camera, Upload, User, Award, AlertTriangle, Calendar, TrendingUp, Clock, FileText, Shield, ChevronDown, ChevronUp, Search, Gavel } from 'lucide-react';
+import { ArrowLeft, Copy, Camera, Upload, User, Award, AlertTriangle, Calendar, TrendingUp, Clock, FileText, Shield, ChevronDown, ChevronUp, Search, Gavel, Star, Plus, X } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useToast } from '../../hooks/useToast';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getPhotoUrl, handlePhotoError } from '../../utils/photoUrl';
+import { useAuth } from '../../contexts/AuthContext';
 
 const StudentProfile: React.FC = () => {
   const { id } = useParams();
@@ -23,6 +24,7 @@ const StudentProfile: React.FC = () => {
   const portal = usePortalPrefix();
   const { success, error, ToastContainer } = useToast();
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [student, setStudent] = useState<any>(null);
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,14 +50,47 @@ const StudentProfile: React.FC = () => {
   const [incidentSearch, setIncidentSearch] = useState('');
   const [meritSearch, setMeritSearch] = useState('');
 
+  // Goldie badge award state
+  const [badgeAwards, setBadgeAwards] = useState<any[]>([]);
+  const [showAwardModal, setShowAwardModal] = useState(false);
+  const [awardForm, setAwardForm] = useState({ award_date: new Date().toISOString().split('T')[0], notes: '' });
+  const [savingAward, setSavingAward] = useState(false);
+
   useEffect(() => {
     if (id) {
       fetchStudent();
       fetchClasses();
       fetchStats();
       fetchDetailedHistory();
+      fetchBadgeAwards();
     }
   }, [id]);
+
+  const fetchBadgeAwards = async () => {
+    if (!id) return;
+    try {
+      const response = await api.getGoldieBadgeAwards(Number(id));
+      setBadgeAwards(response.data || []);
+    } catch {
+      // table may not exist yet on older schemas — silent fail
+    }
+  };
+
+  const handleRecordAward = async () => {
+    if (!id || !awardForm.award_date) return;
+    setSavingAward(true);
+    try {
+      await api.recordGoldieBadgeAward({ student_id: Number(id), award_date: awardForm.award_date, notes: awardForm.notes });
+      success('Goldie badge award recorded successfully!');
+      setShowAwardModal(false);
+      setAwardForm({ award_date: new Date().toISOString().split('T')[0], notes: '' });
+      fetchBadgeAwards();
+    } catch (err: any) {
+      error(err.response?.data?.error || 'Failed to record award');
+    } finally {
+      setSavingAward(false);
+    }
+  };
 
   const fetchStudent = async () => {
     try {
@@ -596,13 +631,13 @@ const StudentProfile: React.FC = () => {
       )}
 
       {/* Goldie Badge */}
-      {stats && stats.totalMerits >= 10 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="mb-6"
-        >
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8 }}
+        className="mb-6"
+      >
+        {stats && stats.totalMerits >= 10 && (
           <GoldieBadge
             totalMerits={stats.totalMerits}
             totalDemerits={stats.totalIncidents}
@@ -610,8 +645,120 @@ const StudentProfile: React.FC = () => {
             showDetails={true}
             size="lg"
           />
-        </motion.div>
-      )}
+        )}
+
+        {/* Goldie Badge Award History */}
+        {(user?.role === 'admin' || user?.role === 'grade_head') && (
+          <div className="mt-4 rounded-2xl bg-white/80 backdrop-blur-xl shadow-xl border border-white/20 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <Star className="text-amber-500" size={22} />
+                <h3 className="text-lg font-bold text-gray-900">Goldie Badge Awards</h3>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                onClick={() => setShowAwardModal(true)}
+                className="flex items-center space-x-1.5 px-4 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 text-white rounded-xl text-sm font-semibold shadow"
+              >
+                <Plus size={16} />
+                <span>Record Award</span>
+              </motion.button>
+            </div>
+
+            {badgeAwards.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">No Goldie badge awards recorded yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {badgeAwards.map((award: any) => (
+                  <div key={award.id} className="flex items-start space-x-3 p-3 rounded-xl bg-amber-50 border border-amber-100">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 flex items-center justify-center flex-shrink-0">
+                      <Star size={16} className="text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {new Date(award.award_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </p>
+                        <span className="text-xs text-gray-500">by {award.awarded_by_name || 'Staff'}</span>
+                      </div>
+                      {award.notes && <p className="text-sm text-gray-600 mt-0.5">{award.notes}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Award Modal */}
+        <AnimatePresence>
+          {showAwardModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+              onClick={() => setShowAwardModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center space-x-2">
+                    <Star className="text-amber-500" size={22} />
+                    <h2 className="text-xl font-bold text-gray-900">Record Goldie Badge Award</h2>
+                  </div>
+                  <button onClick={() => setShowAwardModal(false)} className="p-1 hover:bg-gray-100 rounded-lg">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Date Awarded <span className="text-red-500">*</span></label>
+                    <input
+                      type="date"
+                      value={awardForm.award_date}
+                      onChange={(e) => setAwardForm({ ...awardForm, award_date: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-400 focus:border-transparent text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+                    <textarea
+                      value={awardForm.notes}
+                      onChange={(e) => setAwardForm({ ...awardForm, notes: e.target.value })}
+                      rows={3}
+                      placeholder="e.g. Awarded at term assembly for consistent good behaviour"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-400 focus:border-transparent text-sm resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button onClick={() => setShowAwardModal(false)} className="px-5 py-2.5 rounded-xl text-gray-600 hover:bg-gray-100 text-sm font-medium">
+                    Cancel
+                  </button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleRecordAward}
+                    disabled={savingAward || !awardForm.award_date}
+                    className="px-5 py-2.5 bg-gradient-to-r from-amber-400 to-yellow-500 text-white rounded-xl text-sm font-semibold shadow disabled:opacity-50"
+                  >
+                    {savingAward ? 'Saving...' : 'Save Award'}
+                  </motion.button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -753,6 +900,7 @@ const StudentProfile: React.FC = () => {
         isOpen={isParentModalOpen}
         onClose={() => setIsParentModalOpen(false)}
         parent={parentData}
+        student={student}
       />
     </div>
   );

@@ -207,6 +207,18 @@ const repairSchema = async (schemaName) => {
             WHERE NOT EXISTS (SELECT 1 FROM goldie_badge_config);
         `);
 
+        // Create goldie_badge_awards table for manual award records
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS goldie_badge_awards (
+                id SERIAL PRIMARY KEY,
+                student_id INTEGER NOT NULL,
+                awarded_by INTEGER NOT NULL,
+                award_date DATE NOT NULL,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+
         // Create import_history table if it doesn't exist
         await client.query(`
             CREATE TABLE IF NOT EXISTS import_history (
@@ -239,6 +251,33 @@ const repairSchema = async (schemaName) => {
                 await client.query(`ALTER TABLE import_history ALTER COLUMN ${col} TYPE VARCHAR(100)`);
             } catch (e) { /* already correct type or column absent */ }
         }
+
+        // Ensure detention_rules has all required columns (migration-created tables lack
+        // name, description, trigger_type, time_period_days).
+        await client.query(`ALTER TABLE detention_rules ADD COLUMN IF NOT EXISTS name TEXT;`);
+        await client.query(`ALTER TABLE detention_rules ADD COLUMN IF NOT EXISTS description TEXT;`);
+        await client.query(`ALTER TABLE detention_rules ADD COLUMN IF NOT EXISTS trigger_type TEXT;`);
+        await client.query(`ALTER TABLE detention_rules ADD COLUMN IF NOT EXISTS time_period_days INTEGER DEFAULT 30;`);
+        // Back-fill name for rows that have none (migration-seeded rows)
+        await client.query(`
+            UPDATE detention_rules
+            SET name = CASE
+                WHEN severity IS NOT NULL THEN initcap(severity) || ' Severity Detention'
+                WHEN min_points >= 10 THEN min_points::text || '+ Points Detention'
+                ELSE min_points::text || '+ Incidents Detention'
+            END
+            WHERE name IS NULL;
+        `);
+        // Back-fill trigger_type for rows that have none
+        await client.query(`
+            UPDATE detention_rules
+            SET trigger_type = CASE
+                WHEN severity IS NOT NULL THEN 'incident_type'
+                WHEN min_points >= 10 THEN 'points_threshold'
+                ELSE 'incident_count'
+            END
+            WHERE trigger_type IS NULL;
+        `);
 
         console.log(`  ✓ Schema ${schemaName} repaired`);
     } catch (error) {

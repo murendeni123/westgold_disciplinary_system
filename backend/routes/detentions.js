@@ -16,7 +16,7 @@ function isSessionFrozen(session) {
 }
 
 // Get detention rules
-router.get('/rules', authenticateToken, requireRole('admin'), async (req, res) => {
+router.get('/rules', authenticateToken, requireRole('admin', 'grade_head'), async (req, res) => {
   try {
     const schema = getSchema(req);
     if (!schema) {
@@ -31,34 +31,83 @@ router.get('/rules', authenticateToken, requireRole('admin'), async (req, res) =
 });
 
 // Create/update detention rule
-router.post('/rules', authenticateToken, requireRole('admin'), async (req, res) => {
+router.post('/rules', authenticateToken, requireRole('admin', 'grade_head'), async (req, res) => {
   try {
     const schema = getSchema(req);
     if (!schema) {
       return res.status(403).json({ error: 'School context required' });
     }
-    const { id, action_type, min_points, max_points, severity, detention_duration, is_active } = req.body;
+    const {
+      id, name, action_type, min_points, max_points, severity,
+      detention_duration, is_active, description, trigger_type, time_period_days
+    } = req.body;
+    const ruleName = name || (severity ? `${severity} Severity Detention` : `${min_points}+ Points Detention`);
 
     if (id) {
       await schemaRun(req,
-        `UPDATE detention_rules 
-         SET action_type = $1, min_points = $2, max_points = $3, severity = $4, detention_duration = $5, is_active = $6
-         WHERE id = $7`,
-        [action_type, min_points, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : true, id]
+        `UPDATE detention_rules
+         SET name = $1, action_type = $2, min_points = $3, max_points = $4, severity = $5,
+             detention_duration = $6, is_active = $7, description = $8, trigger_type = $9, time_period_days = $10
+         WHERE id = $11`,
+        [ruleName, action_type || 'detention', min_points || 0, max_points || null, severity || null,
+         detention_duration || 60, is_active !== undefined ? is_active : true,
+         description || null, trigger_type || null, time_period_days || 30, id]
       );
       const rule = await schemaGet(req, 'SELECT * FROM detention_rules WHERE id = $1', [id]);
       res.json(rule);
     } else {
       const result = await schemaRun(req,
-        `INSERT INTO detention_rules (action_type, min_points, max_points, severity, detention_duration, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-        [action_type, min_points, max_points || null, severity || null, detention_duration || 60, is_active !== undefined ? is_active : true]
+        `INSERT INTO detention_rules
+         (name, action_type, min_points, max_points, severity, detention_duration, is_active, description, trigger_type, time_period_days)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+        [ruleName, action_type || 'detention', min_points || 0, max_points || null, severity || null,
+         detention_duration || 60, is_active !== undefined ? is_active : true,
+         description || null, trigger_type || null, time_period_days || 30]
       );
       const rule = await schemaGet(req, 'SELECT * FROM detention_rules WHERE id = $1', [result.id]);
       res.status(201).json(rule);
     }
   } catch (error) {
     console.error('Error saving detention rule:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Toggle or partial-update a detention rule (safe for is_active-only updates)
+router.patch('/rules/:id', authenticateToken, requireRole('admin', 'grade_head'), async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+    const { is_active } = req.body;
+    if (is_active === undefined) {
+      return res.status(400).json({ error: 'No updatable fields provided' });
+    }
+    await schemaRun(req,
+      `UPDATE detention_rules SET is_active = $1 WHERE id = $2`,
+      [is_active, req.params.id]
+    );
+    const rule = await schemaGet(req, 'SELECT * FROM detention_rules WHERE id = $1', [req.params.id]);
+    if (!rule) return res.status(404).json({ error: 'Rule not found' });
+    res.json(rule);
+  } catch (error) {
+    console.error('Error updating detention rule:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete a detention rule permanently
+router.delete('/rules/:id', authenticateToken, requireRole('admin', 'grade_head'), async (req, res) => {
+  try {
+    const schema = getSchema(req);
+    if (!schema) {
+      return res.status(403).json({ error: 'School context required' });
+    }
+    await schemaRun(req, 'DELETE FROM detention_rules WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting detention rule:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -103,7 +152,7 @@ router.get('/', authenticateToken, async (req, res) => {
     
     let query = `
       SELECT d.*, u.name as teacher_name,
-             (SELECT COUNT(*) FROM detention_assignments WHERE detention_session_id = d.id) as student_count
+             (SELECT COUNT(*) FROM detention_assignments WHERE detention_id = d.id) as student_count
       FROM detention_sessions d
       LEFT JOIN teachers t ON d.teacher_on_duty_id = t.id
       LEFT JOIN public.users u ON t.user_id = u.id
@@ -536,17 +585,33 @@ router.get('/qualifying-students', authenticateToken, requireRole('admin'), asyn
       return res.status(403).json({ error: 'School context required' });
     }
 
+    // Read the points threshold from detention_rules; fall back to 10 if no active rule exists
+    const thresholdRule = await schemaGet(req,
+      `SELECT MIN(min_points) as threshold FROM detention_rules
+       WHERE (is_active = true OR is_active = 1) AND action_type = 'detention'`
+    );
+    const pointsThreshold = (thresholdRule && thresholdRule.threshold != null)
+      ? Number(thresholdRule.threshold) : 10;
+
     const qualifyingStudents = await schemaAll(req, `
-      SELECT 
+      WITH merit_totals AS (
+        SELECT student_id, COALESCE(SUM(points), 0) AS total_merits
+        FROM merits
+        GROUP BY student_id
+      )
+      SELECT
         s.id,
         s.student_id as student_number,
         s.first_name || ' ' || s.last_name as student_name,
         c.class_name,
-        COALESCE(SUM(bi.points_deducted), 0) as total_points,
+        COALESCE(SUM(bi.points_deducted), 0) as total_demerits,
+        COALESCE(mt.total_merits, 0) as total_merits,
+        (COALESCE(SUM(bi.points_deducted), 0) - COALESCE(mt.total_merits, 0)) AS total_points,
         0 as upcoming_detentions
       FROM students s
       LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id
         AND bi.status != 'resolved'
+      LEFT JOIN merit_totals mt ON s.id = mt.student_id
       LEFT JOIN classes c ON s.class_id = c.id
       WHERE s.is_active = true
         AND s.id NOT IN (
@@ -556,10 +621,10 @@ router.get('/qualifying-students', authenticateToken, requireRole('admin'), asyn
           WHERE ds.detention_date >= CURRENT_DATE
             AND da.status IN ('assigned', 'late', 'attended')
         )
-      GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
-      HAVING COALESCE(SUM(bi.points_deducted), 0) >= 10
-      ORDER BY COALESCE(SUM(bi.points_deducted), 0) DESC
-    `);
+      GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name, mt.total_merits
+      HAVING (COALESCE(SUM(bi.points_deducted), 0) - COALESCE(mt.total_merits, 0)) >= $1
+      ORDER BY (COALESCE(SUM(bi.points_deducted), 0) - COALESCE(mt.total_merits, 0)) DESC
+    `, [pointsThreshold]);
 
     res.json(qualifyingStudents);
   } catch (error) {
@@ -637,7 +702,7 @@ router.get('/:id/teachers', authenticateToken, async (req, res) => {
 
     const teachers = await schemaAll(req, `
       SELECT dst.teacher_id as id, u.name, u.email,
-             t.subject_taught
+             t.subjects
       FROM detention_session_teachers dst
       JOIN teachers t  ON dst.teacher_id  = t.id
       JOIN public.users u ON t.user_id = u.id
@@ -750,7 +815,7 @@ router.get('/:id/report/excel', authenticateToken, async (req, res) => {
       FROM detention_assignments da
       INNER JOIN students s ON da.student_id = s.id
       LEFT JOIN  classes  c ON s.class_id    = c.id
-      WHERE da.detention_session_id = $1
+      WHERE da.detention_id = $1
       ORDER BY s.last_name, s.first_name
     `, [req.params.id]);
 
@@ -914,7 +979,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
       FROM detention_assignments da
       INNER JOIN students s ON da.student_id = s.id
       LEFT  JOIN classes  c ON s.class_id    = c.id
-      WHERE da.detention_session_id = $1
+      WHERE da.detention_id = $1
       ORDER BY da.created_at DESC
     `, [req.params.id]);
 
@@ -1025,8 +1090,8 @@ router.post('/:id/assign', authenticateToken, requireRole('admin', 'teacher', 'g
     const { student_id, incident_id, reason } = req.body;
 
     const result = await schemaRun(req,
-      `INSERT INTO detention_assignments (detention_session_id, detention_id, student_id, incident_id, notes, assigned_by, status)
-       VALUES ($1, $1, $2, $3, $4, $5, 'assigned') RETURNING id`,
+      `INSERT INTO detention_assignments (detention_id, student_id, incident_id, notes, assigned_by, status)
+       VALUES ($1, $2, $3, $4, $5, 'assigned') RETURNING id`,
       [req.params.id, student_id, incident_id || null, reason || null, req.user.id]
     );
 
@@ -1151,7 +1216,7 @@ router.put('/assignments/:id', authenticateToken, async (req, res) => {
       // Find the next available detention session with capacity
       const nextSession = await schemaGet(req, `
         SELECT ds.id, ds.detention_date, ds.detention_time, ds.max_capacity,
-               (SELECT COUNT(*) FROM detention_assignments WHERE detention_session_id = ds.id) as current_count
+               (SELECT COUNT(*) FROM detention_assignments WHERE detention_id = ds.id) as current_count
         FROM detention_sessions ds
         WHERE ds.detention_date > $1
           AND ds.status = 'scheduled'
@@ -1163,9 +1228,9 @@ router.put('/assignments/:id', authenticateToken, async (req, res) => {
         // Auto-assign to next session
         try {
           await schemaRun(req,
-            `INSERT INTO detention_assignments 
-             (detention_session_id, detention_id, student_id, notes, assigned_by, status)
-             VALUES ($1, $1, $2, $3, $4, 'assigned')`,
+            `INSERT INTO detention_assignments
+             (detention_id, student_id, notes, assigned_by, status)
+             VALUES ($1, $2, $3, $4, 'assigned')`,
             [
               nextSession.id,
               assignment.student_id,
@@ -1354,30 +1419,45 @@ router.post('/auto-assign', authenticateToken, requireRole('admin'), async (req,
     let assignedCount = 0;
     let queuedCount = 0;
 
-    // Find all students who qualify for detention based on accumulated demerit points
-    // Get students with unresolved incidents totaling >= 10 points
+    // Read threshold from detention_rules (same as qualifying-students endpoint)
+    const autoAssignThresholdRule = await schemaGet(req,
+      `SELECT MIN(min_points) as threshold FROM detention_rules
+       WHERE (is_active = true OR is_active = 1) AND action_type = 'detention'`
+    );
+    const autoAssignThreshold = (autoAssignThresholdRule && autoAssignThresholdRule.threshold != null)
+      ? Number(autoAssignThresholdRule.threshold) : 10;
+
+    // Find qualifying students using NET points (demerits − merits)
     const qualifyingStudentsQuery = `
-      SELECT 
+      WITH merit_totals AS (
+        SELECT student_id, COALESCE(SUM(points), 0) AS total_merits
+        FROM merits
+        GROUP BY student_id
+      )
+      SELECT
         s.id,
         s.first_name || ' ' || s.last_name as student_name,
         s.parent_id,
-        COALESCE(SUM(bi.points_deducted), 0) as total_points
+        COALESCE(SUM(bi.points_deducted), 0) as total_demerits,
+        COALESCE(mt.total_merits, 0) as total_merits,
+        (COALESCE(SUM(bi.points_deducted), 0) - COALESCE(mt.total_merits, 0)) AS total_points
       FROM students s
       LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id
         AND bi.status != 'resolved'
+      LEFT JOIN merit_totals mt ON s.id = mt.student_id
       WHERE s.is_active = true
-      GROUP BY s.id, s.first_name, s.last_name, s.parent_id
-      HAVING COALESCE(SUM(bi.points_deducted), 0) >= 10
-      ORDER BY COALESCE(SUM(bi.points_deducted), 0) DESC
+      GROUP BY s.id, s.first_name, s.last_name, s.parent_id, mt.total_merits
+      HAVING (COALESCE(SUM(bi.points_deducted), 0) - COALESCE(mt.total_merits, 0)) >= $1
+      ORDER BY (COALESCE(SUM(bi.points_deducted), 0) - COALESCE(mt.total_merits, 0)) DESC
     `;
 
-    const qualifyingStudents = await schemaAll(req, qualifyingStudentsQuery);
+    const qualifyingStudents = await schemaAll(req, qualifyingStudentsQuery, [autoAssignThreshold]);
 
     // Filter out students already assigned to ANY upcoming detention
     const studentsWithUpcomingDetention = await schemaAll(req, `
       SELECT DISTINCT da.student_id
       FROM detention_assignments da
-      INNER JOIN detention_sessions ds ON da.detention_session_id = ds.id
+      INNER JOIN detention_sessions ds ON da.detention_id = ds.id
       WHERE ds.detention_date >= CURRENT_DATE
         AND da.status IN ('assigned', 'late')
     `);
@@ -1395,13 +1475,13 @@ router.post('/auto-assign', authenticateToken, requireRole('admin'), async (req,
         try {
           // Assign to current detention session
           await schemaRun(req,
-            `INSERT INTO detention_assignments 
-             (detention_session_id, detention_id, student_id, notes, assigned_by, status)
-             VALUES ($1, $1, $2, $3, $4, 'assigned')`,
+            `INSERT INTO detention_assignments
+             (detention_id, student_id, notes, assigned_by, status)
+             VALUES ($1, $2, $3, $4, 'assigned')`,
             [
-              detention_id, 
-              student.id, 
-              `Auto-assigned: ${student.total_points} demerit points`, 
+              detention_id,
+              student.id,
+              `Auto-assigned: net points ${student.total_points} (${student.total_demerits} demerits − ${student.total_merits} merits)`,
               req.user.id
             ]
           );
@@ -1414,7 +1494,7 @@ router.post('/auto-assign', authenticateToken, requireRole('admin'), async (req,
               student.parent_id,
               'detention',
               'Detention Assigned',
-              `${student.student_name} has been assigned to detention on ${detentionDate} at ${detention.detention_time}. Reason: ${student.total_points} demerit points accumulated.`,
+              `${student.student_name} has been assigned to detention on ${detentionDate} at ${detention.detention_time}. Reason: net demerit score of ${student.total_points} points (${student.total_demerits} demerits − ${student.total_merits} merits).`,
               detention_id,
               'detention'
             );
@@ -1475,46 +1555,56 @@ router.post('/evaluate-rules', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Student ID is required' });
     }
 
-    // Get active detention rules (is_active is INTEGER in detention_rules table)
-    const rules = await schemaAll(req, 
-      'SELECT * FROM detention_rules WHERE is_active = 1 ORDER BY min_points'
+    // Get active detention rules — handle both BOOLEAN (true) and INTEGER (1) is_active
+    const rules = await schemaAll(req,
+      `SELECT * FROM detention_rules
+       WHERE (is_active = true OR is_active = 1) AND action_type = 'detention'
+       ORDER BY min_points`
     );
 
     const triggeredRules = [];
 
     for (const rule of rules) {
       let meetsRule = false;
+      // Use stored trigger_type; fall back to inferring from legacy columns
+      const triggerType = rule.trigger_type ||
+        (rule.severity ? 'incident_type' : (rule.min_points >= 10 ? 'points_threshold' : 'incident_count'));
+      const periodDays = rule.time_period_days || 30;
 
-      if (rule.action_type === 'points_threshold') {
+      if (triggerType === 'points_threshold') {
+        // Use NET points: demerits (within period) minus all-time merits
         const result = await schemaGet(req, `
-          SELECT COALESCE(SUM(i.points_deducted), 0) as total_points
+          SELECT
+            COALESCE(SUM(i.points_deducted), 0) AS total_demerits,
+            COALESCE((SELECT SUM(m.points) FROM merits m WHERE m.student_id = $1), 0) AS total_merits
           FROM behaviour_incidents i
           WHERE i.student_id = $1
-            AND i.date >= CURRENT_DATE - INTERVAL '${rule.time_period_days || 30} days'
+            AND i.status != 'resolved'
+            AND i.date >= CURRENT_DATE - INTERVAL '${periodDays} days'
         `, [student_id]);
-        
-        const points = result?.total_points || 0;
-        meetsRule = points >= rule.min_points && (!rule.max_points || points <= rule.max_points);
-      } else if (rule.action_type === 'incident_count') {
+        const netPoints = Number(result?.total_demerits || 0) - Number(result?.total_merits || 0);
+        meetsRule = netPoints >= rule.min_points && (!rule.max_points || netPoints <= rule.max_points);
+      } else if (triggerType === 'incident_type' && rule.severity) {
         const result = await schemaGet(req, `
-          SELECT COUNT(i.id) as incident_count
-          FROM behaviour_incidents i
-          WHERE i.student_id = $1
-            AND i.date >= CURRENT_DATE - INTERVAL '${rule.time_period_days || 30} days'
-        `, [student_id]);
-        
-        const count = result?.incident_count || 0;
-        meetsRule = count >= rule.min_points && (!rule.max_points || count <= rule.max_points);
-      } else if (rule.action_type === 'severity' && rule.severity) {
-        const result = await schemaGet(req, `
-          SELECT COUNT(i.id) as count
+          SELECT COUNT(i.id) as cnt
           FROM behaviour_incidents i
           WHERE i.student_id = $1
             AND i.severity = $2
-            AND i.date >= CURRENT_DATE - INTERVAL '${rule.time_period_days || 30} days'
+            AND i.status != 'resolved'
+            AND i.date >= CURRENT_DATE - INTERVAL '${periodDays} days'
         `, [student_id, rule.severity]);
-        
-        meetsRule = (result?.count || 0) > 0;
+        meetsRule = Number(result?.cnt || 0) >= (rule.min_points || 1);
+      } else {
+        // incident_count
+        const result = await schemaGet(req, `
+          SELECT COUNT(i.id) as cnt
+          FROM behaviour_incidents i
+          WHERE i.student_id = $1
+            AND i.status != 'resolved'
+            AND i.date >= CURRENT_DATE - INTERVAL '${periodDays} days'
+        `, [student_id]);
+        const count = Number(result?.cnt || 0);
+        meetsRule = count >= rule.min_points && (!rule.max_points || count <= rule.max_points);
       }
 
       if (meetsRule) {
@@ -1522,13 +1612,13 @@ router.post('/evaluate-rules', authenticateToken, async (req, res) => {
         
         // Find next available detention session
         const nextDetention = await schemaGet(req, `
-          SELECT d.*, 
-                 (SELECT COUNT(*) FROM detention_assignments WHERE detention_session_id = d.id) as current_count
+          SELECT d.*,
+                 (SELECT COUNT(*) FROM detention_assignments WHERE detention_id = d.id) as current_count
           FROM detention_sessions d
           WHERE d.detention_date >= CURRENT_DATE
             AND d.status = 'scheduled'
-            AND (d.max_capacity IS NULL OR 
-                 (SELECT COUNT(*) FROM detention_assignments WHERE detention_session_id = d.id) < d.max_capacity)
+            AND (d.max_capacity IS NULL OR
+                 (SELECT COUNT(*) FROM detention_assignments WHERE detention_id = d.id) < d.max_capacity)
           ORDER BY d.detention_date, d.detention_time
           LIMIT 1
         `);
@@ -1536,15 +1626,15 @@ router.post('/evaluate-rules', authenticateToken, async (req, res) => {
         if (nextDetention) {
           // Check if student is already assigned to this detention
           const existing = await schemaGet(req,
-            'SELECT id FROM detention_assignments WHERE detention_session_id = $1 AND student_id = $2',
+            'SELECT id FROM detention_assignments WHERE detention_id = $1 AND student_id = $2',
             [nextDetention.id, student_id]
           );
 
           if (!existing) {
             // Assign student to detention
             await schemaRun(req,
-              `INSERT INTO detention_assignments (detention_session_id, detention_id, student_id, notes, assigned_by)
-               VALUES ($1, $1, $2, $3, $4)`,
+              `INSERT INTO detention_assignments (detention_id, student_id, notes, assigned_by)
+               VALUES ($1, $2, $3, $4)`,
               [nextDetention.id, student_id, `Auto-assigned: ${rule.name}`, req.user.id]
             );
 
@@ -1766,8 +1856,8 @@ router.post('/:id/process-queue', authenticateToken, requireRole('admin'), async
         // Assign to detention
         await schemaRun(req,
           `INSERT INTO detention_assignments 
-           (detention_session_id, detention_id, student_id, notes, assigned_by, status)
-           VALUES ($1, $1, $2, $3, $4, 'assigned')`,
+           (detention_id, student_id, notes, assigned_by, status)
+           VALUES ($1, $2, $3, $4, 'assigned')`,
           [
             req.params.id,
             queuedStudent.student_id,
