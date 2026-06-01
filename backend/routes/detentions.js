@@ -594,16 +594,24 @@ router.get('/qualifying-students', authenticateToken, requireRole('admin'), asyn
       ? Number(thresholdRule.threshold) : 10;
 
     const qualifyingStudents = await schemaAll(req, `
+      WITH merit_totals AS (
+        SELECT student_id, COALESCE(SUM(points), 0) AS total_merits
+        FROM merits
+        GROUP BY student_id
+      )
       SELECT
         s.id,
         s.student_id as student_number,
         s.first_name || ' ' || s.last_name as student_name,
         c.class_name,
-        COALESCE(SUM(bi.points_deducted), 0) as total_points,
+        COALESCE(SUM(bi.points_deducted), 0) as total_demerits,
+        COALESCE(mt.total_merits, 0) as total_merits,
+        (COALESCE(SUM(bi.points_deducted), 0) - COALESCE(mt.total_merits, 0)) AS total_points,
         0 as upcoming_detentions
       FROM students s
       LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id
         AND bi.status != 'resolved'
+      LEFT JOIN merit_totals mt ON s.id = mt.student_id
       LEFT JOIN classes c ON s.class_id = c.id
       WHERE s.is_active = true
         AND s.id NOT IN (
@@ -613,9 +621,9 @@ router.get('/qualifying-students', authenticateToken, requireRole('admin'), asyn
           WHERE ds.detention_date >= CURRENT_DATE
             AND da.status IN ('assigned', 'late', 'attended')
         )
-      GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name
-      HAVING COALESCE(SUM(bi.points_deducted), 0) >= $1
-      ORDER BY COALESCE(SUM(bi.points_deducted), 0) DESC
+      GROUP BY s.id, s.student_id, s.first_name, s.last_name, c.class_name, mt.total_merits
+      HAVING (COALESCE(SUM(bi.points_deducted), 0) - COALESCE(mt.total_merits, 0)) >= $1
+      ORDER BY (COALESCE(SUM(bi.points_deducted), 0) - COALESCE(mt.total_merits, 0)) DESC
     `, [pointsThreshold]);
 
     res.json(qualifyingStudents);
@@ -1393,24 +1401,39 @@ router.post('/auto-assign', authenticateToken, requireRole('admin'), async (req,
     let assignedCount = 0;
     let queuedCount = 0;
 
-    // Find all students who qualify for detention based on accumulated demerit points
-    // Get students with unresolved incidents totaling >= 10 points
+    // Read threshold from detention_rules (same as qualifying-students endpoint)
+    const autoAssignThresholdRule = await schemaGet(req,
+      `SELECT MIN(min_points) as threshold FROM detention_rules
+       WHERE (is_active = true OR is_active = 1) AND action_type = 'detention'`
+    );
+    const autoAssignThreshold = (autoAssignThresholdRule && autoAssignThresholdRule.threshold != null)
+      ? Number(autoAssignThresholdRule.threshold) : 10;
+
+    // Find qualifying students using NET points (demerits − merits)
     const qualifyingStudentsQuery = `
-      SELECT 
+      WITH merit_totals AS (
+        SELECT student_id, COALESCE(SUM(points), 0) AS total_merits
+        FROM merits
+        GROUP BY student_id
+      )
+      SELECT
         s.id,
         s.first_name || ' ' || s.last_name as student_name,
         s.parent_id,
-        COALESCE(SUM(bi.points_deducted), 0) as total_points
+        COALESCE(SUM(bi.points_deducted), 0) as total_demerits,
+        COALESCE(mt.total_merits, 0) as total_merits,
+        (COALESCE(SUM(bi.points_deducted), 0) - COALESCE(mt.total_merits, 0)) AS total_points
       FROM students s
       LEFT JOIN behaviour_incidents bi ON s.id = bi.student_id
         AND bi.status != 'resolved'
+      LEFT JOIN merit_totals mt ON s.id = mt.student_id
       WHERE s.is_active = true
-      GROUP BY s.id, s.first_name, s.last_name, s.parent_id
-      HAVING COALESCE(SUM(bi.points_deducted), 0) >= 10
-      ORDER BY COALESCE(SUM(bi.points_deducted), 0) DESC
+      GROUP BY s.id, s.first_name, s.last_name, s.parent_id, mt.total_merits
+      HAVING (COALESCE(SUM(bi.points_deducted), 0) - COALESCE(mt.total_merits, 0)) >= $1
+      ORDER BY (COALESCE(SUM(bi.points_deducted), 0) - COALESCE(mt.total_merits, 0)) DESC
     `;
 
-    const qualifyingStudents = await schemaAll(req, qualifyingStudentsQuery);
+    const qualifyingStudents = await schemaAll(req, qualifyingStudentsQuery, [autoAssignThreshold]);
 
     // Filter out students already assigned to ANY upcoming detention
     const studentsWithUpcomingDetention = await schemaAll(req, `
@@ -1440,7 +1463,7 @@ router.post('/auto-assign', authenticateToken, requireRole('admin'), async (req,
             [
               detention_id,
               student.id,
-              `Auto-assigned: ${student.total_points} demerit points`, 
+              `Auto-assigned: net points ${student.total_points} (${student.total_demerits} demerits − ${student.total_merits} merits)`,
               req.user.id
             ]
           );
@@ -1453,7 +1476,7 @@ router.post('/auto-assign', authenticateToken, requireRole('admin'), async (req,
               student.parent_id,
               'detention',
               'Detention Assigned',
-              `${student.student_name} has been assigned to detention on ${detentionDate} at ${detention.detention_time}. Reason: ${student.total_points} demerit points accumulated.`,
+              `${student.student_name} has been assigned to detention on ${detentionDate} at ${detention.detention_time}. Reason: net demerit score of ${student.total_points} points (${student.total_demerits} demerits − ${student.total_merits} merits).`,
               detention_id,
               'detention'
             );
@@ -1531,15 +1554,18 @@ router.post('/evaluate-rules', authenticateToken, async (req, res) => {
       const periodDays = rule.time_period_days || 30;
 
       if (triggerType === 'points_threshold') {
+        // Use NET points: demerits (within period) minus all-time merits
         const result = await schemaGet(req, `
-          SELECT COALESCE(SUM(i.points_deducted), 0) as total_points
+          SELECT
+            COALESCE(SUM(i.points_deducted), 0) AS total_demerits,
+            COALESCE((SELECT SUM(m.points) FROM merits m WHERE m.student_id = $1), 0) AS total_merits
           FROM behaviour_incidents i
           WHERE i.student_id = $1
             AND i.status != 'resolved'
             AND i.date >= CURRENT_DATE - INTERVAL '${periodDays} days'
         `, [student_id]);
-        const points = Number(result?.total_points || 0);
-        meetsRule = points >= rule.min_points && (!rule.max_points || points <= rule.max_points);
+        const netPoints = Number(result?.total_demerits || 0) - Number(result?.total_merits || 0);
+        meetsRule = netPoints >= rule.min_points && (!rule.max_points || netPoints <= rule.max_points);
       } else if (triggerType === 'incident_type' && rule.severity) {
         const result = await schemaGet(req, `
           SELECT COUNT(i.id) as cnt
