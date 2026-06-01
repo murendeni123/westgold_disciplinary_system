@@ -771,13 +771,24 @@ router.get('/:id/report/excel', authenticateToken, async (req, res) => {
     worksheet.addRow([`Status: ${session.status.toUpperCase()}`]);
     worksheet.addRow([]);
 
+    const thinBorder = {
+      top:    { style: 'thin', color: { argb: 'FFD1D5DB' } },
+      bottom: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+      left:   { style: 'thin', color: { argb: 'FFD1D5DB' } },
+      right:  { style: 'thin', color: { argb: 'FFD1D5DB' } },
+    };
+
     // ── Attendance table ──────────────────────────────────────────────────────
     const headerRow = worksheet.addRow([
       'Student Name', 'Student ID', 'Grade', 'Class', 'Attendance Status', 'Served', 'Notes',
     ]);
-    headerRow.font = { bold: true };
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF143D59' } };
-    headerRow.font  = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.height = 24;
+    headerRow.eachCell(cell => {
+      cell.border = thinBorder;
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    });
 
     const statusLabel = {
       attended: 'Present', present: 'Present',
@@ -789,29 +800,36 @@ router.get('/:id/report/excel', authenticateToken, async (req, res) => {
     for (const a of assignments) {
       const served = (a.status === 'attended' || a.status === 'present') ? 'Yes' : 'No';
       if (served === 'Yes') presentCount++;
-      worksheet.addRow([
+      const notes = a.notes || '';
+      const dataRow = worksheet.addRow([
         a.student_name,
         a.student_number || '',
         a.grade_level    || '',
         a.class_name     || '',
         statusLabel[a.status] || a.status || 'Pending',
         served,
-        a.notes || '',
+        notes,
       ]);
+      dataRow.height = Math.max(18, Math.min(Math.ceil(notes.length / 40) * 15 + 5, 80));
+      dataRow.eachCell(cell => {
+        cell.border = thinBorder;
+        cell.alignment = { vertical: 'top', wrapText: true };
+      });
     }
 
     worksheet.addRow([]);
-    worksheet.addRow([`Total Students: ${assignments.length}  |  Served: ${presentCount}  |  Absent: ${assignments.length - presentCount}`]);
+    const summaryRow = worksheet.addRow([`Total Students: ${assignments.length}  |  Served: ${presentCount}  |  Absent: ${assignments.length - presentCount}`]);
+    summaryRow.font = { bold: true };
+    summaryRow.height = 20;
 
-    // Auto-size columns
-    worksheet.columns.forEach(col => {
-      let max = 10;
-      col.eachCell?.({ includeEmpty: true }, cell => {
-        const len = cell.value ? String(cell.value).length : 0;
-        if (len > max) max = len;
-      });
-      col.width = Math.min(max + 4, 40);
-    });
+    // Column widths
+    worksheet.getColumn(1).width = 28;  // Student Name
+    worksheet.getColumn(2).width = 15;  // Student ID
+    worksheet.getColumn(3).width = 10;  // Grade
+    worksheet.getColumn(4).width = 15;  // Class
+    worksheet.getColumn(5).width = 22;  // Attendance Status
+    worksheet.getColumn(6).width = 10;  // Served
+    worksheet.getColumn(7).width = 55;  // Notes
 
     const fileName = `detention_register_${req.params.id}_${sessionDate.replace(/\//g, '-')}.xlsx`;
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

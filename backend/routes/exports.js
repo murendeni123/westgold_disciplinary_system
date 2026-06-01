@@ -61,47 +61,120 @@ router.get('/students/:id', authenticateToken, requireRole('admin'), async (req,
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Student Record');
 
-      // Student info
-      worksheet.addRow(['Student Information']);
-      worksheet.addRow(['Student ID', student[0].student_id]);
-      worksheet.addRow(['Name', `${student[0].first_name} ${student[0].last_name}`]);
-      worksheet.addRow(['Class', student[0].class_name || 'N/A']);
-      worksheet.addRow(['Grade', student[0].grade_level || 'N/A']);
+      const thinBorder = {
+        top:    { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        bottom: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        left:   { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        right:  { style: 'thin', color: { argb: 'FFD1D5DB' } },
+      };
+
+      const addSectionHeader = (label, argb) => {
+        const r = worksheet.addRow([label]);
+        r.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: argb } };
+        r.height = 22;
+        r.getCell(1).alignment = { vertical: 'middle' };
+      };
+
+      const addColHeader = (cols) => {
+        const r = worksheet.addRow(cols);
+        r.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF374151' } };
+        r.height = 22;
+        r.eachCell(cell => {
+          cell.border = thinBorder;
+          cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+        });
+      };
+
+      const addDataRow = (vals) => {
+        const r = worksheet.addRow(vals);
+        const maxLen = Math.max(...vals.map(v => String(v || '').length));
+        r.height = Math.max(18, Math.min(Math.ceil(maxLen / 48) * 15 + 3, 90));
+        r.eachCell(cell => {
+          cell.border = thinBorder;
+          cell.alignment = { vertical: 'top', wrapText: true };
+        });
+        return r;
+      };
+
+      // Student information
+      addSectionHeader('STUDENT INFORMATION', 'FF059669');
+      addDataRow(['Student ID', student[0].student_id]);
+      addDataRow(['Name', `${student[0].first_name} ${student[0].last_name}`]);
+      addDataRow(['Class', student[0].class_name || 'N/A']);
+      addDataRow(['Grade', student[0].grade_level || 'N/A']);
       worksheet.addRow([]);
 
       // Demerits
-      worksheet.addRow(['Demerits']);
-      worksheet.addRow(['Date', 'Type', 'Severity', 'Points', 'Description', 'Teacher']);
-      incidents.forEach(inc => {
-        worksheet.addRow([inc.created_at, inc.incident_type, inc.severity, inc.points_deducted, inc.description, inc.teacher_name]);
-      });
+      addSectionHeader('DEMERITS', 'FFDC2626');
+      addColHeader(['Date', 'Type', 'Severity', 'Points', 'Description', 'Teacher']);
+      if (incidents.length === 0) {
+        worksheet.addRow(['No demerit records found']);
+      } else {
+        incidents.forEach(inc => {
+          addDataRow([
+            inc.created_at ? new Date(inc.created_at).toLocaleDateString('en-ZA') : '',
+            inc.incident_type || '',
+            inc.severity || '',
+            inc.points_deducted || 0,
+            inc.description || '',
+            inc.teacher_name || '',
+          ]);
+        });
+      }
       worksheet.addRow([]);
 
       // Merits
-      worksheet.addRow(['Merits']);
-      worksheet.addRow(['Date', 'Type', 'Points', 'Description', 'Teacher']);
-      merits.forEach(merit => {
-        worksheet.addRow([merit.created_at, merit.merit_type, merit.points, merit.description, merit.teacher_name]);
-      });
+      addSectionHeader('MERITS', 'FF059669');
+      addColHeader(['Date', 'Type', 'Points', 'Description', 'Teacher']);
+      if (merits.length === 0) {
+        worksheet.addRow(['No merit records found']);
+      } else {
+        merits.forEach(merit => {
+          addDataRow([
+            merit.created_at ? new Date(merit.created_at).toLocaleDateString('en-ZA') : '',
+            merit.merit_type || '',
+            merit.points || 0,
+            merit.description || '',
+            merit.teacher_name || '',
+          ]);
+        });
+      }
       worksheet.addRow([]);
 
-      // Detentions
-      worksheet.addRow(['Detention History']);
-      worksheet.addRow(['Date', 'Time', 'Location', 'Duration (min)', 'Attendance', 'Served', 'Notes']);
-      detentions.forEach(det => {
-        const served = (det.status === 'attended' || det.status === 'present') ? 'Yes' : 'No';
+      // Detention history
+      addSectionHeader('DETENTION HISTORY', 'FF4B5563');
+      addColHeader(['Date', 'Time', 'Location', 'Duration (min)', 'Attendance', 'Served', 'Notes']);
+      if (detentions.length === 0) {
+        worksheet.addRow(['No detention records found']);
+      } else {
         const attendanceLabel = {
           attended: 'Present', present: 'Present', absent: 'Absent',
           late: 'Late', excused: 'Excused', assigned: 'Pending', rescheduled: 'Rescheduled',
         };
-        worksheet.addRow([
-          det.detention_date, det.detention_time, det.location || 'N/A',
-          det.duration || 60,
-          attendanceLabel[det.status] || det.status || 'Pending',
-          served,
-          det.notes || '',
-        ]);
-      });
+        detentions.forEach(det => {
+          const served = (det.status === 'attended' || det.status === 'present') ? 'Yes' : 'No';
+          addDataRow([
+            det.detention_date ? new Date(det.detention_date).toLocaleDateString('en-ZA') : '',
+            det.detention_time || '',
+            det.location || 'N/A',
+            det.duration || 60,
+            attendanceLabel[det.status] || det.status || 'Pending',
+            served,
+            det.notes || '',
+          ]);
+        });
+      }
+
+      // Column widths
+      worksheet.getColumn(1).width = 22;  // Date / Label
+      worksheet.getColumn(2).width = 30;  // Type / Value / Name
+      worksheet.getColumn(3).width = 18;  // Severity / Time / Grade
+      worksheet.getColumn(4).width = 12;  // Points / Duration
+      worksheet.getColumn(5).width = 55;  // Description / Attendance
+      worksheet.getColumn(6).width = 22;  // Teacher / Served
+      worksheet.getColumn(7).width = 45;  // Notes
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename=student_${student[0].student_id}.xlsx`);
@@ -181,11 +254,47 @@ router.get('/class/:id', authenticateToken, requireRole('admin'), async (req, re
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Class Records');
 
-      worksheet.addRow(['Student ID', 'Name', 'Demerit Points', 'Merit Points', 'Net Points']);
-      students.forEach(s => {
-        const netPoints = (parseInt(s.merit_points) || 0) - (parseInt(s.demerit_points) || 0);
-        worksheet.addRow([s.student_id, `${s.first_name} ${s.last_name}`, s.demerit_points || 0, s.merit_points || 0, netPoints]);
+      const thinBorder = {
+        top:    { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        bottom: { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        left:   { style: 'thin', color: { argb: 'FFD1D5DB' } },
+        right:  { style: 'thin', color: { argb: 'FFD1D5DB' } },
+      };
+
+      // Header row
+      const headerRow = worksheet.addRow(['Student ID', 'Name', 'Demerit Points', 'Merit Points', 'Net Points']);
+      headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
+      headerRow.height = 24;
+      headerRow.eachCell(cell => {
+        cell.border = thinBorder;
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
       });
+
+      // Data rows
+      students.forEach((s, idx) => {
+        const netPoints = (parseInt(s.merit_points) || 0) - (parseInt(s.demerit_points) || 0);
+        const r = worksheet.addRow([
+          s.student_id,
+          `${s.first_name} ${s.last_name}`,
+          s.demerit_points || 0,
+          s.merit_points || 0,
+          netPoints,
+        ]);
+        if (idx % 2 === 1) r.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+        r.height = 18;
+        r.eachCell(cell => {
+          cell.border = thinBorder;
+          cell.alignment = { vertical: 'middle', wrapText: true };
+        });
+      });
+
+      // Column widths
+      worksheet.getColumn(1).width = 18;  // Student ID
+      worksheet.getColumn(2).width = 32;  // Name
+      worksheet.getColumn(3).width = 18;  // Demerit Points
+      worksheet.getColumn(4).width = 15;  // Merit Points
+      worksheet.getColumn(5).width = 15;  // Net Points
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename=class_records.xlsx`);

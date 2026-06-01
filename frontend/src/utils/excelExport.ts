@@ -39,7 +39,7 @@ const sectionTitleStyle = {
 
 const cellStyle = {
   font: { sz: 11, name: 'Calibri' },
-  alignment: { vertical: 'center' },
+  alignment: { vertical: 'center', wrapText: true },
   border: BORDER_STYLE,
 };
 
@@ -67,8 +67,20 @@ function autoSizeColumns(headers: string[], data: any[][]): { wch: number }[] {
       const len = val != null ? String(val).length : 0;
       if (len > maxLen) maxLen = len;
     });
-    return { wch: Math.min(Math.max(maxLen + 3, 12), 45) };
+    return { wch: Math.min(Math.max(maxLen + 3, 12), 55) };
   });
+}
+
+// ── Helper: Estimate row height for wrapped text ────────────────────────────
+function estimateRowHeight(rowData: any[], colWidths: number[]): number {
+  let maxLines = 1;
+  rowData.forEach((val, i) => {
+    if (val == null) return;
+    const colW = Math.max(colWidths[i] || 15, 10);
+    const lines = Math.ceil(String(val).length / colW);
+    if (lines > maxLines) maxLines = lines;
+  });
+  return Math.max(22, Math.min(maxLines * 16, 100));
 }
 
 // ── Helper: Apply styles to a worksheet ─────────────────────────────────────
@@ -143,16 +155,18 @@ export const exportToExcel = (
   // Style header and data (header is at row 3)
   styleSheet(worksheet, 3, headers, data.length);
 
-  // Auto-size columns
-  worksheet['!cols'] = autoSizeColumns(headers, data);
+  // Auto-size columns (computed first so heights can reference widths)
+  const cols = autoSizeColumns(headers, data);
+  worksheet['!cols'] = cols;
+  const colWidths = cols.map((c) => c.wch);
 
-  // Row heights
+  // Row heights — dynamic so wrapped descriptions don't get clipped
   worksheet['!rows'] = [
     { hpx: 32 }, // title
     { hpx: 20 }, // date
     { hpx: 8 },  // blank
     { hpx: 28 }, // headers
-    ...data.map(() => ({ hpx: 22 })),
+    ...data.map((row) => ({ hpx: estimateRowHeight(row, colWidths) })),
   ];
 
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
@@ -206,13 +220,15 @@ export const exportMultiSheetExcel = (
     }
 
     styleSheet(worksheet, 3, sheet.headers, sheet.data.length);
-    worksheet['!cols'] = autoSizeColumns(sheet.headers, sheet.data);
+    const sCols = autoSizeColumns(sheet.headers, sheet.data);
+    worksheet['!cols'] = sCols;
+    const sColWidths = sCols.map((c) => c.wch);
     worksheet['!rows'] = [
       { hpx: 30 },
       { hpx: 20 },
       { hpx: 8 },
       { hpx: 26 },
-      ...sheet.data.map(() => ({ hpx: 22 })),
+      ...sheet.data.map((row) => ({ hpx: estimateRowHeight(row, sColWidths) })),
     ];
 
     XLSX.utils.book_append_sheet(workbook, worksheet, safeName);
@@ -338,7 +354,7 @@ export const exportComprehensiveReport = (
   rows.forEach((row) => {
     row.forEach((val: any, i: number) => {
       const len = val != null ? String(val).length + 3 : 0;
-      if (len > colWidths[i]) colWidths[i] = Math.min(len, 45);
+      if (len > colWidths[i]) colWidths[i] = Math.min(len, 55);
     });
   });
   worksheet['!cols'] = colWidths.map((w) => ({ wch: w }));
