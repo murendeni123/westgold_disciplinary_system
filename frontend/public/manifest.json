@@ -15,21 +15,5 @@
       "purpose": "any"
     }
   ],
-  "categories": ["education", "productivity"],
-  "shortcuts": [
-    {
-      "name": "Messages",
-      "short_name": "Messages",
-      "description": "View your messages",
-      "url": "/parent/messages",
-      "icons": [{ "src": "/classly_icon.PNG", "sizes": "any" }]
-    },
-    {
-      "name": "Attendance",
-      "short_name": "Attendance",
-      "description": "View attendance",
-      "url": "/parent/attendance",
-      "icons": [{ "src": "/classly_icon.PNG", "sizes": "any" }]
-    }
-  ]
+  "categories": ["education", "productivity"]
 }
