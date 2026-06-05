@@ -9,34 +9,33 @@
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon-192x192.png",
-      "sizes": "192x192",
+      "src": "/classly_icon.PNG",
+      "sizes": "any",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "/classly_icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ],
   "categories": ["education", "productivity"],
-  "screenshots": [],
   "shortcuts": [
     {
       "name": "Messages",
       "short_name": "Messages",
       "description": "View your messages",
       "url": "/parent/messages",
-      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/classly_icon.PNG", "sizes": "any" }]
     },
     {
       "name": "Attendance",
       "short_name": "Attendance",
       "description": "View attendance",
       "url": "/parent/attendance",
-      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/classly_icon.PNG", "sizes": "any" }]
     }
   ]
 }
