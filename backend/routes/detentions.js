@@ -1089,6 +1089,28 @@ router.post('/:id/assign', authenticateToken, requireRole('admin', 'teacher', 'g
     }
     const { student_id, incident_id, reason } = req.body;
 
+    if (!student_id) {
+      return res.status(400).json({ error: 'student_id is required' });
+    }
+
+    // Prevent adding to a completed/frozen session
+    const session = await schemaGet(req, 'SELECT status FROM detention_sessions WHERE id = $1', [req.params.id]);
+    if (!session) {
+      return res.status(404).json({ error: 'Detention session not found' });
+    }
+    if (session.status === 'completed') {
+      return res.status(400).json({ error: 'Cannot add students to a completed session' });
+    }
+
+    // Prevent duplicate assignment
+    const existing = await schemaGet(req,
+      'SELECT id FROM detention_assignments WHERE detention_id = $1 AND student_id = $2',
+      [req.params.id, student_id]
+    );
+    if (existing) {
+      return res.status(409).json({ error: 'Student is already assigned to this session' });
+    }
+
     const result = await schemaRun(req,
       `INSERT INTO detention_assignments (detention_id, student_id, incident_id, notes, assigned_by, status)
        VALUES ($1, $2, $3, $4, $5, 'assigned') RETURNING id`,
@@ -1096,58 +1118,55 @@ router.post('/:id/assign', authenticateToken, requireRole('admin', 'teacher', 'g
     );
 
     const assignment = await schemaGet(req, 'SELECT * FROM detention_assignments WHERE id = $1', [result.id]);
-    
+
     // Get student and detention details for notification
-    const student = await schemaGet(req, 
-      'SELECT s.*, s.first_name || \' \' || s.last_name as student_name FROM students s WHERE s.id = $1', 
+    const student = await schemaGet(req,
+      'SELECT s.*, s.first_name || \' \' || s.last_name as student_name FROM students s WHERE s.id = $1',
       [student_id]
     );
-    
-    const detention = await schemaGet(req,
+
+    const detentionSession = await schemaGet(req,
       'SELECT * FROM detention_sessions WHERE id = $1',
       [req.params.id]
     );
-    
-    // Notify parent if exists - WITH EMAIL
-    if (student && student.parent_id && detention) {
-      const detentionDate = new Date(detention.detention_date).toLocaleDateString();
-      await createNotification(
-        req,
-        student.parent_id,
-        'detention',
-        'Detention Assigned',
-        `${student.student_name} has been assigned to detention on ${detentionDate} at ${detention.detention_time}. Reason: ${reason || 'Not specified'}`,
-        result.id,
-        'detention',
-        { sendEmail: true } // Send email for detention assignments
-      );
 
-      // Send detailed email to parent
+    // Notify parent — wrapped so a notification failure never blocks the response
+    if (student && student.parent_id && detentionSession) {
       try {
+        const detentionDate = new Date(detentionSession.detention_date).toLocaleDateString();
+        await createNotification(
+          req,
+          student.parent_id,
+          'detention',
+          'Detention Assigned',
+          `${student.student_name} has been assigned to detention on ${detentionDate} at ${detentionSession.detention_time}. Reason: ${reason || 'Not specified'}`,
+          result.id,
+          'detention',
+          { sendEmail: true }
+        );
+
         const parent = await dbGet('SELECT email, name FROM public.users WHERE id = $1', [student.parent_id]);
         if (parent && parent.email) {
-          console.log(`📧 Sending detention email to parent: ${parent.name} (${parent.email})`);
           await sendDetentionNotificationEmail(
             parent.email,
             parent.name,
             student.student_name,
-            detention.detention_date,
-            detention.detention_time,
-            detention.duration || 60,
-            detention.location,
+            detentionSession.detention_date,
+            detentionSession.detention_time,
+            detentionSession.duration || 60,
+            detentionSession.location,
             reason || 'Not specified'
-          );
-          console.log(`✅ Detention email sent successfully to ${parent.email}`);
+          ).catch(emailErr => console.error('Detention email error:', emailErr));
         }
-      } catch (emailError) {
-        console.error(`❌ Error sending detention email:`, emailError);
+      } catch (notifErr) {
+        console.error('Error sending detention notification (assignment still saved):', notifErr);
       }
     }
-    
+
     res.status(201).json(assignment);
   } catch (error) {
     console.error('Error assigning student:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: error.message });
   }
 });
 

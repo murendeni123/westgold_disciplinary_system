@@ -977,6 +977,7 @@ const SessionDetailsModal: React.FC<{
   const [addStudentSearch, setAddStudentSearch] = useState('');
   const [selectedStudentIds, setSelectedStudentIds] = useState<number[]>([]);
   const [addingStudents, setAddingStudents] = useState(false);
+  const [addStudentError, setAddStudentError] = useState<string | null>(null);
   const [markingAttendance, setMarkingAttendance] = useState<number | null>(null);
 
   useEffect(() => {
@@ -1034,10 +1035,14 @@ const SessionDetailsModal: React.FC<{
     setShowAddStudent(true);
     setAddStudentSearch('');
     setSelectedStudentIds([]);
+    setAddStudentError(null);
     try {
       const res = await api.getStudents();
       setAllStudents(res.data || []);
-    } catch { setAllStudents([]); }
+    } catch (err: any) {
+      setAllStudents([]);
+      setAddStudentError('Failed to load students. Please close and try again.');
+    }
   };
 
   const handleToggleStudent = (studentId: number) => {
@@ -1049,6 +1054,7 @@ const SessionDetailsModal: React.FC<{
   const handleAddSelectedStudents = async () => {
     if (selectedStudentIds.length === 0) return;
     setAddingStudents(true);
+    setAddStudentError(null);
     try {
       await Promise.all(
         selectedStudentIds.map(id =>
@@ -1059,7 +1065,10 @@ const SessionDetailsModal: React.FC<{
       if (onStudentsRefresh) onStudentsRefresh();
       setShowAddStudent(false);
       setSelectedStudentIds([]);
-    } catch { /* silently handled */ }
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.response?.data?.details || err?.message || 'Failed to add students';
+      setAddStudentError(msg);
+    }
     finally { setAddingStudents(false); }
   };
 
@@ -1501,6 +1510,11 @@ const SessionDetailsModal: React.FC<{
                   });
                 })()}
               </div>
+              {addStudentError && (
+                <div className="mx-4 mb-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center gap-2">
+                  <span className="font-semibold">Error:</span> {addStudentError}
+                </div>
+              )}
               <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl flex items-center gap-3">
                 {selectedStudentIds.length > 0
                   ? <span className="px-2.5 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold">{selectedStudentIds.length} selected</span>

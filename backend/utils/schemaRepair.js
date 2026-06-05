@@ -252,6 +252,12 @@ const repairSchema = async (schemaName) => {
             } catch (e) { /* already correct type or column absent */ }
         }
 
+        // Ensure detention_assignments has all columns the assign route writes
+        await client.query(`ALTER TABLE detention_assignments ADD COLUMN IF NOT EXISTS notes TEXT;`);
+        await client.query(`ALTER TABLE detention_assignments ADD COLUMN IF NOT EXISTS reason TEXT;`);
+        await client.query(`ALTER TABLE detention_assignments ADD COLUMN IF NOT EXISTS assigned_by INTEGER;`);
+        await client.query(`ALTER TABLE detention_assignments ADD COLUMN IF NOT EXISTS attendance_time TIMESTAMP;`);
+
         // Ensure detention_rules has all required columns (migration-created tables lack
         // name, description, trigger_type, time_period_days).
         await client.query(`ALTER TABLE detention_rules ADD COLUMN IF NOT EXISTS name TEXT;`);
