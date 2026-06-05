@@ -257,6 +257,18 @@ const repairSchema = async (schemaName) => {
         await client.query(`ALTER TABLE detention_assignments ADD COLUMN IF NOT EXISTS reason TEXT;`);
         await client.query(`ALTER TABLE detention_assignments ADD COLUMN IF NOT EXISTS assigned_by INTEGER;`);
         await client.query(`ALTER TABLE detention_assignments ADD COLUMN IF NOT EXISTS attendance_time TIMESTAMP;`);
+        // Some older schemas have detention_session_id NOT NULL alongside detention_id.
+        // Our INSERT uses detention_id — so drop the NOT NULL to prevent constraint violations,
+        // then add the column (nullable) to schemas that lack it entirely, and sync existing rows.
+        await client.query(`ALTER TABLE detention_assignments ADD COLUMN IF NOT EXISTS detention_session_id INTEGER;`);
+        try {
+            await client.query(`ALTER TABLE detention_assignments ALTER COLUMN detention_session_id DROP NOT NULL;`);
+        } catch (e) { /* already nullable */ }
+        await client.query(`
+            UPDATE detention_assignments
+            SET detention_session_id = detention_id
+            WHERE detention_session_id IS NULL AND detention_id IS NOT NULL;
+        `);
 
         // Ensure detention_rules has all required columns (migration-created tables lack
         // name, description, trigger_type, time_period_days).
