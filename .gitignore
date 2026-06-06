@@ -48,6 +48,11 @@ tmp/
 temp/
 *.tmp
 
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
 # Upload directories (if they contain user-uploaded files)
 backend/uploads/
 
