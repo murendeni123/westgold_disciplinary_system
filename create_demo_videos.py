@@ -1,41 +1,45 @@
 """
-Classly Portal Demo Video Generator
+Classly Portal Demo Video Generator  (v2 — voiceover + ambient music)
 Creates high-quality MP4 walkthrough videos for each portal from screenshots.
 
 Video specs:
-  Resolution : 1440 × 900 (native screenshot size)
-  Frame rate : 30 fps
-  Codec      : H.264, CRF 18 (visually lossless)
-  Audio      : none (silent – schools add their own narration)
-  Transitions: 0.6 s smooth crossfade between slides
-  Slide hold : 4 s per screenshot, 2 s per section header
+  Resolution  : 1440 × 900 (native screenshot size)
+  Frame rate  : 30 fps
+  Codec       : H.264 CRF 18 (visually lossless), AAC 128 k audio
+  Audio       : espeak-ng voiceover + scipy-generated ambient chords
+  Transitions : 0.6 s smooth crossfade between slides
+  Slide hold  : 4 s per screenshot, 2.2 s per section header, 4.5 s title cards
 """
 
 import os
 import re
+import subprocess
+import tempfile
 import textwrap
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont
+from pydub import AudioSegment
+from scipy.io import wavfile
 
 from moviepy import ImageClip, concatenate_videoclips
-from moviepy.video.fx import CrossFadeIn, CrossFadeOut
+from moviepy.video.fx import CrossFadeIn
 
-# ── Constants ─────────────────────────────────────────────────────────────────
-W, H       = 1440, 900
-FPS        = 30
-CRF        = 18          # H.264 quality (lower = better)
-SLIDE_DUR  = 4.0         # seconds per screenshot
-SECTION_DUR= 2.2         # seconds per section-break card
-TITLE_DUR  = 4.5         # opening / closing title card
-FADE       = 0.6         # crossfade duration
+# ── Constants ──────────────────────────────────────────────────────────────────
+W, H        = 1440, 900
+FPS         = 30
+CRF         = 18
+SLIDE_DUR   = 5.0   # 5 s gives narration (≤3.8 s) + 0.75 s lead-in + buffer
+SECTION_DUR = 2.2
+TITLE_DUR   = 4.5
+FADE        = 0.6
+SAMPLE_RATE = 44100
 
-FONT_BOLD   = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
-FONT_REG    = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+FONT_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+FONT_REG  = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
 
 SCREENSHOTS = Path("/home/user/westgold_disciplinary_system/screenshots")
-OUT_BASE    = SCREENSHOTS          # save videos alongside the screenshot folders
 
 # ── Brand colours ──────────────────────────────────────────────────────────────
 BRAND = {
@@ -45,42 +49,171 @@ BRAND = {
     "parent":     {"primary": (220, 38,  38), "accent": (254, 226, 226), "label": "Parent Portal"},
 }
 
-# ── Screenshot selection ───────────────────────────────────────────────────────
-# Only the detailed walkthrough screenshots (not the original basic 8-page set).
-# Pattern: files whose base name (after the leading digits) contains at least
-# two words/segments → these are the walkthrough ones.
+# ── Narration scripts ──────────────────────────────────────────────────────────
+# ~8-12 words each so they fit comfortably within the 4-second slide window.
+NARRATIONS = {
+    # Login
+    "login-page":                    "Welcome to Classly. Sign in with your school credentials to begin.",
+    "login-credentials-filled":      "Enter your email and password, then click Sign In.",
+    "login-credentials-entered":     "Enter your email and password, then click Sign In.",
+    # Dashboard
+    "dashboard-overview":            "The dashboard shows a complete overview of school discipline activity.",
+    "dashboard-quick-actions":       "Use quick actions to jump straight to common tasks.",
+    "dashboard-behaviour-trends":    "Behaviour trend charts help you spot patterns and at-risk students early.",
+    "dashboard-pending-incidents":   "Pending incidents awaiting your review are highlighted here.",
+    "dashboard-charts":              "Charts give a visual summary of recent behaviour and merit data.",
+    "dashboard-recent-activity":     "Recent activity keeps you up to date with the latest events.",
+    "dashboard-class-activity":      "Class activity highlights which groups need the most attention.",
+    # Students
+    "students-list":                 "The Students module lists every enrolled student with class and behaviour summary.",
+    "students-search":               "Use the search bar to quickly find any student by name or number.",
+    "students-add-modal":            "Add a new student by entering their name, grade, and parent details.",
+    "student-profile-overview":      "Each student profile shows contact details, class, and point totals.",
+    "student-profile-history":       "The history tab shows every incident and merit logged for this student.",
+    "student-profile-incidents":     "Review all logged incidents for this student in one place.",
+    # Classes
+    "classes-list":                  "Classes shows all active groups, assigned teachers, and enrolment counts.",
+    "classes-overview":              "An overview of all classes in the school with their current status.",
+    "class-detail-students":         "Drill into a class to view its students and behaviour summaries.",
+    "class-detail-actions":          "Class actions let you log incidents or award merits to the whole group.",
+    # Teachers
+    "teachers-list":                 "Manage teaching staff, view class assignments, and set grade head roles.",
+    # Behaviour
+    "behaviour-all-incidents":       "All Incidents shows every behaviour report logged across the school.",
+    "behaviour-incidents":           "Browse all logged incidents with status and severity indicators.",
+    "behaviour-incidents-list":      "Filter and review incidents logged by your classes.",
+    "behaviour-pending-filter":      "Filter to Pending to focus on incidents that still need your approval.",
+    "behaviour-pending-only":        "The Pending view focuses only on incidents awaiting review.",
+    "behaviour-incident-detail-modal": "Click an incident to view full details and choose an outcome.",
+    "behaviour-incident-detail":     "The detail view shows the full incident record and supporting information.",
+    "behaviour-before-approve":      "Review the incident carefully before approving or rejecting.",
+    "behaviour-incident-approved":   "Once approved, demerit points are applied to the student automatically.",
+    # Logging incidents
+    "log-incident-blank-form":       "Log a new behaviour incident by selecting the student and rule broken.",
+    "log-incident-form":             "Select the student, rule, and severity to start logging an incident.",
+    "log-incident-class-selected":   "Choose the class first to filter the student list.",
+    "log-incident-dropdowns-filled": "Select the incident type, rule broken, and severity level.",
+    "log-incident-form-complete":    "Add a description and any additional notes before submitting.",
+    "log-incident-filled":           "Review all details are correct before submitting the incident.",
+    "log-incident-submit-area":      "Click Submit to send the incident for review.",
+    "log-incident-submitted":        "The incident is submitted and now pending admin approval.",
+    # Merits
+    "merits-list":                   "The Merits module shows all recognition awards given to students.",
+    "merit-award-form":              "Award a merit by selecting the student and achievement being recognised.",
+    "award-merit-blank-form":        "Select a student and merit type to start awarding recognition.",
+    "award-merit-dropdowns-filled":  "Choose the merit category and point value for this award.",
+    "award-merit-form-complete":     "Add a reason for the award before confirming.",
+    "award-merit-form":              "Fill in the student, category, and reason for this merit award.",
+    "award-merit-filled":            "Review the merit details, then click Confirm to proceed.",
+    "award-merit-confirmation-modal": "Confirm the award details before finalising.",
+    "award-merit-confirmation":      "Confirm the details before saving this merit award.",
+    "award-merit-success":           "The merit award has been recorded and the student notified.",
+    # Detentions
+    "detention-sessions-list":       "The Detentions module shows all scheduled sessions and their status.",
+    "detentions-overview":           "Overview of upcoming and past detention sessions across the school.",
+    "detention-qualifying-students": "Students who have accumulated enough demerit points appear here.",
+    "detentions-student-list":       "Students eligible for detention based on their demerit totals.",
+    "detention-create-modal-empty":  "Create a new detention session by setting the date, time, and venue.",
+    "detention-create-modal-filled": "Review the session details before saving.",
+    "detention-session-created":     "The new session is created and ready for student assignments.",
+    "detention-session-details-modal": "Click a session to manage attendance and add students.",
+    "detention-session-details":     "View session details and manage the list of attending students.",
+    "detention-add-students-modal":  "Add qualifying students to this session with one click.",
+    "detentions-detail":             "Detailed view of a specific detention session and its participants.",
+    # Discipline centre
+    "discipline-center":             "The Discipline Centre is your analytics hub for school-wide behaviour data.",
+    "discipline-center-charts":      "Charts break down incidents by category, class, and time period.",
+    "discipline-center-leaderboards": "Leaderboards highlight classes and students with the most recorded activity.",
+    "discipline-rules":              "Manage the school's discipline rules, point values, and categories.",
+    # Consequences
+    "consequences-list":             "Consequences tracks all formal sanctions assigned to students.",
+    "consequence-management":        "Update consequence statuses, add notes, and track resolution progress.",
+    "consequences-overview":         "An overview of all active and resolved consequences across the school.",
+    "consequence-details-modal":     "View the full details of a specific consequence assignment.",
+    # Interventions
+    "interventions-list":            "Interventions logs supportive actions for students who need additional help.",
+    "interventions-filters":         "Filter interventions by type, status, or student.",
+    "interventions-guided-start":    "The guided workflow walks you through setting up a new intervention plan.",
+    "interventions-overview":        "Overview of all active support interventions currently in place.",
+    # Reports
+    "reports-analytics":             "Reports generates detailed analytics on behaviour trends and student progress.",
+    "reports-charts":                "Visual charts make it easy to present data to parents and leadership.",
+    "reports-overview":              "The Reports overview summarises key metrics for the current academic period.",
+    # Settings
+    "settings-overview":             "Settings lets you configure school-wide preferences and system behaviour.",
+    "settings-thresholds":           "Set demerit thresholds that trigger automatic detention referrals.",
+    "settings-profile":              "Update your profile details and account preferences here.",
+    "settings-profile-tab":          "The Profile tab lets you update your personal and contact information.",
+    "settings-password-tab":         "Change your password here to keep your account secure.",
+    "settings-school-children-tab":  "Manage which children are linked to your parent account.",
+    "settings-preferences-tab":      "Set your notification preferences and language settings.",
+    "settings-password":             "Update your password from the Security settings tab.",
+    "settings-preferences":          "Configure notification and display preferences.",
+    # Notifications
+    "notifications-page":            "The Notifications centre shows all system alerts and messages.",
+    "notifications-list":            "View all recent notifications including incident updates and merit awards.",
+    "notifications-older":           "Older notifications are archived here for your reference.",
+    "notifications":                 "Notifications keep you informed of important events in real time.",
+    # Bulk operations
+    "bulk-import":                   "Bulk import lets you upload student or teacher records from a spreadsheet.",
+    # Messaging
+    "messages-inbox":                "The Messages inbox shows all received communications from school staff.",
+    "messages-sent":                 "Sent messages keeps a record of all communications you have sent.",
+    "messages-compose-modal":        "Compose a message by selecting a recipient and entering your text.",
+    "messages-compose-filled":       "Review your message before sending it to the school.",
+    "messages-sent-confirmation":    "Your message has been sent and the recipient will be notified.",
+    # Parent-specific
+    "children-overview":             "My Children shows a summary card for each of your children.",
+    "child-profile-liam":            "Click a child's card to view their full profile and activity history.",
+    "child-profile-liam-detail":     "The detailed profile shows behaviour, merits, and attendance at a glance.",
+    "child-profile-aisha":           "Each child has their own profile with a complete activity history.",
+    "attendance-overview":           "Attendance shows your child's record for the current term.",
+    "attendance-records":            "Detailed records show every present, absent, and late entry.",
+    "profile-overview":              "Your profile shows your personal details and linked children.",
+    "profile-editing":               "Edit your contact details and emergency contact information here.",
+    "profile-emergency-contacts":    "Keep emergency contacts up to date for school records.",
+    "profile-saved":                 "Your profile changes have been saved successfully.",
+    "sidebar-navigation":            "The sidebar gives you quick access to every section of the portal.",
+    # Grade-head specific
+    "grade-dashboard-overview":      "The Grade dashboard shows behaviour data for your entire grade.",
+    "grade-dashboard-quick-actions": "Quick actions let you manage grade-level discipline at a glance.",
+    "grade-dashboard-charts":        "Charts visualise trends across all classes within your grade.",
+    "my-dashboard-overview":         "Your personal dashboard shows activity for your own classes.",
+    "my-dashboard-activity-feed":    "The activity feed shows recent incidents and merits from your classes.",
+    "my-teachings":                  "My Teachings lists all classes you currently teach.",
+    "my-teachings-class-detail":     "Select a class to view its students and manage their behaviour.",
+    "my-class":                      "My Class shows the class you are responsible for as grade head.",
+}
 
+# ── Screenshot selection ───────────────────────────────────────────────────────
 BASIC_NAMES = {
-    # admin basic set
     "01-dashboard", "02-discipline-center", "03-students",
     "04-detention-sessions", "05-behaviour", "06-merits",
     "07-attendance", "08-interventions", "09-reports",
     "10-teachers", "11-classes", "12-settings", "00-login",
-    # grade-head basic set
-    "02-behaviour", "03-students", "04-detentions", "05-merits",
-    # parent basic set
+    "02-behaviour", "04-detentions", "05-merits",
     "02-incidents", "03-merits", "04-attendance", "05-detentions",
     "06-notifications", "07-messages", "08-profile",
 }
 
 def walkthrough_screenshots(folder: Path):
-    """Return sorted walkthrough PNGs, excluding the original basic set."""
-    files = sorted(folder.glob("*.png"))
+    """Return sorted walkthrough PNGs, excluding the basic set and base-name duplicates."""
+    files  = sorted(folder.glob("*.png"))
     result = []
+    seen_bases: set = set()
     for f in files:
-        stem = f.stem               # e.g. "03-dashboard-overview"
-        # Skip the exact basic-set names
+        stem = f.stem
         if stem in BASIC_NAMES:
             continue
-        # Skip any file named just like "01-dashboard" (basic pattern)
-        # Walkthrough names always have 3+ hyphen-segments
-        if stem.count("-") < 2 and stem not in ("00-login-page", "01-login-page"):
-            # Allow multi-word stems like "login-page" (2 segments but valid)
-            pass
+        base = re.sub(r"^\d+-", "", stem)   # strip leading "NN-"
+        if base in seen_bases:              # skip duplicate base names
+            continue
+        seen_bases.add(base)
         result.append(f)
     return result
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+
+# ── Visual helpers ─────────────────────────────────────────────────────────────
 
 def load_font(path, size):
     try:
@@ -90,14 +223,10 @@ def load_font(path, size):
 
 
 def gradient_bg(color1, color2, w=W, h=H):
-    """Vertical gradient from color1 (top) to color2 (bottom)."""
     arr = np.zeros((h, w, 3), dtype=np.uint8)
     for y in range(h):
         t = y / (h - 1)
-        r = int(color1[0] * (1 - t) + color2[0] * t)
-        g = int(color1[1] * (1 - t) + color2[1] * t)
-        b = int(color1[2] * (1 - t) + color2[2] * t)
-        arr[y, :] = [r, g, b]
+        arr[y, :] = [int(color1[i] * (1 - t) + color2[i] * t) for i in range(3)]
     return Image.fromarray(arr)
 
 
@@ -110,252 +239,316 @@ def lighten(color, factor=1.4):
 
 
 def make_title_card(portal_key, subtitle=""):
-    """Opening title card for a portal."""
     cfg   = BRAND[portal_key]
     pri   = cfg["primary"]
     label = cfg["label"]
+    img   = gradient_bg(darken(pri, 0.45), darken(pri, 0.75))
 
-    img = gradient_bg(darken(pri, 0.45), darken(pri, 0.75))
-    draw = ImageDraw.Draw(img)
-
-    # Diagonal decorative band
     from PIL import Image as PILImage
     overlay = PILImage.new("RGBA", (W, H), (0, 0, 0, 0))
     od = ImageDraw.Draw(overlay)
     od.polygon([(0, H//2), (W, H//4), (W, H//2+80), (0, H//2+220)],
                fill=(*lighten(pri, 1.3), 22))
-    img = PILImage.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
+    img  = PILImage.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
     draw = ImageDraw.Draw(img)
 
-    # "Classly" wordmark
-    wm_font = load_font(FONT_BOLD, 34)
-    draw.text((60, 52), "Classly", font=wm_font, fill=(255, 255, 255, 200))
-    draw.text((60, 92), "School Disciplinary Management Platform",
-              font=load_font(FONT_REG, 20), fill=(200, 220, 255))
-
-    # Portal title
-    title_font = load_font(FONT_BOLD, 78)
-    draw.text((80, H // 2 - 80), label, font=title_font, fill=(255, 255, 255))
-
-    # Subtitle
+    draw.text((60, 52),  "Classly",                                 font=load_font(FONT_BOLD, 34), fill=(255, 255, 255))
+    draw.text((60, 92),  "School Disciplinary Management Platform",  font=load_font(FONT_REG,  20), fill=(200, 220, 255))
+    draw.text((80, H // 2 - 80), label, font=load_font(FONT_BOLD, 78), fill=(255, 255, 255))
     if subtitle:
-        draw.text((82, H // 2 + 22), subtitle,
-                  font=load_font(FONT_REG, 28), fill=(210, 230, 255))
-
-    # Bottom accent bar
+        draw.text((82, H // 2 + 22), subtitle, font=load_font(FONT_REG, 28), fill=(210, 230, 255))
     draw.rectangle([(0, H - 8), (W, H)], fill=lighten(pri, 1.5))
-
     return np.array(img)
 
 
 def make_closing_card():
-    """Shared closing card."""
-    img = gradient_bg((15, 23, 42), (30, 41, 59))
+    img  = gradient_bg((15, 23, 42), (30, 41, 59))
     draw = ImageDraw.Draw(img)
-    cx = W // 2
-
-    title_font  = load_font(FONT_BOLD, 56)
-    body_font   = load_font(FONT_REG,  28)
-    small_font  = load_font(FONT_REG,  22)
+    title_font = load_font(FONT_BOLD, 56)
+    body_font  = load_font(FONT_REG,  28)
+    small_font = load_font(FONT_REG,  22)
 
     tw = draw.textlength("Classly", font=title_font)
-    draw.text(((W - tw) // 2, H // 2 - 100), "Classly",
-              font=title_font, fill=(255, 255, 255))
-
+    draw.text(((W - tw) // 2, H // 2 - 100), "Classly", font=title_font, fill=(255, 255, 255))
     sub = "School Disciplinary Management Platform"
-    sw = draw.textlength(sub, font=body_font)
-    draw.text(((W - sw) // 2, H // 2 - 28), sub,
-              font=body_font, fill=(148, 163, 184))
-
-    tagline = "Empowering schools with transparent, consistent discipline"
-    tgw = draw.textlength(tagline, font=small_font)
-    draw.text(((W - tgw) // 2, H // 2 + 50), tagline,
-              font=small_font, fill=(100, 116, 139))
-
+    sw  = draw.textlength(sub, font=body_font)
+    draw.text(((W - sw) // 2, H // 2 - 28), sub, font=body_font, fill=(148, 163, 184))
+    tg  = "Empowering schools with transparent, consistent discipline"
+    tgw = draw.textlength(tg, font=small_font)
+    draw.text(((W - tgw) // 2, H // 2 + 50), tg, font=small_font, fill=(100, 116, 139))
     return np.array(img)
 
 
 def make_section_card(section_title, portal_key):
-    """A 2-second divider card that announces a new section."""
-    cfg = BRAND[portal_key]
-    pri = cfg["primary"]
-
+    cfg  = BRAND[portal_key]
+    pri  = cfg["primary"]
     img  = gradient_bg(darken(pri, 0.35), darken(pri, 0.60))
     draw = ImageDraw.Draw(img)
-
-    # Horizontal accent line
-    draw.rectangle([(60, H // 2 - 55), (W - 60, H // 2 - 50)],
-                   fill=(*lighten(pri, 1.6), 255))
-
-    # Section title
+    draw.rectangle([(60, H // 2 - 55), (W - 60, H // 2 - 50)], fill=(*lighten(pri, 1.6), 255))
     font = load_font(FONT_BOLD, 56)
-    tw = draw.textlength(section_title, font=font)
-    draw.text(((W - tw) // 2, H // 2 - 40), section_title,
-              font=font, fill=(255, 255, 255))
-
-    # Bottom accent
+    tw   = draw.textlength(section_title, font=font)
+    draw.text(((W - tw) // 2, H // 2 - 40), section_title, font=font, fill=(255, 255, 255))
     draw.rectangle([(0, H - 6), (W, H)], fill=lighten(pri, 1.5))
-
     return np.array(img)
 
 
-def caption_bar_height():
-    return 90
-
-
 def add_caption(screenshot_path, caption_text, portal_key):
-    """
-    Overlay a branded caption bar at the bottom of a screenshot.
-    Returns a numpy array (H, W, 3).
-    """
     cfg = BRAND[portal_key]
     pri = cfg["primary"]
-
     img = Image.open(screenshot_path).convert("RGB")
-    # Resize to standard dimensions if needed
     if img.size != (W, H):
         img = img.resize((W, H), Image.LANCZOS)
 
-    bar_h = caption_bar_height()
-
-    # Build the caption overlay
+    bar_h   = 90
     overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    od = ImageDraw.Draw(overlay)
+    od      = ImageDraw.Draw(overlay)
+    od.rectangle([(0, H - bar_h), (W, H)],  fill=(10, 15, 30, 215))
+    od.rectangle([(0, H - bar_h), (6, H)],  fill=(*pri, 255))
 
-    # Semi-transparent dark bar
-    od.rectangle([(0, H - bar_h), (W, H)], fill=(10, 15, 30, 215))
-
-    # Accent stripe on left
-    od.rectangle([(0, H - bar_h), (6, H)], fill=(*pri, 255))
-
-    # Caption text (wrap to fit)
     cap_font = load_font(FONT_REG, 21)
-    bold_font = load_font(FONT_BOLD, 21)
-
-    # Wrap text
-    max_chars = 115
-    lines = textwrap.wrap(caption_text, width=max_chars)
-    y_start = H - bar_h + 14
+    lines    = textwrap.wrap(caption_text, width=115)
+    y_start  = H - bar_h + 14
     for i, line in enumerate(lines[:3]):
-        od.text((24, y_start + i * 26), line,
-                font=cap_font, fill=(230, 240, 255, 245))
+        od.text((24, y_start + i * 26), line, font=cap_font, fill=(230, 240, 255, 245))
 
-    # Step indicator / slide number (top-right corner)
     step_font = load_font(FONT_BOLD, 16)
-    portal_label = cfg["label"]
-    od.text((W - 200, H - bar_h + 18), portal_label,
-            font=step_font, fill=(*lighten(pri, 1.6), 200))
+    od.text((W - 200, H - bar_h + 18), cfg["label"], font=step_font, fill=(*lighten(pri, 1.6), 200))
 
-    # Compose
-    result = Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB")
-    return np.array(result)
+    return np.array(Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB"))
 
 
 def stem_to_caption(stem):
-    """
-    Convert a filename stem like '07-students-list' to a readable caption,
-    e.g. 'Students List'.
-    """
-    # Remove leading number
     name = re.sub(r"^\d+-", "", stem)
     return name.replace("-", " ").title()
 
 
 def infer_section(stem):
-    """Guess a section name from the file stem."""
     name = re.sub(r"^\d+-", "", stem).lower()
-    if "login" in name:         return "Getting Started"
-    if "dashboard" in name:     return "Dashboard Overview"
-    if "my-dashboard" in name:  return "My Teaching Dashboard"
-    if "my-teach" in name:      return "My Teachings"
-    if "my-class" in name:      return "My Class"
-    if "student" in name:       return "Student Management"
-    if "class" in name:         return "Class Management"
-    if "teacher" in name:       return "Teacher Management"
-    if "behaviour" in name or "incident" in name:  return "Behaviour Management"
-    if "log-incident" in name:  return "Logging Incidents"
-    if "merit" in name or "award" in name:         return "Merits & Awards"
-    if "detention" in name:     return "Detention Management"
-    if "discipline" in name:    return "Discipline Centre"
-    if "consequence" in name:   return "Consequence Management"
-    if "intervention" in name:  return "Interventions & Support"
-    if "report" in name or "analytic" in name:     return "Reports & Analytics"
-    if "setting" in name:       return "Settings"
-    if "notif" in name:         return "Notifications"
-    if "message" in name:       return "Messaging"
-    if "profile" in name:       return "Parent Profile"
-    if "children" in name or "child" in name:      return "My Children"
-    if "attendance" in name:    return "Attendance"
-    if "sidebar" in name:       return "Portal Navigation"
-    if "bulk" in name:          return "Bulk Operations"
+    if "login" in name:                           return "Getting Started"
+    if "my-dashboard" in name:                    return "My Teaching Dashboard"
+    if "grade-dashboard" in name:                 return "Grade Dashboard"
+    if "dashboard" in name:                       return "Dashboard Overview"
+    if "my-teach" in name:                        return "My Teachings"
+    if "my-class" in name:                        return "My Class"
+    if "student" in name:                         return "Student Management"
+    if "class" in name:                           return "Class Management"
+    if "teacher" in name:                         return "Teacher Management"
+    if "log-incident" in name:                    return "Logging Incidents"
+    if "behaviour" in name or "incident" in name: return "Behaviour Management"
+    if "merit" in name or "award" in name:        return "Merits & Awards"
+    if "detention" in name:                       return "Detention Management"
+    if "discipline" in name:                      return "Discipline Centre"
+    if "consequence" in name:                     return "Consequence Management"
+    if "intervention" in name:                    return "Interventions & Support"
+    if "report" in name or "analytic" in name:    return "Reports & Analytics"
+    if "setting" in name:                         return "Settings"
+    if "notif" in name:                           return "Notifications"
+    if "message" in name:                         return "Messaging"
+    if "profile" in name:                         return "Parent Profile"
+    if "children" in name or "child" in name:     return "My Children"
+    if "attendance" in name:                      return "Attendance"
+    if "sidebar" in name:                         return "Portal Navigation"
+    if "bulk" in name:                            return "Bulk Operations"
     return "Features Overview"
 
 
-# ── Core video builder ─────────────────────────────────────────────────────────
+# ── Audio helpers ─────────────────────────────────────────────────────────────
 
-def build_video(portal_key, screenshots, output_path):
-    cfg        = BRAND[portal_key]
-    label      = cfg["label"]
+def synthesize_narration(text: str, output_wav: Path):
+    """Synthesise narration text to WAV using espeak-ng (fully offline)."""
+    subprocess.run(
+        ["espeak-ng", "-w", str(output_wav),
+         "-v", "en-us", "-s", "175", "-p", "46", "-a", "170", text],
+        check=True, capture_output=True
+    )
+
+
+def generate_ambient_track(duration_sec: float) -> np.ndarray:
+    """
+    Synthesise a soft ambient pad track via sine-wave chord stacking.
+    Returns float64 array normalised to approx -18 dBFS (background level).
+    Four-chord loop: Fmaj9 → Cmaj9 → Gmaj9 → Dmaj9, 12 s per chord.
+    """
+    n   = int(SAMPLE_RATE * duration_sec)
+    t   = np.arange(n, dtype=np.float64) / SAMPLE_RATE
+    out = np.zeros(n, dtype=np.float64)
+
+    chords = [
+        [174.61, 220.00, 261.63, 329.63, 392.00],  # Fmaj9
+        [130.81, 164.81, 196.00, 246.94, 293.66],  # Cmaj9
+        [196.00, 246.94, 293.66, 369.99, 440.00],  # Gmaj9
+        [146.83, 184.99, 220.00, 277.18, 329.63],  # Dmaj9
+    ]
+    chord_sec = 12.0
+    repeats   = int(np.ceil(duration_sec / (len(chords) * chord_sec))) + 2
+
+    for rep in range(repeats):
+        for ci, freqs in enumerate(chords):
+            s0 = int((rep * len(chords) + ci) * chord_sec * SAMPLE_RATE)
+            s1 = min(int(s0 + chord_sec * SAMPLE_RATE), n)
+            if s0 >= n:
+                break
+            seg_t = np.arange(s1 - s0, dtype=np.float64) / SAMPLE_RATE
+            seg   = np.zeros(s1 - s0)
+            for f in freqs:
+                seg += np.sin(2 * np.pi * f         * seg_t) * 0.040
+                seg += np.sin(2 * np.pi * f * 2     * seg_t) * 0.010
+                seg += np.sin(2 * np.pi * f * 1.001 * seg_t) * 0.008  # warmth detune
+            xf = min(int(1.5 * SAMPLE_RATE), len(seg) // 3)
+            seg[:xf]  *= np.linspace(0, 1, xf)
+            seg[-xf:] *= np.linspace(1, 0, xf)
+            out[s0:s1] += seg
+
+    # Subtle tremolo for movement
+    out *= 0.88 + 0.12 * np.sin(2 * np.pi * 0.07 * t)
+
+    # Normalise to -18 dBFS background level
+    peak = np.max(np.abs(out)) + 1e-9
+    out  = out / peak * 0.13
+
+    # Fade in / out
+    fn = min(int(3 * SAMPLE_RATE), n // 4)
+    out[:fn]  *= np.linspace(0, 1, fn)
+    out[-fn:] *= np.linspace(1, 0, fn)
+    return out
+
+
+def build_audio_track(slide_timings: list, total_sec: float) -> AudioSegment:
+    """
+    Compose the full stereo audio track:
+      - Ambient background music for the entire video duration
+      - espeak-ng voiceover placed 0.75 s after each slide starts
+        (giving the 0.6 s crossfade time to settle)
+    """
+    # Background music
+    bg_arr  = generate_ambient_track(total_sec + 4)
+    bg_i16  = (bg_arr * 32767).astype(np.int16)
+    bg_seg  = AudioSegment(
+        bg_i16.tobytes(), frame_rate=SAMPLE_RATE, sample_width=2, channels=1
+    ).set_channels(2)
+    master = bg_seg[:int(total_sec * 1000)]
+
+    # Voiceover clips
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for start_sec, stem in slide_timings:
+            base      = re.sub(r"^\d+-", "", stem)
+            narration = NARRATIONS.get(base)
+            if not narration:
+                continue
+
+            wav_path = Path(tmpdir) / f"{stem}.wav"
+            try:
+                synthesize_narration(narration, wav_path)
+            except Exception as e:
+                print(f"  ⚠  TTS skip {stem}: {e}")
+                continue
+
+            voice = AudioSegment.from_wav(str(wav_path))
+            if voice.max_dBFS < -60:
+                continue
+            voice = voice.apply_gain(-voice.max_dBFS - 3).set_channels(2)
+
+            # Safety clip: never let narration overflow into the next slide
+            max_voice_ms = int((SLIDE_DUR - 1.0) * 1000)
+            if len(voice) > max_voice_ms:
+                voice = voice[:max_voice_ms].fade_out(150)
+
+            # 750 ms silence prefix so voice starts after crossfade completes
+            pre   = AudioSegment.silent(750, frame_rate=SAMPLE_RATE).set_channels(2)
+            voice = pre + voice
+
+            pos_ms = int(start_sec * 1000)
+            if pos_ms < len(master):
+                master = master.overlay(voice, position=pos_ms)
+
+    return master
+
+
+# ── Core video builder ────────────────────────────────────────────────────────
+
+def build_video(portal_key: str, screenshots: list, output_path: Path):
+    cfg   = BRAND[portal_key]
+    label = cfg["label"]
     print(f"\n🎬  Building {label} video ({len(screenshots)} slides)...")
 
-    clips      = []
-    current_sec = None
+    clips         = []
+    current_sec   = None
+    slide_timings = []  # (start_time_in_video_sec, stem)
+    t             = 0.0
 
     def add_clip(arr, duration):
-        clip = ImageClip(arr, duration=duration).with_effects([CrossFadeIn(FADE)])
-        clips.append(clip)
+        nonlocal t
+        clips.append(ImageClip(arr, duration=duration).with_effects([CrossFadeIn(FADE)]))
+        t += duration - FADE
 
-    # ── Opening title card ────────────────────────────────────────────────
-    opening = make_title_card(portal_key,
-                              f"Step-by-step feature walkthrough  •  {len(screenshots)} sections")
-    add_clip(opening, TITLE_DUR)
+    # Opening title card
+    add_clip(make_title_card(portal_key,
+             f"Step-by-step feature walkthrough  •  {len(screenshots)} sections"), TITLE_DUR)
 
-    # ── Screenshot slides ─────────────────────────────────────────────────
-    for idx, img_path in enumerate(screenshots):
-        stem = img_path.stem
+    for img_path in screenshots:
+        stem    = img_path.stem
         section = infer_section(stem)
         caption = stem_to_caption(stem)
 
-        # Insert a section break when section changes
         if section != current_sec:
-            sec_arr = make_section_card(section, portal_key)
-            add_clip(sec_arr, SECTION_DUR)
+            add_clip(make_section_card(section, portal_key), SECTION_DUR)
             current_sec = section
             print(f"  ── {section}")
 
-        # Load screenshot with caption overlay
+        slide_timings.append((t, stem))  # record BEFORE advancing t
+
         try:
             frame = add_caption(img_path, caption, portal_key)
         except Exception as e:
             print(f"  ⚠  Skipping {img_path.name}: {e}")
+            slide_timings.pop()
             continue
 
         add_clip(frame, SLIDE_DUR)
         print(f"    ✓ {img_path.name}")
 
-    # ── Closing card ──────────────────────────────────────────────────────
-    closing = make_closing_card()
-    add_clip(closing, TITLE_DUR)
+    add_clip(make_closing_card(), TITLE_DUR)
+    total_duration = t + FADE  # last clip's FADE wasn't consumed by a successor
 
-    # ── Concatenate with crossfades ───────────────────────────────────────
-    print(f"  Encoding {len(clips)} clips → {output_path.name} ...")
+    # ── Audio track ────────────────────────────────────────────────────────────
+    print(f"  🎵  Generating audio ({len(slide_timings)} narrations + ambient music)...")
+    audio_track = build_audio_track(slide_timings, total_duration)
+
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        audio_wav = tmp.name
+    audio_track.export(audio_wav, format="wav")
+
+    # ── Silent video ──────────────────────────────────────────────────────────
+    silent_mp4 = output_path.with_suffix(".silent.mp4")
+    print(f"  Encoding {len(clips)} clips → {silent_mp4.name} ...")
     video = concatenate_videoclips(clips, method="compose", padding=-FADE)
     video.write_videofile(
-        str(output_path),
-        fps=FPS,
-        codec="libx264",
+        str(silent_mp4), fps=FPS, codec="libx264",
         ffmpeg_params=["-crf", str(CRF), "-preset", "slow",
                        "-pix_fmt", "yuv420p", "-movflags", "+faststart"],
-        logger=None,
-        audio=False,
+        logger=None, audio=False,
     )
-    size_mb = output_path.stat().st_size / 1_048_576
-    total_s = int(video.duration)
-    print(f"  ✅  {output_path.name}  {total_s//60}:{total_s%60:02d} min  {size_mb:.1f} MB")
     video.close()
 
+    # ── Merge audio + video ────────────────────────────────────────────────────
+    print(f"  Mixing audio + video → {output_path.name} ...")
+    subprocess.run(
+        ["ffmpeg", "-y",
+         "-i", str(silent_mp4), "-i", audio_wav,
+         "-c:v", "copy", "-c:a", "aac", "-b:a", "128k", "-shortest",
+         str(output_path)],
+        check=True, capture_output=True
+    )
 
-# ── Portal definitions ─────────────────────────────────────────────────────────
+    silent_mp4.unlink(missing_ok=True)
+    Path(audio_wav).unlink(missing_ok=True)
+
+    size_mb = output_path.stat().st_size / 1_048_576
+    total_s = int(total_duration)
+    print(f"  ✅  {output_path.name}  {total_s//60}:{total_s%60:02d} min  {size_mb:.1f} MB")
+
+
+# ── Portal definitions ────────────────────────────────────────────────────────
 
 PORTALS = [
     {
@@ -384,7 +577,7 @@ PORTALS = [
 # ── Main ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     print("=" * 60)
-    print("  Classly Portal Demo Video Generator")
+    print("  Classly Portal Demo Video Generator  v2")
     print("=" * 60)
 
     for portal in PORTALS:
