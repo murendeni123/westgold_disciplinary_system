@@ -470,8 +470,8 @@ router.get('/dashboard', authenticateToken, async (req, res) => {
                     SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
                     SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
                     SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late
-                FROM attendance 
-                WHERE date = CURRENT_DATE
+                FROM attendance
+                WHERE attendance_date = CURRENT_DATE
             `);
 
             // Worst behaving students

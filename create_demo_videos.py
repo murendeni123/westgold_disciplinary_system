@@ -6,7 +6,7 @@ Video specs:
   Resolution  : 1440 × 900 (native screenshot size)
   Frame rate  : 30 fps
   Codec       : H.264 CRF 18 (visually lossless), AAC 128 k audio
-  Audio       : espeak-ng voiceover + scipy-generated ambient chords
+  Audio       : Kokoro neural TTS (af_heart) + scipy-generated ambient chords
   Transitions : 0.6 s smooth crossfade between slides
   Slide hold  : 4 s per screenshot, 2.2 s per section header, 4.5 s title cards
 """
@@ -19,9 +19,19 @@ import textwrap
 from pathlib import Path
 
 import numpy as np
+from math import gcd
 from PIL import Image, ImageDraw, ImageFont
 from pydub import AudioSegment
 from scipy.io import wavfile
+from scipy.signal import resample_poly
+from kokoro_onnx import Kokoro as KokoroTTS
+
+_kokoro = None
+def get_kokoro():
+    global _kokoro
+    if _kokoro is None:
+        _kokoro = KokoroTTS('/tmp/kokoro/kokoro-v1.0.onnx', '/tmp/kokoro/voices-v1.0.bin')
+    return _kokoro
 
 from moviepy import ImageClip, concatenate_videoclips
 from moviepy.video.fx import CrossFadeIn
@@ -183,6 +193,73 @@ NARRATIONS = {
     "my-teachings":                  "My Teachings lists all classes you currently teach.",
     "my-teachings-class-detail":     "Select a class to view its students and manage their behaviour.",
     "my-class":                      "My Class shows the class you are responsible for as grade head.",
+    # Short-stem names used by the new capture script
+    "login":                         "Welcome to Classly. Sign in with your school credentials to begin.",
+    "login-filled":                  "Enter your email and password, then click Sign In to access the portal.",
+    "dashboard":                     "The dashboard gives you a live overview of school discipline activity.",
+    "dashboard-charts":              "Scroll down to see behaviour trend charts and performance summaries.",
+    "dashboard-activity":            "Recent activity shows the latest incidents, merits, and alerts.",
+    "students":                      "The Students module lists every enrolled student with their class and point totals.",
+    "students-search":               "Use the search bar to instantly locate any student by name.",
+    "add-student-modal":             "Add a new student by entering their details and linking a parent account.",
+    "student-profile":               "Each student profile shows their personal details, class, and point history.",
+    "student-incidents":             "The incidents tab shows every behaviour event logged for this student.",
+    "student-history":               "The history tab shows every incident and merit recorded for this student.",
+    "classes":                       "Classes shows all active groups, their teachers, and enrolment counts.",
+    "teachers":                      "Manage teaching staff, view assignments, and assign grade head roles.",
+    "behaviour-all":                 "All Incidents displays every behaviour report logged across the school.",
+    "behaviour-pending":             "Filter to Pending to focus only on incidents that still need approval.",
+    "incident-detail":               "Click any incident to review the full details and select an outcome.",
+    "incident-approved":             "Once approved, demerit points are automatically applied to the student.",
+    "merits":                        "The Merits module tracks all recognition awards given across the school.",
+    "merit-award-form":              "Award a merit by selecting the student and the achievement being recognised.",
+    "merit-form-filled":             "Review the details before confirming the merit award.",
+    "detentions":                    "The Detentions module shows all scheduled sessions and their current status.",
+    "qualifying-students":           "Students who have reached the demerit threshold are listed here for detention.",
+    "create-detention-modal":        "Schedule a new detention session by setting the date, time, and venue.",
+    "create-detention-filled":       "Review the session details carefully before saving.",
+    "detention-detail":              "Open a session to manage attendance and add qualifying students.",
+    "discipline-centre":             "The Discipline Centre is your analytics hub for school-wide behaviour data.",
+    "discipline-leaderboard":        "Leaderboards rank classes and students by behaviour and merit performance.",
+    "discipline-charts":             "Charts break down incidents and trends by category, class, and time period.",
+    "discipline-rules":              "Manage the school's discipline rules, point values, and categories.",
+    "consequences":                  "The Consequences module tracks all formal sanctions assigned to students.",
+    "interventions":                 "Interventions logs supportive actions for students who need extra help.",
+    "reports":                       "Reports generates detailed analytics on behaviour trends and student progress.",
+    "reports-charts":                "Visual charts make it easy to present insights to parents and leadership.",
+    "settings":                      "Settings lets you configure school-wide preferences and system behaviour.",
+    "settings-thresholds":           "Set demerit thresholds that automatically trigger detention referrals.",
+    "notifications":                 "The Notifications centre shows all system alerts and important messages.",
+    "bulk-import":                   "Bulk import lets you upload student or teacher records from a spreadsheet.",
+    "my-classes":                    "My Classes shows all the classes you are currently responsible for.",
+    "class-detail":                  "Drill into a class to view enrolled students and their behaviour summaries.",
+    "log-incident-blank":            "Log a new behaviour incident by selecting the student and rule broken.",
+    "log-incident-class":            "Choose the class first to narrow down the student list.",
+    "log-incident-class-selected":   "With the class selected, choose the student involved in the incident.",
+    "log-incident-dropdowns":        "Select the incident type, rule broken, and severity level.",
+    "log-incident-filled":           "Add a description of the incident before clicking Submit.",
+    "log-incident-submitted":        "The incident has been submitted and is now pending admin approval.",
+    "award-merit-blank":             "Select a student and merit type to start recognising positive behaviour.",
+    "award-merit-filled":            "Review the award details and add a reason before confirming.",
+    "award-merit-confirm":           "Confirm the merit award details before they are saved.",
+    "award-merit-success":           "The merit has been awarded and the student will be notified.",
+    "merits-list":                   "The merits list shows all recognition awards given by your classes.",
+    "behaviour-list":                "Browse all incidents logged by your classes with status indicators.",
+    "grade-dashboard":               "The Grade dashboard shows discipline and merit data for your entire grade.",
+    "grade-dashboard-charts":        "Charts visualise behaviour trends across all classes in your grade.",
+    "my-teachings":                  "My Teachings lists all subjects and classes you currently teach.",
+    "my-children":                   "My Children shows a summary card for each child linked to your account.",
+    "child-profile":                 "Click a child to view their full school behaviour and merit profile.",
+    "child-profile-scroll":          "Scroll to see detailed incident history and merit awards for this child.",
+    "behaviour":                     "View all behaviour incidents recorded for your children this term.",
+    "behaviour-detail":              "The detail view shows the full record of a specific behaviour incident.",
+    "attendance":                    "Attendance shows your child's daily attendance record for the current term.",
+    "profile":                       "Your profile shows your personal details and linked children.",
+    "profile-detail":                "Scroll to manage emergency contacts and update your contact preferences.",
+    "messages-inbox":                "The inbox shows all messages received from the school.",
+    "messages-sent":                 "Sent messages keeps a record of all communications you have sent.",
+    "compose-blank":                 "Compose a new message by selecting a recipient and entering your subject.",
+    "compose-filled":                "Review your message before sending it to the school.",
 }
 
 # ── Screenshot selection ───────────────────────────────────────────────────────
@@ -355,12 +432,14 @@ def infer_section(stem):
 # ── Audio helpers ─────────────────────────────────────────────────────────────
 
 def synthesize_narration(text: str, output_wav: Path):
-    """Synthesise narration text to WAV using espeak-ng (fully offline)."""
-    subprocess.run(
-        ["espeak-ng", "-w", str(output_wav),
-         "-v", "en-us", "-s", "175", "-p", "46", "-a", "170", text],
-        check=True, capture_output=True
-    )
+    """Synthesise narration with Kokoro neural TTS (af_heart female voice)."""
+    k = get_kokoro()
+    samples, sr = k.create(text, voice='af_heart', speed=1.0, lang='en-us')
+    # Resample from Kokoro native rate to 44100
+    g = gcd(sr, SAMPLE_RATE)
+    samples_44k = resample_poly(samples, SAMPLE_RATE // g, sr // g).astype(np.float32)
+    i16 = (np.clip(samples_44k, -1.0, 1.0) * 32767).astype(np.int16)
+    wavfile.write(str(output_wav), SAMPLE_RATE, i16)
 
 
 def generate_ambient_track(duration_sec: float) -> np.ndarray:
