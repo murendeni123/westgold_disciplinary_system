@@ -1,8 +1,8 @@
 /**
  * Classly – Full Portal Screenshot Capture
- * One unique screenshot per screen — no repeats.
- * Run a single portal: node capture_all_portals.js admin|teacher|grade-head|parent
- * Run all:            node capture_all_portals.js
+ * Comprehensive walkthrough — every feature on every page.
+ * Run a portal:  node capture_all_portals.js admin|teacher|grade-head|parent
+ * Run all:       node capture_all_portals.js
  */
 
 const { chromium } = require('playwright');
@@ -34,223 +34,506 @@ async function getToken(email, password, schoolCode) {
   return { token: d.token, user: d.user };
 }
 
+/** Create a page with token already injected — no login screen shown */
 async function newPage(browser, token, user) {
   const ctx  = await browser.newContext({ viewport: VP });
   const page = await ctx.newPage();
   page.on('dialog', dlg => dlg.accept());
+  // Inject credentials directly without showing the login page
   await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
-  if (token) {
-    await page.evaluate(({ token, userStr }) => {
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', userStr);
-    }, { token, userStr: JSON.stringify(user) });
-  }
+  await page.evaluate(({ token, userStr }) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', userStr);
+  }, { token, userStr: JSON.stringify(user) });
   return { page, ctx };
 }
 
-async function ss(page, filename) {
-  await page.waitForTimeout(900);
-  await page.screenshot({ path: filename, fullPage: false });
-  console.log('  ✓', path.basename(filename));
+let _counter = {};
+async function ss(page, dir, name) {
+  await page.waitForTimeout(1200);
+  const n = (_counter[dir] = (_counter[dir] || 0) + 1);
+  const num = String(n).padStart(2, '0');
+  const filepath = `${dir}/${num}-${name}.png`;
+  await page.screenshot({ path: filepath, fullPage: false });
+  console.log('  ✓', path.basename(filepath));
+  return filepath;
 }
 
-async function wait(page, selector, timeout = 8000) {
+async function wait(page, selector, timeout = 10000) {
   try { await page.waitForSelector(selector, { timeout }); } catch (_) {}
+}
+
+async function waitNet(page) {
+  try { await page.waitForLoadState('networkidle', { timeout: 12000 }); } catch (_) {}
+}
+
+async function scrollTo(page, y) {
+  await page.evaluate(y => window.scrollTo(0, y), y);
+  await page.waitForTimeout(600);
+}
+
+async function clickTab(page, label) {
+  const btn = await page.$(`button:has-text("${label}"), [role="tab"]:has-text("${label}")`);
+  if (btn) { await btn.click({ force: true }); await page.waitForTimeout(800); return true; }
+  return false;
 }
 
 // ── ADMIN ──────────────────────────────────────────────────────────────────────
 async function captureAdmin(browser) {
-  console.log('\n📸  Admin Portal (admin@school.com)');
+  console.log('\n📸  Admin Portal (admin@school.com / DEFAULT)');
   const dir = DIRS.admin;
-  const { token, user } = await getToken('admin@school.com', 'admin123', 'ws2025');
+  _counter[dir] = 0;
+  // Clear old screenshots
+  fs.readdirSync(dir).filter(f => f.endsWith('.png')).forEach(f => fs.unlinkSync(`${dir}/${f}`));
 
-  // 01 Login page
-  { const { page, ctx } = await newPage(browser, null, null);
-    await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle' });
-    await ss(page, `${dir}/01-login.png`); await ctx.close(); }
+  const { token, user } = await getToken('admin@school.com', 'admin123', 'DEFAULT');
 
-  // 02 Login credentials filled
-  { const { page, ctx } = await newPage(browser, null, null);
+  // ── 1. Login page (shown ONCE only) ─────────────────────────────────────────
+  {
+    const ctx  = await browser.newContext({ viewport: VP });
+    const page = await ctx.newPage();
     await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle' });
+    await wait(page, 'input[type="email"]');
     await page.fill('input[type="email"], input[name="email"]', 'admin@school.com').catch(() => {});
-    await page.fill('input[type="password"]', 'admin123').catch(() => {});
-    await ss(page, `${dir}/02-login-filled.png`); await ctx.close(); }
+    await page.fill('input[type="password"]', '••••••••').catch(() => {});
+    await ss(page, dir, 'login');
+    await ctx.close();
+  }
 
-  // 03 Dashboard
-  { const { page, ctx } = await newPage(browser, token, user);
+  // ── 2. Dashboard ─────────────────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/admin`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="stat"], [class*="card"], h1, h2');
-    await ss(page, `${dir}/03-dashboard.png`);
-    // 04 Dashboard scrolled to charts
-    await page.evaluate(() => window.scrollTo(0, 450));
-    await page.waitForTimeout(600);
-    await ss(page, `${dir}/04-dashboard-charts.png`);
-    await ctx.close(); }
+    await wait(page, '[class*="stat"], [class*="card"], h1', 12000);
+    await waitNet(page);
+    await ss(page, dir, 'dashboard');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'dashboard-charts');
+    await scrollTo(page, 800);
+    await ss(page, dir, 'dashboard-bottom');
+    await ctx.close();
+  }
 
-  // 05 Students list
-  { const { page, ctx } = await newPage(browser, token, user);
+  // ── 3. Students ───────────────────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/admin/students`, { waitUntil: 'networkidle' });
     await wait(page, 'table tbody tr, [class*="student"]');
-    await ss(page, `${dir}/05-students.png`);
-    // 06 Search
-    const inp = await page.$('input[placeholder*="search" i], input[type="search"]');
-    if (inp) { await inp.fill('Liam'); await page.waitForTimeout(700);
-               await ss(page, `${dir}/06-students-search.png`); await inp.fill(""); }
-    // 07 Add student modal
-    const addBtn = await page.$('button:has-text("Add"), button:has-text("New Student")');
-    if (addBtn) { await addBtn.click({force:true}); await wait(page, '[role="dialog"]');
-                  await ss(page, `${dir}/07-add-student-modal.png`);
-                  await page.keyboard.press('Escape'); }
-    await ctx.close(); }
+    await ss(page, dir, 'students-list');
 
-  // 08 Student profile
-  { const { page, ctx } = await newPage(browser, token, user);
+    // Search
+    const inp = await page.$('input[placeholder*="search" i], input[type="search"]');
+    if (inp) {
+      await inp.fill('Liam');
+      await page.waitForTimeout(800);
+      await ss(page, dir, 'students-search');
+      await inp.fill('');
+      await page.waitForTimeout(500);
+    }
+
+    // Add student modal
+    const addBtn = await page.$('button:has-text("Add"), button:has-text("New Student"), button:has-text("Add Student")');
+    if (addBtn) {
+      await addBtn.click({ force: true });
+      await wait(page, '[role="dialog"]');
+      await ss(page, dir, 'add-student-modal');
+      // Fill form partially
+      const fn = await page.$('[role="dialog"] input[name*="first"], [role="dialog"] input[placeholder*="first" i]');
+      const ln = await page.$('[role="dialog"] input[name*="last"], [role="dialog"] input[placeholder*="last" i]');
+      if (fn) await fn.fill('Thabo');
+      if (ln) await ln.fill('Mokoena');
+      await ss(page, dir, 'add-student-form-filled');
+      await page.keyboard.press('Escape');
+    }
+    await ctx.close();
+  }
+
+  // ── 4. Student profile ────────────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/admin/students/1`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="profile"], h1, h2');
-    await ss(page, `${dir}/08-student-profile.png`);
-    // 09 Incidents tab
-    const tab = await page.$('[role="tab"]:has-text("Incident"), button:has-text("Incident"), [role="tab"]:has-text("History")');
-    if (tab) { await tab.click({force:true}); await page.waitForTimeout(700);
-               await ss(page, `${dir}/09-student-incidents.png`); }
-    await ctx.close(); }
+    await ss(page, dir, 'student-profile');
+    await scrollTo(page, 350);
+    await ss(page, dir, 'student-profile-detail');
 
-  // 10 Classes
-  { const { page, ctx } = await newPage(browser, token, user);
+    // Click incidents / history tab
+    const incTab = await page.$('[role="tab"]:has-text("Incident"), [role="tab"]:has-text("History"), [role="tab"]:has-text("Behaviour")');
+    if (incTab) {
+      await incTab.click({ force: true });
+      await page.waitForTimeout(800);
+      await ss(page, dir, 'student-incidents-tab');
+    }
+    // Merits tab
+    const mTab = await page.$('[role="tab"]:has-text("Merit")');
+    if (mTab) {
+      await mTab.click({ force: true });
+      await page.waitForTimeout(800);
+      await ss(page, dir, 'student-merits-tab');
+    }
+    await ctx.close();
+  }
+
+  // ── 5. Classes ────────────────────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/admin/classes`, { waitUntil: 'networkidle' });
     await wait(page, 'table tbody tr, [class*="class"]');
-    await ss(page, `${dir}/10-classes.png`); await ctx.close(); }
+    await ss(page, dir, 'classes-list');
+    // Open a class
+    const row = await page.$('table tbody tr:first-child a, [class*="card"]:first-child, table tbody tr:first-child');
+    if (row) {
+      await row.click({ force: true });
+      await wait(page, '[class*="student"], [class*="class"], h1');
+      await ss(page, dir, 'class-detail');
+      await scrollTo(page, 400);
+      await ss(page, dir, 'class-detail-scroll');
+    }
+    await ctx.close();
+  }
 
-  // 11 Teachers
-  { const { page, ctx } = await newPage(browser, token, user);
+  // ── 6. Teachers ───────────────────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/admin/teachers`, { waitUntil: 'networkidle' });
     await wait(page, 'table tbody tr, [class*="teacher"]');
-    await ss(page, `${dir}/11-teachers.png`); await ctx.close(); }
+    await ss(page, dir, 'teachers-list');
+    // Add teacher modal
+    const addBtn = await page.$('button:has-text("Add"), button:has-text("Invite"), button:has-text("New Teacher")');
+    if (addBtn) {
+      await addBtn.click({ force: true });
+      await wait(page, '[role="dialog"]');
+      await ss(page, dir, 'add-teacher-modal');
+      await page.keyboard.press('Escape');
+    }
+    await ctx.close();
+  }
 
-  // 12 Behaviour all incidents
-  { const { page, ctx } = await newPage(browser, token, user);
+  // ── 7. Parents ────────────────────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
+    await page.goto(`${BASE_URL}/admin/parents`, { waitUntil: 'networkidle' });
+    await wait(page, 'table tbody tr, [class*="parent"], h1');
+    await ss(page, dir, 'parents-list');
+    await ctx.close();
+  }
+
+  // ── 8. Behaviour incidents ────────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/admin/behaviour`, { waitUntil: 'networkidle' });
-    await wait(page, 'table tbody tr, [class*="incident"]');
-    await ss(page, `${dir}/12-behaviour-all.png`);
-    // 13 Pending filter
-    const pendBtn = await page.$('button:has-text("Pending"), [value="pending"], [data-value="pending"]');
-    if (pendBtn) { try { await pendBtn.click({ force: true }); } catch(_) {} ; await page.waitForTimeout(700);
-                   await ss(page, `${dir}/13-behaviour-pending.png`); }
-    // 14 Incident detail
-    const row = await page.$('table tbody tr:first-child, [class*="incident-row"]:first-child');
-    if (row) { await row.click({force:true}); await wait(page, '[role="dialog"]');
-               await ss(page, `${dir}/14-incident-detail.png`);
-               // 15 Approve
-               const appBtn = await page.$('button:has-text("Approve")');
-               if (appBtn) { await appBtn.click({ force: true }); await page.waitForTimeout(1000);
-                             await ss(page, `${dir}/15-incident-approved.png`); }
-               else { await page.keyboard.press('Escape'); } }
-    await ctx.close(); }
+    await wait(page, 'table tbody tr, [class*="incident"], h1');
+    await ss(page, dir, 'behaviour-all-incidents');
 
-  // 16 Merits list
-  { const { page, ctx } = await newPage(browser, token, user);
+    // Pending filter
+    try {
+      const pendBtn = await page.$('button:has-text("Pending"), [value="pending"], [data-value="pending"]');
+      if (pendBtn) {
+        await pendBtn.click({ force: true });
+        await page.waitForTimeout(900);
+        await ss(page, dir, 'behaviour-pending-filter');
+      }
+    } catch (_) {}
+
+    // Open incident detail — re-query after any filter change
+    try {
+      const firstRow = await page.$('table tbody tr:first-child td, table tbody tr:first-child');
+      if (firstRow) {
+        await page.evaluate(el => el.click(), firstRow);
+        await wait(page, '[role="dialog"]', 6000);
+        const dialog = await page.$('[role="dialog"]');
+        if (dialog) {
+          await ss(page, dir, 'incident-detail-modal');
+          const appBtn = await page.$('[role="dialog"] button:has-text("Approve"), [role="dialog"] button:has-text("Resolve")');
+          if (appBtn) {
+            await appBtn.click({ force: true });
+            await page.waitForTimeout(1200);
+            await ss(page, dir, 'incident-approved');
+          } else {
+            await page.keyboard.press('Escape');
+          }
+        }
+      }
+    } catch (_) {}
+
+    // Log new incident
+    await page.goto(`${BASE_URL}/admin/behaviour/log`, { waitUntil: 'networkidle' });
+    await wait(page, 'form, select, h1');
+    await ss(page, dir, 'log-incident-blank');
+    const classS = await page.$('select[name*="class"], [class*="class"] select, select:first-of-type');
+    if (classS) { await classS.selectOption({ index: 1 }); await page.waitForTimeout(600); }
+    const studS = await page.$('select[name*="student"]');
+    if (studS) { await studS.selectOption({ index: 1 }); await page.waitForTimeout(400); }
+    const typeS = await page.$('select[name*="type"], select[name*="rule"], select[name*="incident"]');
+    if (typeS) { await typeS.selectOption({ index: 1 }); await page.waitForTimeout(400); }
+    const sevS = await page.$('select[name*="severity"]');
+    if (sevS) { await sevS.selectOption({ index: 1 }); await page.waitForTimeout(400); }
+    const desc = await page.$('textarea, input[name*="description"], input[name*="notes"]');
+    if (desc) await desc.fill('Student was repeatedly disrupting the lesson and refusing to settle despite two warnings from the teacher.');
+    await ss(page, dir, 'log-incident-filled');
+    await ctx.close();
+  }
+
+  // ── 9. Merits ─────────────────────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/admin/merits`, { waitUntil: 'networkidle' });
-    await wait(page, 'table tbody tr, [class*="merit"]');
-    await ss(page, `${dir}/16-merits.png`);
-    // 17 Award form
+    await wait(page, 'table tbody tr, [class*="merit"], h1');
+    await ss(page, dir, 'merits-list');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'merits-list-scroll');
+
+    // Award merit
     await page.goto(`${BASE_URL}/admin/merits/award`, { waitUntil: 'networkidle' });
-    await wait(page, 'form, select');
-    await ss(page, `${dir}/17-merit-award-form.png`);
-    // 18 Form filled
+    await wait(page, 'form, select, h1');
+    await ss(page, dir, 'award-merit-blank');
     const s1 = await page.$('select[name*="student"], select:nth-of-type(1)');
     const s2 = await page.$('select[name*="type"], select:nth-of-type(2)');
     if (s1) await s1.selectOption({ index: 1 });
     if (s2) await s2.selectOption({ index: 1 });
-    const ta = await page.$('textarea, input[name*="reason"]');
-    if (ta) await ta.fill('Exceptional academic improvement and positive attitude');
-    await ss(page, `${dir}/18-merit-form-filled.png`);
-    await ctx.close(); }
+    const r = await page.$('textarea, input[name*="reason"]');
+    if (r) await r.fill('Exceptional academic improvement and consistently positive attitude throughout the term. A role model for peers.');
+    await ss(page, dir, 'award-merit-filled');
+    const sub = await page.$('button[type="submit"], button:has-text("Award"), button:has-text("Submit")');
+    if (sub) {
+      await sub.click({ force: true });
+      await wait(page, '[role="dialog"], [class*="confirm"], [class*="success"]', 5000);
+      await ss(page, dir, 'award-merit-confirm');
+      const yes = await page.$('[role="dialog"] button:has-text("Confirm"), [role="dialog"] button:has-text("Yes"), [role="dialog"] button:has-text("Award")');
+      if (yes) {
+        await yes.click({ force: true });
+        await page.waitForTimeout(1200);
+        await ss(page, dir, 'award-merit-success');
+      }
+    }
+    await ctx.close();
+  }
 
-  // 19 Detention sessions
-  { const { page, ctx } = await newPage(browser, token, user);
-    await page.goto(`${BASE_URL}/admin/detentions`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="detention"], table, h1');
-    await ss(page, `${dir}/19-detentions.png`);
-    // 20 Qualifying students
+  // ── 10. Detention Sessions ────────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
+    await page.goto(`${BASE_URL}/admin/detention-sessions`, { waitUntil: 'networkidle' });
+    await wait(page, '[class*="detention"], table, h1', 10000);
+    await ss(page, dir, 'detention-sessions');
+
+    // Qualifying students modal
     const qualBtn = await page.$('button:has-text("Qualifying"), [class*="qualifying"]');
-    if (qualBtn) { await qualBtn.click({force:true}); await wait(page, '[role="dialog"]');
-                   await ss(page, `${dir}/20-qualifying-students.png`);
-                   await page.keyboard.press('Escape'); await page.waitForTimeout(400); }
-    // 21 Create session modal
-    const newBtn = await page.$('button:has-text("Create"), button:has-text("Schedule"), button:has-text("New Session"), button:has-text("Add Session")');
-    if (newBtn) { await newBtn.click({force:true}); await wait(page, '[role="dialog"]');
-                  await ss(page, `${dir}/21-create-detention-modal.png`);
-                  const di = await page.$('[role="dialog"] input[type="date"]');
-                  if (di) await di.fill('2026-06-15');
-                  const vi = await page.$('[role="dialog"] input[placeholder*="venue" i], [role="dialog"] input[name*="venue"]');
-                  if (vi) await vi.fill('Library – Room B12');
-                  await ss(page, `${dir}/22-create-detention-filled.png`);
-                  await page.keyboard.press('Escape'); }
-    // 23 Session detail
-    const sess = await page.$('[class*="session"]:first-child, table tbody tr:first-child');
-    if (sess) { await sess.click({force:true}); await wait(page, '[role="dialog"]');
-                await ss(page, `${dir}/23-detention-detail.png`);
-                await page.keyboard.press('Escape'); }
-    await ctx.close(); }
+    if (qualBtn) {
+      await qualBtn.click({ force: true });
+      await wait(page, '[role="dialog"]');
+      await ss(page, dir, 'detention-qualifying-students');
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(500);
+    }
 
-  // 24-25 Discipline centre
-  { const { page, ctx } = await newPage(browser, token, user);
-    await page.goto(`${BASE_URL}/admin/discipline-center`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="discipline"], h1');
-    await ss(page, `${dir}/24-discipline-centre.png`);
-    await page.evaluate(() => window.scrollTo(0, 450));
-    await page.waitForTimeout(500);
-    await ss(page, `${dir}/25-discipline-leaderboard.png`);
-    // 26 Rules tab/page
-    const rulesBtn = await page.$('button:has-text("Rules"), a:has-text("Rules"), [role="tab"]:has-text("Rules")');
-    if (rulesBtn) { await rulesBtn.click({force:true}); await page.waitForTimeout(700);
-                   await ss(page, `${dir}/26-discipline-rules.png`); }
-    else { await page.goto(`${BASE_URL}/admin/discipline-center/rules`, { waitUntil: 'networkidle' });
-           await ss(page, `${dir}/26-discipline-rules.png`); }
-    await ctx.close(); }
+    // Queued students modal
+    const queueBtn = await page.$('button:has-text("Queue"), button:has-text("Queued")');
+    if (queueBtn) {
+      await queueBtn.click({ force: true });
+      await wait(page, '[role="dialog"]');
+      await ss(page, dir, 'detention-queue');
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(500);
+    }
 
-  // 27 Consequences
-  { const { page, ctx } = await newPage(browser, token, user);
+    // Create new session modal
+    const newBtn = await page.$('button:has-text("Create"), button:has-text("Schedule"), button:has-text("New Session"), button:has-text("Add Session"), button:has-text("+ Session")');
+    if (newBtn) {
+      await newBtn.click({ force: true });
+      await wait(page, '[role="dialog"]');
+      await ss(page, dir, 'detention-create-modal');
+      const di = await page.$('[role="dialog"] input[type="date"]');
+      const ti = await page.$('[role="dialog"] input[type="time"]');
+      const lo = await page.$('[role="dialog"] input[placeholder*="location" i], [role="dialog"] input[placeholder*="venue" i], [role="dialog"] input[name*="location"]');
+      const du = await page.$('[role="dialog"] input[name*="duration"], [role="dialog"] input[type="number"]');
+      if (di) await di.fill('2026-06-20');
+      if (ti) await ti.fill('14:30');
+      if (lo) await lo.fill('Main Hall – Block A');
+      if (du) await du.fill('90');
+      await ss(page, dir, 'detention-create-filled');
+      await page.keyboard.press('Escape');
+    }
+
+    // View a session detail
+    const sess = await page.$('[class*="session"]:first-child, [class*="card"]:first-child, table tbody tr:first-child');
+    if (sess) {
+      await sess.click({ force: true });
+      await wait(page, '[role="dialog"]', 5000);
+      const dialog = await page.$('[role="dialog"]');
+      if (dialog) {
+        await ss(page, dir, 'detention-session-detail');
+        await page.keyboard.press('Escape');
+      }
+    }
+    await ctx.close();
+  }
+
+  // ── 11. Consequences ──────────────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/admin/consequences`, { waitUntil: 'networkidle' });
+    await wait(page, '[class*="consequence"], table tbody tr, h1');
+    await ss(page, dir, 'consequences-list');
+    await scrollTo(page, 350);
+    await ss(page, dir, 'consequences-list-scroll');
+
+    // Open a consequence detail
+    const row = await page.$('table tbody tr:first-child, [class*="card"]:first-child, [class*="consequence-item"]:first-child');
+    if (row) {
+      await row.click({ force: true });
+      await wait(page, '[role="dialog"]', 5000);
+      const dialog = await page.$('[role="dialog"]');
+      if (dialog) {
+        await ss(page, dir, 'consequence-detail-modal');
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(400);
+      }
+    }
+
+    // Consequence management
+    await page.goto(`${BASE_URL}/admin/consequence-management`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="consequence"], table, h1');
-    await ss(page, `${dir}/27-consequences.png`); await ctx.close(); }
+    await ss(page, dir, 'consequence-management');
+    await ctx.close();
+  }
 
-  // 28 Interventions
-  { const { page, ctx } = await newPage(browser, token, user);
+  // ── 12. Interventions ─────────────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/admin/interventions`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="intervention"], table, h1');
-    await ss(page, `${dir}/28-interventions.png`); await ctx.close(); }
+    await wait(page, '[class*="intervention"], table tbody tr, h1');
+    await ss(page, dir, 'interventions-list');
+    await scrollTo(page, 350);
+    await ss(page, dir, 'interventions-list-scroll');
 
-  // 29-30 Reports
-  { const { page, ctx } = await newPage(browser, token, user);
+    // Open an intervention detail
+    const row = await page.$('table tbody tr:first-child, [class*="card"]:first-child, [class*="intervention"]:not(h1):not([class*="list"])');
+    if (row) {
+      await row.click({ force: true });
+      await wait(page, '[role="dialog"]', 5000);
+      const dialog = await page.$('[role="dialog"]');
+      if (dialog) {
+        await ss(page, dir, 'intervention-detail-modal');
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(400);
+      }
+    }
+    await ctx.close();
+  }
+
+  // ── 13. Discipline Centre ─────────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
+    await page.goto(`${BASE_URL}/admin/discipline`, { waitUntil: 'networkidle' });
+    await wait(page, '[class*="discipline"], h1');
+    await ss(page, dir, 'discipline-centre');
+    await scrollTo(page, 350);
+    await ss(page, dir, 'discipline-centre-charts');
+    await scrollTo(page, 700);
+    await ss(page, dir, 'discipline-centre-leaderboard');
+
+    // Discipline Rules
+    await page.goto(`${BASE_URL}/admin/discipline-rules`, { waitUntil: 'networkidle' });
+    await wait(page, '[class*="rule"], table, h1');
+    await ss(page, dir, 'discipline-rules');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'discipline-rules-scroll');
+    await ctx.close();
+  }
+
+  // ── 14. Reports & Analytics ───────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/admin/reports`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="report"], h1');
-    await ss(page, `${dir}/29-reports.png`);
-    await page.evaluate(() => window.scrollTo(0, 450));
-    await page.waitForTimeout(600);
-    await ss(page, `${dir}/30-reports-charts.png`);
-    await ctx.close(); }
+    await ss(page, dir, 'reports-overview');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'reports-charts');
+    await scrollTo(page, 800);
+    await ss(page, dir, 'reports-bottom');
 
-  // 31-32 Settings
-  { const { page, ctx } = await newPage(browser, token, user);
-    await page.goto(`${BASE_URL}/admin/settings`, { waitUntil: 'networkidle' });
-    await wait(page, 'form, [class*="setting"], h1');
-    await ss(page, `${dir}/31-settings.png`);
-    const tTab = await page.$('button:has-text("Threshold"), [role="tab"]:has-text("Threshold")');
-    if (tTab) { await tTab.click({force:true}); await page.waitForTimeout(700);
-                await ss(page, `${dir}/32-settings-thresholds.png`); }
-    await ctx.close(); }
+    // Try different report tabs if any
+    const tabs = await page.$$('[role="tab"], .tab-btn, button[data-tab]');
+    if (tabs.length > 1) {
+      await tabs[1].click({ force: true });
+      await page.waitForTimeout(900);
+      await ss(page, dir, 'reports-tab2');
+    }
+    await ctx.close();
+  }
 
-  // 33 Notifications
-  { const { page, ctx } = await newPage(browser, token, user);
+  // ── 15. Notifications ─────────────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/admin/notifications`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="notification"], h1');
-    await ss(page, `${dir}/33-notifications.png`); await ctx.close(); }
+    await ss(page, dir, 'notifications');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'notifications-scroll');
+    await ctx.close();
+  }
 
-  // 34 Bulk import
-  { const { page, ctx } = await newPage(browser, token, user);
+  // ── 16. Bulk Import ───────────────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/admin/bulk-import`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="import"], h1');
-    await ss(page, `${dir}/34-bulk-import.png`); await ctx.close(); }
+    await ss(page, dir, 'bulk-import');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'bulk-import-scroll');
+    // Try smart import
+    await page.goto(`${BASE_URL}/admin/smart-import`, { waitUntil: 'networkidle' });
+    await wait(page, '[class*="import"], h1');
+    await ss(page, dir, 'smart-import');
+    await ctx.close();
+  }
+
+  // ── 17. Settings — ALL 5 tabs ─────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
+    await page.goto(`${BASE_URL}/admin/settings`, { waitUntil: 'networkidle' });
+    await wait(page, 'form, [class*="setting"], h1');
+
+    // Tab: Profile (default)
+    await ss(page, dir, 'settings-profile-tab');
+
+    // Tab: Password
+    await clickTab(page, 'Password');
+    await ss(page, dir, 'settings-password-tab');
+
+    // Tab: School Info
+    await clickTab(page, 'School Info');
+    await wait(page, '[class*="school"], p', 4000);
+    await ss(page, dir, 'settings-school-info-tab');
+    await scrollTo(page, 300);
+    await ss(page, dir, 'settings-school-info-scroll');
+
+    // Tab: Preferences
+    const prefDone = await clickTab(page, 'Preferences');
+    if (!prefDone) await clickTab(page, 'Notif');
+    await wait(page, '[class*="pref"], [class*="toggle"], input[type="checkbox"]', 4000);
+    await ss(page, dir, 'settings-preferences-tab');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'settings-preferences-scroll');
+
+    // Tab: Language
+    await clickTab(page, 'Language');
+    await wait(page, '[class*="lang"], select, h2', 4000);
+    await ss(page, dir, 'settings-language-tab');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'settings-language-scroll');
+
+    await ctx.close();
+  }
+
+  // ── 18. User Management ───────────────────────────────────────────────────────
+  {
+    const { page, ctx } = await newPage(browser, token, user);
+    await page.goto(`${BASE_URL}/admin/users`, { waitUntil: 'networkidle' });
+    await wait(page, 'table tbody tr, [class*="user"], h1');
+    await ss(page, dir, 'user-management');
+    await ctx.close();
+  }
 
   const n = fs.readdirSync(dir).filter(f => f.endsWith('.png')).length;
   console.log(`  ✅  Admin done — ${n} screenshots`);
@@ -260,116 +543,174 @@ async function captureAdmin(browser) {
 async function captureTeacher(browser) {
   console.log('\n📸  Teacher Portal (teacher.rodriguez@school.com)');
   const dir = DIRS.teacher;
-  const { token, user } = await getToken('teacher.rodriguez@school.com', 'teacher123', 'ws2025');
+  _counter[dir] = 0;
+  fs.readdirSync(dir).filter(f => f.endsWith('.png')).forEach(f => fs.unlinkSync(`${dir}/${f}`));
 
-  { const { page, ctx } = await newPage(browser, null, null);
-    await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle' });
-    await ss(page, `${dir}/01-login.png`); await ctx.close(); }
+  const { token, user } = await getToken('teacher.rodriguez@school.com', 'teacher123', 'DEFAULT');
 
-  { const { page, ctx } = await newPage(browser, null, null);
+  // Login page — once
+  {
+    const ctx = await browser.newContext({ viewport: VP });
+    const page = await ctx.newPage();
     await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle' });
+    await wait(page, 'input[type="email"]');
     await page.fill('input[type="email"], input[name="email"]', 'teacher.rodriguez@school.com').catch(() => {});
-    await page.fill('input[type="password"]', 'teacher123').catch(() => {});
-    await ss(page, `${dir}/02-login-filled.png`); await ctx.close(); }
+    await page.fill('input[type="password"]', '••••••••').catch(() => {});
+    await ss(page, dir, 'login');
+    await ctx.close();
+  }
 
+  // Dashboard
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="dashboard"], [class*="card"], h1');
-    await ss(page, `${dir}/03-dashboard.png`);
-    await page.evaluate(() => window.scrollTo(0, 450));
-    await page.waitForTimeout(500);
-    await ss(page, `${dir}/04-dashboard-charts.png`);
+    await wait(page, '[class*="dashboard"], h1');
+    await ss(page, dir, 'dashboard');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'dashboard-charts');
     await ctx.close(); }
 
+  // My Classes
   { const { page, ctx } = await newPage(browser, token, user);
-    await page.goto(`${BASE_URL}/teacher/my-classes`, { waitUntil: 'networkidle' });
+    await page.goto(`${BASE_URL}/teacher/classes`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="class"], h1');
-    await ss(page, `${dir}/05-my-classes.png`);
+    await ss(page, dir, 'my-classes');
     const cls = await page.$('[class*="card"]:first-child, table tbody tr:first-child, a[href*="class"]');
-    if (cls) { await cls.click({force:true}); await wait(page, '[class*="student"], table');
-               await ss(page, `${dir}/06-class-detail.png`); }
+    if (cls) {
+      await cls.click({ force: true });
+      await wait(page, '[class*="student"], table, h1');
+      await ss(page, dir, 'class-detail');
+      await scrollTo(page, 400);
+      await ss(page, dir, 'class-detail-scroll');
+    }
     await ctx.close(); }
 
+  // Student profile
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/students/1`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="profile"], h1');
-    await ss(page, `${dir}/07-student-profile.png`); await ctx.close(); }
+    await ss(page, dir, 'student-profile');
+    await scrollTo(page, 350);
+    await ss(page, dir, 'student-profile-detail');
+    await ctx.close(); }
 
+  // Log incident — blank + filled + submitted
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/behaviour/log`, { waitUntil: 'networkidle' });
     await wait(page, 'form, select, h1');
-    await ss(page, `${dir}/08-log-incident-blank.png`);
-    const cs = await page.$('select[name*="class"], [class*="class"] select');
+    await ss(page, dir, 'log-incident-blank');
+    const cs = await page.$('select[name*="class"], [class*="class"] select, select:first-of-type');
     if (cs) { await cs.selectOption({ index: 1 }); await page.waitForTimeout(600); }
-    await ss(page, `${dir}/09-log-incident-class.png`);
-    const ss_ = await page.$('select[name*="student"]');
-    const rs  = await page.$('select[name*="rule"], select[name*="incident"], select[name*="type"]');
-    const sv  = await page.$('select[name*="severity"]');
-    if (ss_) await ss_.selectOption({ index: 1 });
-    if (rs)  await rs.selectOption({ index: 1 });
-    if (sv)  await sv.selectOption({ index: 1 });
-    await page.waitForTimeout(500);
+    const st = await page.$('select[name*="student"]');
+    if (st) { await st.selectOption({ index: 1 }); await page.waitForTimeout(400); }
+    const rt = await page.$('select[name*="rule"], select[name*="type"], select[name*="incident"]');
+    if (rt) { await rt.selectOption({ index: 1 }); await page.waitForTimeout(400); }
+    const sv = await page.$('select[name*="severity"]');
+    if (sv) { await sv.selectOption({ index: 1 }); }
     const ta = await page.$('textarea, input[name*="description"]');
-    if (ta) await ta.fill('Student was disrupting the lesson and refusing to follow instructions.');
-    await ss(page, `${dir}/10-log-incident-filled.png`);
+    if (ta) await ta.fill('Student was disrupting the class by speaking loudly and refusing to follow seating instructions.');
+    await ss(page, dir, 'log-incident-filled');
     const sub = await page.$('button[type="submit"], button:has-text("Submit"), button:has-text("Log Incident")');
-    if (sub) { await sub.click({force:true}); await page.waitForTimeout(1200);
-               await ss(page, `${dir}/11-log-incident-submitted.png`); }
+    if (sub) {
+      await sub.click({ force: true });
+      await page.waitForTimeout(1500);
+      await ss(page, dir, 'log-incident-submitted');
+    }
     await ctx.close(); }
 
+  // Behaviour list
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/behaviour`, { waitUntil: 'networkidle' });
     await wait(page, 'table tbody tr, [class*="incident"], h1');
-    await ss(page, `${dir}/12-behaviour-list.png`); await ctx.close(); }
+    await ss(page, dir, 'behaviour-list');
+    await ctx.close(); }
 
+  // Award merit — blank + filled + confirm + success
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/merits/award`, { waitUntil: 'networkidle' });
     await wait(page, 'form, select, h1');
-    await ss(page, `${dir}/13-award-merit-blank.png`);
+    await ss(page, dir, 'award-merit-blank');
     const s1 = await page.$('select[name*="student"], select:nth-of-type(1)');
-    const s2 = await page.$('select[name*="type"], select[name*="merit"]');
+    const s2 = await page.$('select[name*="type"], select:nth-of-type(2)');
     if (s1) await s1.selectOption({ index: 1 });
     if (s2) await s2.selectOption({ index: 1 });
     const r = await page.$('textarea, input[name*="reason"]');
-    if (r) await r.fill('Excellent participation and academic improvement this term');
-    await ss(page, `${dir}/14-award-merit-filled.png`);
-    const conf = await page.$('button:has-text("Confirm"), button:has-text("Award"), button[type="submit"]');
-    if (conf) { await conf.click({force:true}); await wait(page, '[role="dialog"], [class*="confirm"]');
-                await ss(page, `${dir}/15-award-merit-confirm.png`);
-                const yes = await page.$('[role="dialog"] button:has-text("Confirm"), [role="dialog"] button:has-text("Yes")');
-                if (yes) { await yes.click({force:true}); await page.waitForTimeout(1000);
-                           await ss(page, `${dir}/16-award-merit-success.png`); } }
+    if (r) await r.fill('Excellent participation in class discussions and outstanding submission of the science project.');
+    await ss(page, dir, 'award-merit-filled');
+    const conf = await page.$('button[type="submit"], button:has-text("Award"), button:has-text("Confirm")');
+    if (conf) {
+      await conf.click({ force: true });
+      await wait(page, '[role="dialog"], [class*="confirm"], [class*="success"]', 5000);
+      await ss(page, dir, 'award-merit-confirm');
+      const yes = await page.$('[role="dialog"] button:has-text("Confirm"), [role="dialog"] button:has-text("Yes"), [role="dialog"] button:has-text("Award")');
+      if (yes) {
+        await yes.click({ force: true });
+        await page.waitForTimeout(1200);
+        await ss(page, dir, 'award-merit-success');
+      }
+    }
     await ctx.close(); }
 
+  // Merits list
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/merits`, { waitUntil: 'networkidle' });
     await wait(page, 'table tbody tr, [class*="merit"], h1');
-    await ss(page, `${dir}/17-merits-list.png`); await ctx.close(); }
+    await ss(page, dir, 'merits-list');
+    await ctx.close(); }
 
+  // Detentions
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/detentions`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="detention"], h1');
-    await ss(page, `${dir}/18-detentions.png`); await ctx.close(); }
+    await ss(page, dir, 'detentions');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'detentions-scroll');
+    await ctx.close(); }
 
+  // Interventions
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/interventions`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="intervention"], h1');
-    await ss(page, `${dir}/19-interventions.png`); await ctx.close(); }
+    await ss(page, dir, 'interventions');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'interventions-scroll');
+    await ctx.close(); }
 
+  // Consequences
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/consequences`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="consequence"], h1');
-    await ss(page, `${dir}/20-consequences.png`); await ctx.close(); }
+    await ss(page, dir, 'consequences');
+    await ctx.close(); }
 
+  // Reports
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/reports`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="report"], h1');
-    await ss(page, `${dir}/21-reports.png`); await ctx.close(); }
+    await ss(page, dir, 'reports');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'reports-scroll');
+    await ctx.close(); }
 
+  // Notifications
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/notifications`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="notification"], h1');
-    await ss(page, `${dir}/22-notifications.png`); await ctx.close(); }
+    await ss(page, dir, 'notifications');
+    await ctx.close(); }
+
+  // Settings — all tabs
+  { const { page, ctx } = await newPage(browser, token, user);
+    await page.goto(`${BASE_URL}/teacher/settings`, { waitUntil: 'networkidle' });
+    await wait(page, 'form, [class*="setting"], h1');
+    await ss(page, dir, 'settings-profile');
+    await clickTab(page, 'Password');
+    await ss(page, dir, 'settings-password');
+    const prefDone = await clickTab(page, 'Preferences');
+    if (!prefDone) await clickTab(page, 'Notif');
+    await ss(page, dir, 'settings-preferences');
+    await clickTab(page, 'Language');
+    await ss(page, dir, 'settings-language');
+    await ctx.close(); }
 
   const n = fs.readdirSync(dir).filter(f => f.endsWith('.png')).length;
   console.log(`  ✅  Teacher done — ${n} screenshots`);
@@ -377,135 +718,142 @@ async function captureTeacher(browser) {
 
 // ── GRADE HEAD ─────────────────────────────────────────────────────────────────
 async function captureGradeHead(browser) {
-  console.log('\n📸  Grade Head Portal (teacher.johnson@school.com — Grade 8)');
+  console.log('\n📸  Grade Head Portal (teacher.johnson@school.com)');
   const dir = DIRS.grade;
-  const { token, user } = await getToken('teacher.johnson@school.com', 'teacher123', 'ws2025');
+  _counter[dir] = 0;
+  fs.readdirSync(dir).filter(f => f.endsWith('.png')).forEach(f => fs.unlinkSync(`${dir}/${f}`));
 
-  { const { page, ctx } = await newPage(browser, null, null);
-    await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle' });
-    await ss(page, `${dir}/01-login.png`); await ctx.close(); }
+  const { token, user } = await getToken('teacher.johnson@school.com', 'teacher123', 'DEFAULT');
 
-  { const { page, ctx } = await newPage(browser, null, null);
+  { const ctx = await browser.newContext({ viewport: VP });
+    const page = await ctx.newPage();
     await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle' });
     await page.fill('input[type="email"], input[name="email"]', 'teacher.johnson@school.com').catch(() => {});
-    await page.fill('input[type="password"]', 'teacher123').catch(() => {});
-    await ss(page, `${dir}/02-login-filled.png`); await ctx.close(); }
+    await page.fill('input[type="password"]', '••••••••').catch(() => {});
+    await ss(page, dir, 'login');
+    await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/grade-head`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="dashboard"], [class*="card"], h1');
-    await ss(page, `${dir}/03-dashboard.png`);
-    await page.evaluate(() => window.scrollTo(0, 450));
-    await page.waitForTimeout(500);
-    await ss(page, `${dir}/04-dashboard-charts.png`);
+    await wait(page, '[class*="dashboard"], h1');
+    await ss(page, dir, 'dashboard');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'dashboard-charts');
     await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/grade-head/students`, { waitUntil: 'networkidle' });
     await wait(page, 'table tbody tr, [class*="student"], h1');
-    await ss(page, `${dir}/05-students.png`);
+    await ss(page, dir, 'students-list');
     const inp = await page.$('input[placeholder*="search" i]');
-    if (inp) { await inp.fill('Sipho'); await page.waitForTimeout(700);
-               await ss(page, `${dir}/06-students-search.png`); await inp.fill(""); }
+    if (inp) { await inp.fill('Zoe'); await page.waitForTimeout(700);
+               await ss(page, dir, 'students-search'); await inp.fill(''); }
     await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
-    await page.goto(`${BASE_URL}/grade-head/students/1`, { waitUntil: 'networkidle' });
+    await page.goto(`${BASE_URL}/grade-head/students/4`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="profile"], h1');
-    await ss(page, `${dir}/07-student-profile.png`);
-    const tab = await page.$('[role="tab"]:has-text("Incident"), [role="tab"]:has-text("History")');
-    if (tab) { await tab.click({force:true}); await page.waitForTimeout(700);
-               await ss(page, `${dir}/08-student-history.png`); }
+    await ss(page, dir, 'student-profile');
+    const tab = await page.$('[role="tab"]:has-text("Incident"), [role="tab"]:has-text("History"), [role="tab"]:has-text("Behaviour")');
+    if (tab) { await tab.click({ force: true }); await page.waitForTimeout(700);
+               await ss(page, dir, 'student-incidents-tab'); }
     await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/grade-head/classes`, { waitUntil: 'networkidle' });
     await wait(page, 'table tbody tr, [class*="class"], h1');
-    await ss(page, `${dir}/09-classes.png`); await ctx.close(); }
+    await ss(page, dir, 'classes');
+    await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/grade-head/behaviour`, { waitUntil: 'networkidle' });
     await wait(page, 'table tbody tr, [class*="incident"], h1');
-    await ss(page, `${dir}/10-behaviour-all.png`);
+    await ss(page, dir, 'behaviour-all');
     const pb = await page.$('button:has-text("Pending"), [value="pending"]');
-    if (pb) { await pb.click({force:true}); await page.waitForTimeout(600);
-              await ss(page, `${dir}/11-behaviour-pending.png`); }
+    if (pb) { await pb.click({ force: true }); await page.waitForTimeout(700);
+              await ss(page, dir, 'behaviour-pending'); }
     await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/grade-head/behaviour/log`, { waitUntil: 'networkidle' });
     await wait(page, 'form, select, h1');
-    await ss(page, `${dir}/12-log-incident-blank.png`);
+    await ss(page, dir, 'log-incident-blank');
     const cs = await page.$('select[name*="class"]');
     if (cs) { await cs.selectOption({ index: 1 }); await page.waitForTimeout(600); }
     const st = await page.$('select[name*="student"]');
-    if (st) await st.selectOption({ index: 1 });
-    const ru = await page.$('select[name*="rule"], select[name*="type"]');
-    if (ru) await ru.selectOption({ index: 1 });
+    if (st) { await st.selectOption({ index: 1 }); }
     const ta = await page.$('textarea');
     if (ta) await ta.fill('Repeated disruption during class — third occurrence this month.');
-    await ss(page, `${dir}/13-log-incident-filled.png`);
+    await ss(page, dir, 'log-incident-filled');
     await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/grade-head/merits`, { waitUntil: 'networkidle' });
     await wait(page, 'table tbody tr, [class*="merit"], h1');
-    await ss(page, `${dir}/14-merits.png`);
+    await ss(page, dir, 'merits-list');
     await page.goto(`${BASE_URL}/grade-head/merits/award`, { waitUntil: 'networkidle' });
     await wait(page, 'form, select, h1');
-    await ss(page, `${dir}/15-award-merit-blank.png`);
+    await ss(page, dir, 'award-merit-blank');
     const s1 = await page.$('select[name*="student"], select:nth-of-type(1)');
     const s2 = await page.$('select[name*="type"]');
     if (s1) await s1.selectOption({ index: 1 });
     if (s2) await s2.selectOption({ index: 1 });
-    const r = await page.$('textarea, input[name*="reason"]');
-    if (r) await r.fill('Outstanding leadership in Grade 8 activities');
-    await ss(page, `${dir}/16-award-merit-filled.png`);
+    const r = await page.$('textarea');
+    if (r) await r.fill('Outstanding leadership in Grade 8 activities and excellent sportsmanship.');
+    await ss(page, dir, 'award-merit-filled');
     await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
-    await page.goto(`${BASE_URL}/grade-head/detentions`, { waitUntil: 'networkidle' });
+    await page.goto(`${BASE_URL}/grade-head/detention-sessions`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="detention"], h1');
-    await ss(page, `${dir}/17-detentions.png`); await ctx.close(); }
+    await ss(page, dir, 'detention-sessions');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'detention-sessions-scroll');
+    await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/grade-head/my-teachings`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="teaching"], [class*="class"], h1');
-    await ss(page, `${dir}/18-my-teachings.png`); await ctx.close(); }
-
-  { const { page, ctx } = await newPage(browser, token, user);
-    await page.goto(`${BASE_URL}/grade-head/discipline-center`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="discipline"], h1');
-    await ss(page, `${dir}/19-discipline-centre.png`);
-    await page.evaluate(() => window.scrollTo(0, 400));
-    await page.waitForTimeout(500);
-    await ss(page, `${dir}/20-discipline-charts.png`);
+    await wait(page, '[class*="teach"], [class*="class"], h1');
+    await ss(page, dir, 'my-teachings');
     await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
-    await page.goto(`${BASE_URL}/grade-head/consequences`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="consequence"], h1');
-    await ss(page, `${dir}/21-consequences.png`); await ctx.close(); }
+    await page.goto(`${BASE_URL}/grade-head/discipline`, { waitUntil: 'networkidle' });
+    await wait(page, '[class*="discipline"], h1');
+    await ss(page, dir, 'discipline-centre');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'discipline-charts');
+    await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
-    await page.goto(`${BASE_URL}/grade-head/interventions`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="intervention"], h1');
-    await ss(page, `${dir}/22-interventions.png`); await ctx.close(); }
+    await page.goto(`${BASE_URL}/grade-head/consequence-management`, { waitUntil: 'networkidle' });
+    await wait(page, '[class*="consequence"], h1');
+    await ss(page, dir, 'consequence-management');
+    await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/grade-head/reports`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="report"], h1');
-    await ss(page, `${dir}/23-reports.png`); await ctx.close(); }
+    await ss(page, dir, 'reports');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'reports-scroll');
+    await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/grade-head/notifications`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="notification"], h1');
-    await ss(page, `${dir}/24-notifications.png`); await ctx.close(); }
+    await ss(page, dir, 'notifications');
+    await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/grade-head/settings`, { waitUntil: 'networkidle' });
     await wait(page, 'form, [class*="setting"], h1');
-    await ss(page, `${dir}/25-settings.png`); await ctx.close(); }
+    await ss(page, dir, 'settings-profile');
+    await clickTab(page, 'Password');
+    await ss(page, dir, 'settings-password');
+    await clickTab(page, 'Language');
+    await ss(page, dir, 'settings-language');
+    await ctx.close(); }
 
   const n = fs.readdirSync(dir).filter(f => f.endsWith('.png')).length;
   console.log(`  ✅  Grade Head done — ${n} screenshots`);
@@ -515,117 +863,137 @@ async function captureGradeHead(browser) {
 async function captureParent(browser) {
   console.log('\n📸  Parent Portal (parent1@school.com)');
   const dir = DIRS.parent;
-  const { token, user } = await getToken('parent1@school.com', 'parent123', 'ws2025');
+  _counter[dir] = 0;
+  fs.readdirSync(dir).filter(f => f.endsWith('.png')).forEach(f => fs.unlinkSync(`${dir}/${f}`));
 
-  { const { page, ctx } = await newPage(browser, null, null);
-    await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle' });
-    await ss(page, `${dir}/01-login.png`); await ctx.close(); }
+  const { token, user } = await getToken('parent1@school.com', 'parent123', 'DEFAULT');
 
-  { const { page, ctx } = await newPage(browser, null, null);
+  { const ctx = await browser.newContext({ viewport: VP });
+    const page = await ctx.newPage();
     await page.goto(`${BASE_URL}/login`, { waitUntil: 'networkidle' });
     await page.fill('input[type="email"], input[name="email"]', 'parent1@school.com').catch(() => {});
-    await page.fill('input[type="password"]', 'parent123').catch(() => {});
-    await ss(page, `${dir}/02-login-filled.png`); await ctx.close(); }
+    await page.fill('input[type="password"]', '••••••••').catch(() => {});
+    await ss(page, dir, 'login');
+    await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/parent`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="dashboard"], [class*="card"], h1');
-    await ss(page, `${dir}/03-dashboard.png`);
-    await page.evaluate(() => window.scrollTo(0, 400));
-    await page.waitForTimeout(500);
-    await ss(page, `${dir}/04-dashboard-activity.png`);
+    await wait(page, '[class*="dashboard"], h1');
+    await ss(page, dir, 'dashboard');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'dashboard-scroll');
     await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/parent/children`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="child"], [class*="student"], h1');
-    await ss(page, `${dir}/05-my-children.png`); await ctx.close(); }
-
-  { const { page, ctx } = await newPage(browser, token, user);
-    await page.goto(`${BASE_URL}/parent/children/1`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="profile"], h1');
-    await ss(page, `${dir}/06-child-profile.png`);
-    await page.evaluate(() => window.scrollTo(0, 400));
-    await page.waitForTimeout(500);
-    await ss(page, `${dir}/07-child-profile-scroll.png`);
+    await wait(page, '[class*="child"], h1');
+    await ss(page, dir, 'my-children');
+    const child = await page.$('[class*="card"]:first-child, table tbody tr:first-child, a[href*="children"]');
+    if (child) {
+      await child.click({ force: true });
+      await wait(page, '[class*="profile"], h1');
+      await ss(page, dir, 'child-profile');
+      await scrollTo(page, 400);
+      await ss(page, dir, 'child-profile-scroll');
+    }
     await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/parent/behaviour`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="incident"], table, h1');
-    await ss(page, `${dir}/08-behaviour.png`);
-    const row = await page.$('table tbody tr:first-child, [class*="incident"]:first-child');
-    if (row) { await row.click({force:true}); await wait(page, '[role="dialog"]');
-               await ss(page, `${dir}/09-behaviour-detail.png`);
-               await page.keyboard.press('Escape'); }
+    await ss(page, dir, 'behaviour');
+    const row = await page.$('table tbody tr:first-child, [class*="card"]:first-child');
+    if (row) {
+      await row.click({ force: true });
+      await wait(page, '[role="dialog"]', 5000);
+      const d = await page.$('[role="dialog"]');
+      if (d) { await ss(page, dir, 'behaviour-detail'); await page.keyboard.press('Escape'); }
+    }
     await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/parent/merits`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="merit"], table, h1');
-    await ss(page, `${dir}/10-merits.png`); await ctx.close(); }
+    await ss(page, dir, 'merits');
+    await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/parent/attendance`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="attendance"], h1');
-    await ss(page, `${dir}/11-attendance.png`); await ctx.close(); }
+    await ss(page, dir, 'attendance');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'attendance-scroll');
+    await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/parent/detentions`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="detention"], h1');
-    await ss(page, `${dir}/12-detentions.png`); await ctx.close(); }
+    await ss(page, dir, 'detentions');
+    await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/parent/interventions`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="intervention"], h1');
-    await ss(page, `${dir}/13-interventions.png`); await ctx.close(); }
+    await ss(page, dir, 'interventions');
+    await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/parent/consequences`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="consequence"], h1');
-    await ss(page, `${dir}/14-consequences.png`);
-    const item = await page.$('[class*="consequence"]:first-child, table tbody tr:first-child');
-    if (item) { await item.click({force:true}); await wait(page, '[role="dialog"]');
-                await ss(page, `${dir}/15-consequence-detail.png`);
-                await page.keyboard.press('Escape'); }
+    await ss(page, dir, 'consequences');
+    const item = await page.$('[class*="card"]:first-child, table tbody tr:first-child');
+    if (item) {
+      await item.click({ force: true });
+      await wait(page, '[role="dialog"]', 5000);
+      const d = await page.$('[role="dialog"]');
+      if (d) { await ss(page, dir, 'consequence-detail'); await page.keyboard.press('Escape'); }
+    }
     await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/parent/messages`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="message"], table, h1');
-    await ss(page, `${dir}/16-messages-inbox.png`);
+    await ss(page, dir, 'messages-inbox');
     const sentTab = await page.$('[role="tab"]:has-text("Sent"), button:has-text("Sent")');
-    if (sentTab) { await sentTab.click({force:true}); await page.waitForTimeout(600);
-                   await ss(page, `${dir}/17-messages-sent.png`); }
-    const comp = await page.$('button:has-text("Compose"), button:has-text("New Message")');
-    if (comp) { await comp.click({force:true}); await wait(page, '[role="dialog"]');
-                await ss(page, `${dir}/18-compose-blank.png`);
-                const sub = await page.$('[role="dialog"] input[placeholder*="subject" i]');
-                const bod = await page.$('[role="dialog"] textarea');
-                if (sub) await sub.fill('Question about behaviour report');
-                if (bod) await bod.fill("Good day, I would like to discuss my child's recent behaviour incident. Please advise on available times.");
-                await ss(page, `${dir}/19-compose-filled.png`);
-                await page.keyboard.press('Escape'); }
+    if (sentTab) { await sentTab.click({ force: true }); await page.waitForTimeout(600);
+                   await ss(page, dir, 'messages-sent'); }
+    const comp = await page.$('button:has-text("Compose"), button:has-text("New Message"), button:has-text("New")');
+    if (comp) {
+      await comp.click({ force: true });
+      await wait(page, '[role="dialog"]');
+      await ss(page, dir, 'compose-blank');
+      const sub = await page.$('[role="dialog"] input[placeholder*="subject" i], [role="dialog"] input[name*="subject"]');
+      const bod = await page.$('[role="dialog"] textarea');
+      if (sub) await sub.fill('Question about my child\'s recent behaviour report');
+      if (bod) await bod.fill("Good day, I would like to discuss the recent incident report for my child. Please advise on available times for a meeting. Thank you.");
+      await ss(page, dir, 'compose-filled');
+      await page.keyboard.press('Escape');
+    }
     await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/parent/notifications`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="notification"], h1');
-    await ss(page, `${dir}/20-notifications.png`); await ctx.close(); }
+    await ss(page, dir, 'notifications');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'notifications-scroll');
+    await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/parent/profile`, { waitUntil: 'networkidle' });
     await wait(page, 'form, [class*="profile"], h1');
-    await ss(page, `${dir}/21-profile.png`);
-    await page.evaluate(() => window.scrollTo(0, 400));
-    await page.waitForTimeout(400);
-    await ss(page, `${dir}/22-profile-detail.png`);
+    await ss(page, dir, 'profile');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'profile-scroll');
     await ctx.close(); }
 
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/parent/settings`, { waitUntil: 'networkidle' });
     await wait(page, 'form, [class*="setting"], h1');
-    await ss(page, `${dir}/23-settings.png`); await ctx.close(); }
+    await ss(page, dir, 'settings');
+    await scrollTo(page, 400);
+    await ss(page, dir, 'settings-scroll');
+    await ctx.close(); }
 
   const n = fs.readdirSync(dir).filter(f => f.endsWith('.png')).length;
   console.log(`  ✅  Parent done — ${n} screenshots`);

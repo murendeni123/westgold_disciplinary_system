@@ -34,30 +34,24 @@ router.get('/', authenticateToken, async (req, res) => {
 
         // Get school information
         const school = await dbGet(`
-            SELECT 
+            SELECT
                 id,
                 name,
                 code,
-                school_code,
+                code AS school_code,
                 subdomain,
                 email,
                 phone,
                 address,
                 city,
-                province,
-                country,
-                postal_code,
                 status,
-                primary_color,
-                secondary_color,
-                accent_color,
-                timezone,
-                date_format,
-                currency,
                 max_students,
                 max_teachers,
+                subscription_tier,
+                plan_type,
+                global_language,
                 created_at
-            FROM public.schools 
+            FROM public.schools
             WHERE id = $1
         `, [schoolId]);
         

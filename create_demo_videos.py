@@ -1,14 +1,14 @@
 """
-Classly Portal Demo Video Generator  (v2 — voiceover + ambient music)
+Classly Portal Demo Video Generator  (v3 — full narration, no voice cutoff)
 Creates high-quality MP4 walkthrough videos for each portal from screenshots.
 
 Video specs:
   Resolution  : 1440 × 900 (native screenshot size)
   Frame rate  : 30 fps
   Codec       : H.264 CRF 18 (visually lossless), AAC 128 k audio
-  Audio       : Kokoro neural TTS (af_heart) + scipy-generated ambient chords
-  Transitions : 0.6 s smooth crossfade between slides
-  Slide hold  : 4 s per screenshot, 2.2 s per section header, 4.5 s title cards
+  Audio       : Kokoro neural TTS (af_heart) + ambient chord music
+  Transitions : 0.6 s smooth crossfade
+  Slide hold  : dynamic — each slide stays for the full narration + 2 s buffer
 """
 
 import os
@@ -37,19 +37,26 @@ from moviepy import ImageClip, concatenate_videoclips
 from moviepy.video.fx import CrossFadeIn
 
 # ── Constants ──────────────────────────────────────────────────────────────────
-W, H        = 1440, 900
-FPS         = 30
-CRF         = 18
-SLIDE_DUR   = 5.0   # 5 s gives narration (≤3.8 s) + 0.75 s lead-in + buffer
-SECTION_DUR = 2.2
-TITLE_DUR   = 4.5
-FADE        = 0.6
-SAMPLE_RATE = 44100
+W, H            = 1440, 900
+FPS             = 30
+CRF             = 18
+SLIDE_DUR_MIN   = 6.0    # minimum slide hold (seconds)
+SLIDE_DUR_DEF   = 8.0    # default if no narration found
+SLIDE_CONT_DUR  = 5.0    # "continuation" scrolled shots — shorter hold
+SECTION_DUR     = 2.2
+TITLE_DUR       = 5.0
+FADE            = 0.6
+PRE_SILENCE_MS  = 900    # voice starts this many ms after slide appears
+SAMPLE_RATE     = 44100
 
 FONT_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
 FONT_REG  = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
 
 SCREENSHOTS = Path("/home/user/westgold_disciplinary_system/screenshots")
+
+# Suffixes that indicate a "continuation" slide (scrolled further down the same page)
+CONTINUATION_SUFFIXES = ("-scroll", "-bottom", "-detail", "-charts", "-scroll",
+                          "-filled", "-leaderboard")
 
 # ── Brand colours ──────────────────────────────────────────────────────────────
 BRAND = {
@@ -59,235 +66,587 @@ BRAND = {
     "parent":     {"primary": (220, 38,  38), "accent": (254, 226, 226), "label": "Parent Portal"},
 }
 
-# ── Narration scripts ──────────────────────────────────────────────────────────
-# ~8-12 words each so they fit comfortably within the 4-second slide window.
+# ── Narrations ────────────────────────────────────────────────────────────────
+# Each narration is ~20–25 words so Kokoro produces ~6–7 seconds of speech,
+# which fits comfortably within the SLIDE_DUR_MIN of 6 seconds + buffer.
 NARRATIONS = {
-    # Login
-    "login-page":                    "Welcome to Classly. Sign in with your school credentials to begin.",
-    "login-credentials-filled":      "Enter your email and password, then click Sign In.",
-    "login-credentials-entered":     "Enter your email and password, then click Sign In.",
-    # Dashboard
-    "dashboard-overview":            "The dashboard shows a complete overview of school discipline activity.",
-    "dashboard-quick-actions":       "Use quick actions to jump straight to common tasks.",
-    "dashboard-behaviour-trends":    "Behaviour trend charts help you spot patterns and at-risk students early.",
-    "dashboard-pending-incidents":   "Pending incidents awaiting your review are highlighted here.",
-    "dashboard-charts":              "Charts give a visual summary of recent behaviour and merit data.",
-    "dashboard-recent-activity":     "Recent activity keeps you up to date with the latest events.",
-    "dashboard-class-activity":      "Class activity highlights which groups need the most attention.",
-    # Students
-    "students-list":                 "The Students module lists every enrolled student with class and behaviour summary.",
-    "students-search":               "Use the search bar to quickly find any student by name or number.",
-    "students-add-modal":            "Add a new student by entering their name, grade, and parent details.",
-    "student-profile-overview":      "Each student profile shows contact details, class, and point totals.",
-    "student-profile-history":       "The history tab shows every incident and merit logged for this student.",
-    "student-profile-incidents":     "Review all logged incidents for this student in one place.",
-    # Classes
-    "classes-list":                  "Classes shows all active groups, assigned teachers, and enrolment counts.",
-    "classes-overview":              "An overview of all classes in the school with their current status.",
-    "class-detail-students":         "Drill into a class to view its students and behaviour summaries.",
-    "class-detail-actions":          "Class actions let you log incidents or award merits to the whole group.",
-    # Teachers
-    "teachers-list":                 "Manage teaching staff, view class assignments, and set grade head roles.",
-    # Behaviour
-    "behaviour-all-incidents":       "All Incidents shows every behaviour report logged across the school.",
-    "behaviour-incidents":           "Browse all logged incidents with status and severity indicators.",
-    "behaviour-incidents-list":      "Filter and review incidents logged by your classes.",
-    "behaviour-pending-filter":      "Filter to Pending to focus on incidents that still need your approval.",
-    "behaviour-pending-only":        "The Pending view focuses only on incidents awaiting review.",
-    "behaviour-incident-detail-modal": "Click an incident to view full details and choose an outcome.",
-    "behaviour-incident-detail":     "The detail view shows the full incident record and supporting information.",
-    "behaviour-before-approve":      "Review the incident carefully before approving or rejecting.",
-    "behaviour-incident-approved":   "Once approved, demerit points are applied to the student automatically.",
-    # Logging incidents
-    "log-incident-blank-form":       "Log a new behaviour incident by selecting the student and rule broken.",
-    "log-incident-form":             "Select the student, rule, and severity to start logging an incident.",
-    "log-incident-class-selected":   "Choose the class first to filter the student list.",
-    "log-incident-dropdowns-filled": "Select the incident type, rule broken, and severity level.",
-    "log-incident-form-complete":    "Add a description and any additional notes before submitting.",
-    "log-incident-filled":           "Review all details are correct before submitting the incident.",
-    "log-incident-submit-area":      "Click Submit to send the incident for review.",
-    "log-incident-submitted":        "The incident is submitted and now pending admin approval.",
-    # Merits
-    "merits-list":                   "The Merits module shows all recognition awards given to students.",
-    "merit-award-form":              "Award a merit by selecting the student and achievement being recognised.",
-    "award-merit-blank-form":        "Select a student and merit type to start awarding recognition.",
-    "award-merit-dropdowns-filled":  "Choose the merit category and point value for this award.",
-    "award-merit-form-complete":     "Add a reason for the award before confirming.",
-    "award-merit-form":              "Fill in the student, category, and reason for this merit award.",
-    "award-merit-filled":            "Review the merit details, then click Confirm to proceed.",
-    "award-merit-confirmation-modal": "Confirm the award details before finalising.",
-    "award-merit-confirmation":      "Confirm the details before saving this merit award.",
-    "award-merit-success":           "The merit award has been recorded and the student notified.",
-    # Detentions
-    "detention-sessions-list":       "The Detentions module shows all scheduled sessions and their status.",
-    "detentions-overview":           "Overview of upcoming and past detention sessions across the school.",
-    "detention-qualifying-students": "Students who have accumulated enough demerit points appear here.",
-    "detentions-student-list":       "Students eligible for detention based on their demerit totals.",
-    "detention-create-modal-empty":  "Create a new detention session by setting the date, time, and venue.",
-    "detention-create-modal-filled": "Review the session details before saving.",
-    "detention-session-created":     "The new session is created and ready for student assignments.",
-    "detention-session-details-modal": "Click a session to manage attendance and add students.",
-    "detention-session-details":     "View session details and manage the list of attending students.",
-    "detention-add-students-modal":  "Add qualifying students to this session with one click.",
-    "detentions-detail":             "Detailed view of a specific detention session and its participants.",
-    # Discipline centre
-    "discipline-center":             "The Discipline Centre is your analytics hub for school-wide behaviour data.",
-    "discipline-center-charts":      "Charts break down incidents by category, class, and time period.",
-    "discipline-center-leaderboards": "Leaderboards highlight classes and students with the most recorded activity.",
-    "discipline-rules":              "Manage the school's discipline rules, point values, and categories.",
-    # Consequences
-    "consequences-list":             "Consequences tracks all formal sanctions assigned to students.",
-    "consequence-management":        "Update consequence statuses, add notes, and track resolution progress.",
-    "consequences-overview":         "An overview of all active and resolved consequences across the school.",
-    "consequence-details-modal":     "View the full details of a specific consequence assignment.",
-    # Interventions
-    "interventions-list":            "Interventions logs supportive actions for students who need additional help.",
-    "interventions-filters":         "Filter interventions by type, status, or student.",
-    "interventions-guided-start":    "The guided workflow walks you through setting up a new intervention plan.",
-    "interventions-overview":        "Overview of all active support interventions currently in place.",
-    # Reports
-    "reports-analytics":             "Reports generates detailed analytics on behaviour trends and student progress.",
-    "reports-charts":                "Visual charts make it easy to present data to parents and leadership.",
-    "reports-overview":              "The Reports overview summarises key metrics for the current academic period.",
-    # Settings
-    "settings-overview":             "Settings lets you configure school-wide preferences and system behaviour.",
-    "settings-thresholds":           "Set demerit thresholds that trigger automatic detention referrals.",
-    "settings-profile":              "Update your profile details and account preferences here.",
-    "settings-profile-tab":          "The Profile tab lets you update your personal and contact information.",
-    "settings-password-tab":         "Change your password here to keep your account secure.",
-    "settings-school-children-tab":  "Manage which children are linked to your parent account.",
-    "settings-preferences-tab":      "Set your notification preferences and language settings.",
-    "settings-password":             "Update your password from the Security settings tab.",
-    "settings-preferences":          "Configure notification and display preferences.",
-    # Notifications
-    "notifications-page":            "The Notifications centre shows all system alerts and messages.",
-    "notifications-list":            "View all recent notifications including incident updates and merit awards.",
-    "notifications-older":           "Older notifications are archived here for your reference.",
-    "notifications":                 "Notifications keep you informed of important events in real time.",
-    # Bulk operations
-    "bulk-import":                   "Bulk import lets you upload student or teacher records from a spreadsheet.",
-    # Messaging
-    "messages-inbox":                "The Messages inbox shows all received communications from school staff.",
-    "messages-sent":                 "Sent messages keeps a record of all communications you have sent.",
-    "messages-compose-modal":        "Compose a message by selecting a recipient and entering your text.",
-    "messages-compose-filled":       "Review your message before sending it to the school.",
-    "messages-sent-confirmation":    "Your message has been sent and the recipient will be notified.",
-    # Parent-specific
-    "children-overview":             "My Children shows a summary card for each of your children.",
-    "child-profile-liam":            "Click a child's card to view their full profile and activity history.",
-    "child-profile-liam-detail":     "The detailed profile shows behaviour, merits, and attendance at a glance.",
-    "child-profile-aisha":           "Each child has their own profile with a complete activity history.",
-    "attendance-overview":           "Attendance shows your child's record for the current term.",
-    "attendance-records":            "Detailed records show every present, absent, and late entry.",
-    "profile-overview":              "Your profile shows your personal details and linked children.",
-    "profile-editing":               "Edit your contact details and emergency contact information here.",
-    "profile-emergency-contacts":    "Keep emergency contacts up to date for school records.",
-    "profile-saved":                 "Your profile changes have been saved successfully.",
-    "sidebar-navigation":            "The sidebar gives you quick access to every section of the portal.",
-    # Grade-head specific
-    "grade-dashboard-overview":      "The Grade dashboard shows behaviour data for your entire grade.",
-    "grade-dashboard-quick-actions": "Quick actions let you manage grade-level discipline at a glance.",
-    "grade-dashboard-charts":        "Charts visualise trends across all classes within your grade.",
-    "my-dashboard-overview":         "Your personal dashboard shows activity for your own classes.",
-    "my-dashboard-activity-feed":    "The activity feed shows recent incidents and merits from your classes.",
-    "my-teachings":                  "My Teachings lists all classes you currently teach.",
-    "my-teachings-class-detail":     "Select a class to view its students and manage their behaviour.",
-    "my-class":                      "My Class shows the class you are responsible for as grade head.",
-    # Short-stem names used by the new capture script
-    "login":                         "Welcome to Classly. Sign in with your school credentials to begin.",
-    "login-filled":                  "Enter your email and password, then click Sign In to access the portal.",
-    "dashboard":                     "The dashboard gives you a live overview of school discipline activity.",
-    "dashboard-charts":              "Scroll down to see behaviour trend charts and performance summaries.",
-    "dashboard-activity":            "Recent activity shows the latest incidents, merits, and alerts.",
-    "students":                      "The Students module lists every enrolled student with their class and point totals.",
-    "students-search":               "Use the search bar to instantly locate any student by name.",
-    "add-student-modal":             "Add a new student by entering their details and linking a parent account.",
-    "student-profile":               "Each student profile shows their personal details, class, and point history.",
-    "student-incidents":             "The incidents tab shows every behaviour event logged for this student.",
-    "student-history":               "The history tab shows every incident and merit recorded for this student.",
-    "classes":                       "Classes shows all active groups, their teachers, and enrolment counts.",
-    "teachers":                      "Manage teaching staff, view assignments, and assign grade head roles.",
-    "behaviour-all":                 "All Incidents displays every behaviour report logged across the school.",
-    "behaviour-pending":             "Filter to Pending to focus only on incidents that still need approval.",
-    "incident-detail":               "Click any incident to review the full details and select an outcome.",
-    "incident-approved":             "Once approved, demerit points are automatically applied to the student.",
-    "merits":                        "The Merits module tracks all recognition awards given across the school.",
-    "merit-award-form":              "Award a merit by selecting the student and the achievement being recognised.",
-    "merit-form-filled":             "Review the details before confirming the merit award.",
-    "detentions":                    "The Detentions module shows all scheduled sessions and their current status.",
-    "qualifying-students":           "Students who have reached the demerit threshold are listed here for detention.",
-    "create-detention-modal":        "Schedule a new detention session by setting the date, time, and venue.",
-    "create-detention-filled":       "Review the session details carefully before saving.",
-    "detention-detail":              "Open a session to manage attendance and add qualifying students.",
-    "discipline-centre":             "The Discipline Centre is your analytics hub for school-wide behaviour data.",
-    "discipline-leaderboard":        "Leaderboards rank classes and students by behaviour and merit performance.",
-    "discipline-charts":             "Charts break down incidents and trends by category, class, and time period.",
-    "discipline-rules":              "Manage the school's discipline rules, point values, and categories.",
-    "consequences":                  "The Consequences module tracks all formal sanctions assigned to students.",
-    "interventions":                 "Interventions logs supportive actions for students who need extra help.",
-    "reports":                       "Reports generates detailed analytics on behaviour trends and student progress.",
-    "reports-charts":                "Visual charts make it easy to present insights to parents and leadership.",
-    "settings":                      "Settings lets you configure school-wide preferences and system behaviour.",
-    "settings-thresholds":           "Set demerit thresholds that automatically trigger detention referrals.",
-    "notifications":                 "The Notifications centre shows all system alerts and important messages.",
-    "bulk-import":                   "Bulk import lets you upload student or teacher records from a spreadsheet.",
-    "my-classes":                    "My Classes shows all the classes you are currently responsible for.",
-    "class-detail":                  "Drill into a class to view enrolled students and their behaviour summaries.",
-    "log-incident-blank":            "Log a new behaviour incident by selecting the student and rule broken.",
-    "log-incident-class":            "Choose the class first to narrow down the student list.",
-    "log-incident-class-selected":   "With the class selected, choose the student involved in the incident.",
-    "log-incident-dropdowns":        "Select the incident type, rule broken, and severity level.",
-    "log-incident-filled":           "Add a description of the incident before clicking Submit.",
-    "log-incident-submitted":        "The incident has been submitted and is now pending admin approval.",
-    "award-merit-blank":             "Select a student and merit type to start recognising positive behaviour.",
-    "award-merit-filled":            "Review the award details and add a reason before confirming.",
-    "award-merit-confirm":           "Confirm the merit award details before they are saved.",
-    "award-merit-success":           "The merit has been awarded and the student will be notified.",
-    "merits-list":                   "The merits list shows all recognition awards given by your classes.",
-    "behaviour-list":                "Browse all incidents logged by your classes with status indicators.",
-    "grade-dashboard":               "The Grade dashboard shows discipline and merit data for your entire grade.",
-    "grade-dashboard-charts":        "Charts visualise behaviour trends across all classes in your grade.",
-    "my-teachings":                  "My Teachings lists all subjects and classes you currently teach.",
-    "my-children":                   "My Children shows a summary card for each child linked to your account.",
-    "child-profile":                 "Click a child to view their full school behaviour and merit profile.",
-    "child-profile-scroll":          "Scroll to see detailed incident history and merit awards for this child.",
-    "behaviour":                     "View all behaviour incidents recorded for your children this term.",
-    "behaviour-detail":              "The detail view shows the full record of a specific behaviour incident.",
-    "attendance":                    "Attendance shows your child's daily attendance record for the current term.",
-    "profile":                       "Your profile shows your personal details and linked children.",
-    "profile-detail":                "Scroll to manage emergency contacts and update your contact preferences.",
-    "messages-inbox":                "The inbox shows all messages received from the school.",
-    "messages-sent":                 "Sent messages keeps a record of all communications you have sent.",
-    "compose-blank":                 "Compose a new message by selecting a recipient and entering your subject.",
-    "compose-filled":                "Review your message before sending it to the school.",
+
+    # ── Login ──
+    "login":
+        "Welcome to Classly, the school disciplinary management platform. "
+        "Sign in with your email, password, and school code to access your portal.",
+
+    "login-filled":
+        "Enter your registered email address and password, then click Sign In. "
+        "Each portal — admin, teacher, grade head, and parent — has its own tailored experience.",
+
+    # ── Dashboard ──
+    "dashboard":
+        "The admin dashboard gives you a real-time overview of your school's discipline activity. "
+        "You can see today's incident count, merit totals, active detentions, and pending reviews at a glance.",
+
+    "dashboard-charts":
+        "Scrolling down reveals detailed behaviour trend charts and a visual breakdown of incidents by category. "
+        "These charts help you identify patterns and spot students who may need early intervention.",
+
+    "dashboard-bottom":
+        "At the bottom of the dashboard you can see recent activity summaries and quick-access statistics "
+        "for attendance, merits, and consequence assignments across the school.",
+
+    # ── Students ──
+    "students-list":
+        "The Students module lists every enrolled student, showing their class, grade level, demerit points, "
+        "and merit points. You can sort, filter by grade or class, and export the list.",
+
+    "students-search":
+        "Use the search bar to instantly locate any student by name or student number. "
+        "Results update in real time as you type, making it fast to find a specific learner.",
+
+    "add-student-modal":
+        "To add a new student, click the Add Student button. "
+        "A form appears where you can enter the student's first name, last name, grade, class, and date of birth.",
+
+    "add-student-form-filled":
+        "Fill in all required details such as the student's name, class assignment, and date of birth, "
+        "then click Save to create the student record and link them to the school.",
+
+    "student-profile":
+        "Each student has a dedicated profile page showing their personal details, current class, "
+        "cumulative demerit and merit point totals, and a complete activity timeline.",
+
+    "student-profile-detail":
+        "Scrolling down the profile reveals the student's incident and merit history, "
+        "any active interventions, consequence assignments, and parent contact information.",
+
+    "student-incidents-tab":
+        "The Incidents tab on a student profile shows every behaviour event logged against that student, "
+        "including the date, type, severity, point deduction, and current approval status.",
+
+    "student-merits-tab":
+        "The Merits tab displays all recognition awards the student has received, "
+        "showing the merit type, points awarded, reason, and the teacher who submitted the award.",
+
+    # ── Classes ──
+    "classes-list":
+        "The Classes module shows every active class in the school with its name, grade level, "
+        "assigned class teacher, student count, and a link to the full class detail view.",
+
+    "class-detail":
+        "Clicking a class opens its detail page, showing all enrolled students and their individual "
+        "demerit and merit summaries, so you can see which learners need attention within that group.",
+
+    "class-detail-scroll":
+        "Scrolling down the class detail reveals additional statistics and quick links "
+        "to log an incident or award a merit for students in this class.",
+
+    # ── Teachers ──
+    "teachers-list":
+        "The Teachers module lists all teaching staff with their department, subjects, and class assignments. "
+        "You can view individual profiles, assign grade head roles, and invite new staff members.",
+
+    "add-teacher-modal":
+        "To add a new teacher, click the Add Teacher button and fill in their name, email, "
+        "department, and subject areas. An invitation is sent for them to set up their account.",
+
+    # ── Parents ──
+    "parents-list":
+        "The Parents module shows all registered parents and guardians, "
+        "the children linked to their accounts, and their contact details for communication.",
+
+    # ── Behaviour ──
+    "behaviour-all-incidents":
+        "The Behaviour module displays all behaviour incidents logged across the school. "
+        "Each row shows the student name, class, incident type, severity, point deduction, date, and current status.",
+
+    "behaviour-pending-filter":
+        "Click the Pending filter to focus only on incidents that still require your review and approval. "
+        "Pending incidents are highlighted so you can quickly work through your review queue.",
+
+    "incident-detail-modal":
+        "Clicking an incident opens the full detail view, showing the complete description, "
+        "the reporting teacher, location, date, and any supporting notes. You can approve or reject from here.",
+
+    "incident-approved":
+        "Once you approve an incident, demerit points are automatically deducted from the student's total, "
+        "and a notification is sent to the relevant teacher and the student's parent if enabled.",
+
+    "log-incident-blank":
+        "To log a new behaviour incident, navigate to Log Incident. "
+        "Select the class, then the specific student, the rule that was broken, and the severity level.",
+
+    "log-incident-filled":
+        "After selecting the class, student, incident type, and severity, "
+        "add a detailed description of what happened, then click Submit to send the incident for admin review.",
+
+    # ── Merits ──
+    "merits-list":
+        "The Merits module shows all recognition awards given across the school, "
+        "with the student name, merit category, points awarded, reason, and the date of the award.",
+
+    "merits-list-scroll":
+        "Scrolling through the merits list reveals the full history of awards, "
+        "helping you track which students and classes are being recognised for positive behaviour and achievement.",
+
+    "award-merit-blank":
+        "To award a merit, click Award Merit. "
+        "Select the student from the dropdown, then choose the merit category that best describes the achievement.",
+
+    "award-merit-filled":
+        "Add a meaningful reason for the award, describing exactly what the student did to deserve recognition. "
+        "This reason is visible on the student's profile and shared with parents.",
+
+    "award-merit-confirm":
+        "A confirmation dialog appears so you can review all the details before the merit is saved. "
+        "Check the student name, category, points, and reason are all correct.",
+
+    "award-merit-success":
+        "The merit has been successfully awarded. Merit points are added to the student's total, "
+        "their profile is updated, and a notification is sent to the student and their parent.",
+
+    # ── Detentions ──
+    "detention-sessions":
+        "The Detention Sessions module shows all scheduled, active, and completed detention sessions. "
+        "Each card shows the date, time, location, capacity, and the number of students currently assigned.",
+
+    "detention-qualifying-students":
+        "The Qualifying Students panel shows every student who has accumulated enough demerit points "
+        "to be eligible for a detention session, based on the thresholds set in your school rules.",
+
+    "detention-queue":
+        "The detention queue shows students who have been formally placed in the next available session. "
+        "You can manage this list, remove students, or move them to a different scheduled session.",
+
+    "detention-create-modal":
+        "To schedule a new detention session, click Create Session. "
+        "Enter the date, start time, location, and the maximum number of students the venue can accommodate.",
+
+    "detention-create-filled":
+        "Fill in all session details — date, time, venue, and capacity — then click Save. "
+        "The session is immediately available for assigning qualifying students.",
+
+    "detention-session-detail":
+        "Open a session to see the full detail: the list of assigned students, attendance status, "
+        "teacher on duty, and a button to add more qualifying students to this session.",
+
+    # ── Consequences ──
+    "consequences-list":
+        "The Consequences module tracks all formal sanctions assigned to students, "
+        "including verbal warnings, detentions, suspensions, community service, and parent meetings.",
+
+    "consequences-list-scroll":
+        "Each consequence shows the student name, type of sanction, the reason it was issued, "
+        "start and end dates, current status, and the administrator who assigned it.",
+
+    "consequence-detail-modal":
+        "Click a consequence to view its full details, update its status, add progress notes, "
+        "or mark it as completed once the student has fulfilled the requirement.",
+
+    "consequence-management":
+        "The Consequence Management page lets you configure the types of consequences available in your school, "
+        "set their descriptions, and manage which consequence categories are active.",
+
+    # ── Interventions ──
+    "interventions-list":
+        "The Interventions module logs all supportive actions put in place for students "
+        "who need additional help, including counselling, academic support, and behavioural monitoring plans.",
+
+    "interventions-list-scroll":
+        "Each intervention record shows the student name, type of intervention, assigned facilitator, "
+        "start and end dates, progress goals, and current status — active, completed, or on hold.",
+
+    "intervention-detail-modal":
+        "Open an intervention to view its full plan, stated goals, progress notes, "
+        "and update the outcome once the intervention period is complete.",
+
+    # ── Discipline Centre ──
+    "discipline-centre":
+        "The Discipline Centre is the analytics hub of the admin portal. "
+        "It provides a school-wide view of behaviour data, trends, and comparative class performance.",
+
+    "discipline-centre-charts":
+        "The charts section breaks down incidents by category, class, grade level, and time period. "
+        "Use these visualisations to present behaviour data to school leadership and governing bodies.",
+
+    "discipline-centre-leaderboard":
+        "The leaderboard ranks classes and individual students by behaviour and merit performance, "
+        "helping you celebrate positive improvement and identify groups that need targeted support.",
+
+    "discipline-rules":
+        "The Discipline Rules page lets you define the school's full code of conduct, "
+        "listing each rule, its category, the default demerit points, and the severity classification.",
+
+    "discipline-rules-scroll":
+        "Scroll through the rules to review all active codes of conduct. "
+        "You can edit existing rules, adjust point values, or add entirely new rule categories.",
+
+    # ── Reports ──
+    "reports-overview":
+        "The Reports module generates detailed analytics on behaviour trends, merit distribution, "
+        "detention frequency, and intervention outcomes across any selected date range.",
+
+    "reports-charts":
+        "Visual charts make it easy to present insights to parents, school leadership, and governing boards. "
+        "You can export reports as PDF or share them directly from the portal.",
+
+    "reports-bottom":
+        "The lower section of reports provides detailed data tables with filterable columns, "
+        "allowing you to drill down by class, grade, date range, or incident type.",
+
+    "reports-tab2":
+        "Additional report tabs offer more specialised views, including term-over-term comparisons "
+        "and individual student progress reports that can be shared with parents.",
+
+    # ── Notifications ──
+    "notifications":
+        "The Notifications centre shows all system alerts, including new incident submissions, "
+        "merit awards, detention updates, and messages from teachers and parents.",
+
+    "notifications-scroll":
+        "Older notifications are kept in your history so you can always review past alerts. "
+        "You can mark individual notifications as read or dismiss them in bulk.",
+
+    # ── Bulk Import ──
+    "bulk-import":
+        "The Bulk Import tool lets you upload large numbers of student or staff records at once "
+        "using a spreadsheet template, saving significant time at the start of each academic year.",
+
+    "bulk-import-scroll":
+        "Download the provided template, fill in the required columns for each student or staff member, "
+        "then upload the completed file to import all records in a single step.",
+
+    "smart-import":
+        "The Smart Import feature uses intelligent data mapping to handle variations in your spreadsheet format, "
+        "automatically matching columns and flagging any rows that need manual correction before importing.",
+
+    # ── Settings — all 5 tabs ──
+    "settings-profile-tab":
+        "The Settings page opens on the Profile tab, where you can update your display name "
+        "and email address. Changes are saved immediately and reflected across the platform.",
+
+    "settings-password-tab":
+        "The Password tab lets you change your account password. "
+        "Enter your current password for verification, then set and confirm your new password.",
+
+    "settings-school-info-tab":
+        "The School Info tab displays your school's name and unique school code. "
+        "Share this code with parents so they can link their accounts to your school when registering.",
+
+    "settings-school-info-scroll":
+        "Scrolling the School Info tab shows additional school details such as the subscription tier "
+        "and maximum student and teacher capacity configured for your school.",
+
+    "settings-preferences-tab":
+        "The Preferences tab lets you configure your notification settings, "
+        "choosing which system events trigger alerts and how you receive them.",
+
+    "settings-preferences-scroll":
+        "Scroll through the preferences to review all available notification options, "
+        "including incident approvals, merit awards, detention reminders, and parent messages.",
+
+    "settings-language-tab":
+        "The Language tab gives admins two important controls: the Global Language setting "
+        "changes the platform language for all users at your school, while My Language sets only your own preference.",
+
+    "settings-language-scroll":
+        "Classly supports English, Afrikaans, Zulu, and Xhosa. "
+        "Select the appropriate language for your school community and click Save to apply the change.",
+
+    # ── User Management ──
+    "user-management":
+        "The User Management page shows all registered users at your school, "
+        "including their email, role, and account status. You can deactivate accounts or reset passwords here.",
+
+    # ── Teacher portal ──
+    "my-classes":
+        "The My Classes page shows all the classes you are currently assigned to teach. "
+        "Click any class card to view its students and manage their behaviour records.",
+
+    "class-detail":
+        "The class detail page shows a full roster of enrolled students with their current "
+        "demerit and merit point totals, giving you an at-a-glance view of class behaviour.",
+
+    "class-detail-scroll":
+        "Scroll down to see class statistics and quick action buttons "
+        "that let you log an incident or award a merit for any student in this class.",
+
+    "log-incident-blank":
+        "To log a behaviour incident, select the class, then choose the specific student involved. "
+        "Next, select the rule that was broken from the discipline code list.",
+
+    "log-incident-filled":
+        "After filling in the class, student, incident type, and severity level, "
+        "add a detailed written description of what occurred before submitting for admin review.",
+
+    "log-incident-submitted":
+        "The incident has been submitted successfully. "
+        "It now sits in the admin review queue and you will be notified once it has been approved or rejected.",
+
+    "behaviour-list":
+        "The Behaviour page shows all incidents you have logged across your classes. "
+        "You can see the status of each report — pending, approved, or rejected.",
+
+    "award-merit-blank":
+        "To award a merit, select a student from your classes and choose the appropriate merit category. "
+        "Merit categories are configured by your school admin.",
+
+    "award-merit-filled":
+        "Add a clear reason for the award that describes what the student did to deserve recognition. "
+        "This message is visible to the student and their parents.",
+
+    "award-merit-confirm":
+        "Review the merit details on the confirmation screen before finalising. "
+        "Check the student, category, points, and reason are all correct.",
+
+    "award-merit-success":
+        "The merit has been successfully awarded. The student's merit total is updated immediately "
+        "and a notification is sent to both the student and their parent.",
+
+    "merits-list":
+        "The Merits list shows all awards you have given across your classes, "
+        "with dates, point values, and the reasons recorded for each award.",
+
+    "detentions":
+        "The Detentions page shows all upcoming and past detention sessions relevant to your classes. "
+        "You can see which of your students have been assigned to attend.",
+
+    "detentions-scroll":
+        "Scroll down to see a full list of your students' detention history, "
+        "including whether they attended, arrived late, or were absent from a scheduled session.",
+
+    "interventions":
+        "The Interventions page shows all active support plans in place for students in your classes. "
+        "Each plan shows the goals, timeline, facilitator, and current progress status.",
+
+    "interventions-scroll":
+        "Scroll to review the details of each intervention, including the specific goals set for the student "
+        "and any notes recorded by the facilitator during the intervention period.",
+
+    "consequences":
+        "The Consequences page shows all formal sanctions assigned to students in your classes, "
+        "helping you stay informed of the outcomes following incident approvals.",
+
+    "reports":
+        "The Reports page gives you a breakdown of behaviour and merit data "
+        "specifically for your classes over the current term.",
+
+    "reports-scroll":
+        "Scroll to access detailed charts showing incident frequency, merit distribution, "
+        "and trend data for each of your classes.",
+
+    "settings-profile":
+        "The Settings page lets you update your personal profile information, "
+        "including your display name and contact email address.",
+
+    "settings-password":
+        "Use the Password tab to update your account password. "
+        "Always use a strong, unique password to keep your account secure.",
+
+    "settings-preferences":
+        "The Preferences tab lets you control which types of notifications you receive "
+        "and how they are delivered — either in-app, by email, or both.",
+
+    "settings-language":
+        "The Language tab lets you set your preferred language for the portal interface. "
+        "Classly supports English, Afrikaans, Zulu, and Xhosa.",
+
+    # ── Grade Head portal ──
+    "dashboard":
+        "The grade head dashboard shows behaviour and merit data for your entire grade. "
+        "Summary cards display the total incidents, merit awards, and active interventions for all grade classes.",
+
+    "dashboard-charts":
+        "Scroll down to see charts comparing behaviour trends across all classes in your grade, "
+        "helping you identify which classes need the most attention.",
+
+    "students-list":
+        "The Students page lists all learners across your entire grade, "
+        "with their class, demerit points, merit points, and a link to their individual profile.",
+
+    "students-search":
+        "Search for any student within your grade by name or student number. "
+        "The list filters instantly to show matching results.",
+
+    "student-profile":
+        "The student profile shows personal details, current class, point totals, "
+        "and the complete incident and merit history for this learner.",
+
+    "student-incidents-tab":
+        "The Incidents tab shows every behaviour event logged against this student, "
+        "with the full details of each incident including the reporting teacher and outcome.",
+
+    "classes":
+        "The Classes page shows all classes within your grade, "
+        "their class teacher, enrolment numbers, and a direct link to each class detail page.",
+
+    "behaviour-all":
+        "The Behaviour page shows all incidents logged across your grade, "
+        "giving you a complete view of discipline activity for the classes you are responsible for.",
+
+    "behaviour-pending":
+        "The Pending view shows only incidents awaiting review within your grade. "
+        "As grade head, you can review and approve these incidents directly.",
+
+    "log-incident-blank":
+        "Log a behaviour incident for any student in your grade by selecting their class "
+        "and choosing the relevant rule from the discipline code.",
+
+    "log-incident-filled":
+        "After selecting the class, student, and incident type, add a description "
+        "of the behaviour observed before submitting the incident for review.",
+
+    "merits-list":
+        "The Merits list shows all recognition awards given to students across your grade, "
+        "allowing you to monitor positive reinforcement at the grade level.",
+
+    "award-merit-blank":
+        "Award a merit to any student in your grade by selecting them from the dropdown "
+        "and choosing the appropriate merit category.",
+
+    "award-merit-filled":
+        "Add a reason for the award before confirming. "
+        "This description appears on the student's profile and is shared with their parents.",
+
+    "detention-sessions":
+        "The Detention Sessions page shows scheduled sessions relevant to your grade. "
+        "You can view which of your students have been assigned to each session.",
+
+    "detention-sessions-scroll":
+        "Scroll to see older or completed sessions and review past attendance records "
+        "for students in your grade.",
+
+    "my-teachings":
+        "My Teachings shows the subjects and classes you personally teach, "
+        "separate from your grade head responsibilities. Manage your own class behaviour here.",
+
+    "discipline-centre":
+        "The Discipline Centre shows analytics specific to your grade, "
+        "breaking down incidents, trends, and class comparisons within your area of responsibility.",
+
+    "discipline-charts":
+        "Charts show incident frequency, severity distribution, and month-on-month trends "
+        "for all classes in your grade.",
+
+    "consequence-management":
+        "The Consequence Management page lets you review and update formal sanctions "
+        "assigned to students within your grade.",
+
+    # ── Parent portal ──
+    "my-children":
+        "My Children shows a summary card for each child linked to your parent account. "
+        "Each card displays the child's current class, merit points, and any recent activity.",
+
+    "child-profile":
+        "Click a child's card to open their full school profile, showing their class, "
+        "current demerit and merit totals, and a summary of recent incidents and awards.",
+
+    "child-profile-scroll":
+        "Scrolling the child profile reveals their complete incident history, merit awards, "
+        "upcoming detentions, and any active intervention plans.",
+
+    "behaviour":
+        "The Behaviour page shows all incidents recorded for your children at school. "
+        "Each entry shows the date, what happened, the severity, and the current status.",
+
+    "behaviour-detail":
+        "Click an incident to read the full details, including the teacher's description, "
+        "the rule that was broken, and any outcome or consequence that followed.",
+
+    "merits":
+        "The Merits page shows all positive recognition awards your children have received. "
+        "Celebrate their achievements and track their progress throughout the term.",
+
+    "attendance":
+        "The Attendance page shows your child's daily attendance record for the current term, "
+        "including present, absent, and late entries with dates and any notes from the school.",
+
+    "attendance-scroll":
+        "Scroll to see a full term view of attendance data, "
+        "helping you identify any patterns of absence or lateness that may need to be addressed.",
+
+    "detentions":
+        "The Detentions page shows whether your child has been assigned to any scheduled detention sessions. "
+        "Details include the date, time, venue, and the reason for the assignment.",
+
+    "interventions":
+        "The Interventions page shows any support plans currently in place for your child. "
+        "These are set up by the school to help students who need additional academic or behavioural assistance.",
+
+    "consequences":
+        "The Consequences page shows any formal sanctions your child has received, "
+        "such as verbal warnings, community service, or suspension notifications.",
+
+    "consequence-detail":
+        "Open a consequence to read the full details, including the reason it was issued, "
+        "the timeline, and any actions required from you as a parent.",
+
+    "messages-inbox":
+        "The Messages inbox shows all communications sent to you by the school. "
+        "These may include incident notifications, progress updates, and meeting requests.",
+
+    "messages-sent":
+        "The Sent tab shows a history of all messages you have sent to the school, "
+        "so you can keep track of your communications and follow up if needed.",
+
+    "compose-blank":
+        "To send a message to the school, click Compose. "
+        "Enter a subject and your message, then select the appropriate recipient.",
+
+    "compose-filled":
+        "Review your message carefully before sending. "
+        "Once sent, a copy is saved in your Sent folder and the school will be notified.",
+
+    "profile":
+        "Your profile page shows your personal contact details and the children linked to your account. "
+        "Keep your information up to date so the school can always reach you.",
+
+    "profile-scroll":
+        "Scroll down to manage emergency contacts and update your contact preferences. "
+        "Accurate emergency contact information is important for the school's records.",
+
+    "settings":
+        "The Settings page lets you update your account details, change your password, "
+        "and configure your notification preferences.",
+
+    "settings-scroll":
+        "Scroll through the settings to find options for managing linked children, "
+        "language preferences, and communication preferences for your parent account.",
 }
+
+
+# ── TTS helpers ────────────────────────────────────────────────────────────────
+
+def synthesize_narration(text: str, output_wav: Path):
+    """Synthesise narration with Kokoro neural TTS (af_heart voice)."""
+    k = get_kokoro()
+    samples, sr = k.create(text, voice='af_heart', speed=1.0, lang='en-us')
+    g = gcd(sr, SAMPLE_RATE)
+    samples_44k = resample_poly(samples, SAMPLE_RATE // g, sr // g).astype(np.float32)
+    i16 = (np.clip(samples_44k, -1.0, 1.0) * 32767).astype(np.int16)
+    wavfile.write(str(output_wav), SAMPLE_RATE, i16)
+
+
+def estimate_speech_seconds(text: str) -> float:
+    """Estimate speech duration from word count at ~2.8 words per second."""
+    return max(2.0, len(text.split()) / 2.8)
+
+
+def slide_duration_for(stem: str, narration: str | None) -> float:
+    """Return the appropriate slide duration based on narration length."""
+    base = re.sub(r"^\d+-", "", stem).lower()
+    # Continuation shots are shorter
+    if any(base.endswith(s) for s in ("-scroll", "-bottom")):
+        return SLIDE_CONT_DUR if not narration else max(SLIDE_CONT_DUR, estimate_speech_seconds(narration) + 2.0)
+    if not narration:
+        return SLIDE_DUR_DEF
+    return max(SLIDE_DUR_MIN, estimate_speech_seconds(narration) + 2.0)
+
 
 # ── Screenshot selection ───────────────────────────────────────────────────────
-BASIC_NAMES = {
-    "01-dashboard", "02-discipline-center", "03-students",
-    "04-detention-sessions", "05-behaviour", "06-merits",
-    "07-attendance", "08-interventions", "09-reports",
-    "10-teachers", "11-classes", "12-settings", "00-login",
-    "02-behaviour", "04-detentions", "05-merits",
-    "02-incidents", "03-merits", "04-attendance", "05-detentions",
-    "06-notifications", "07-messages", "08-profile",
-}
 
 def walkthrough_screenshots(folder: Path):
-    """Return sorted walkthrough PNGs, excluding the basic set and base-name duplicates."""
-    files  = sorted(folder.glob("*.png"))
-    result = []
-    seen_bases: set = set()
-    for f in files:
-        stem = f.stem
-        if stem in BASIC_NAMES:
-            continue
-        base = re.sub(r"^\d+-", "", stem)   # strip leading "NN-"
-        if base in seen_bases:              # skip duplicate base names
-            continue
-        seen_bases.add(base)
-        result.append(f)
-    return result
+    """Return all PNGs in folder, sorted by name, excluding the video file."""
+    files = sorted(folder.glob("*.png"))
+    return [f for f in files if not f.name.startswith("._")]
 
 
 # ── Visual helpers ─────────────────────────────────────────────────────────────
@@ -401,53 +760,36 @@ def stem_to_caption(stem):
 
 def infer_section(stem):
     name = re.sub(r"^\d+-", "", stem).lower()
-    if "login" in name:                           return "Getting Started"
-    if "my-dashboard" in name:                    return "My Teaching Dashboard"
-    if "grade-dashboard" in name:                 return "Grade Dashboard"
-    if "dashboard" in name:                       return "Dashboard Overview"
-    if "my-teach" in name:                        return "My Teachings"
-    if "my-class" in name:                        return "My Class"
-    if "student" in name:                         return "Student Management"
-    if "class" in name:                           return "Class Management"
-    if "teacher" in name:                         return "Teacher Management"
-    if "log-incident" in name:                    return "Logging Incidents"
-    if "behaviour" in name or "incident" in name: return "Behaviour Management"
-    if "merit" in name or "award" in name:        return "Merits & Awards"
-    if "detention" in name:                       return "Detention Management"
-    if "discipline" in name:                      return "Discipline Centre"
-    if "consequence" in name:                     return "Consequence Management"
-    if "intervention" in name:                    return "Interventions & Support"
-    if "report" in name or "analytic" in name:    return "Reports & Analytics"
-    if "setting" in name:                         return "Settings"
-    if "notif" in name:                           return "Notifications"
-    if "message" in name:                         return "Messaging"
-    if "profile" in name:                         return "Parent Profile"
-    if "children" in name or "child" in name:     return "My Children"
-    if "attendance" in name:                      return "Attendance"
-    if "sidebar" in name:                         return "Portal Navigation"
-    if "bulk" in name:                            return "Bulk Operations"
+    if "login" in name:                                    return "Getting Started"
+    if "dashboard" in name:                                return "Dashboard Overview"
+    if "my-teach" in name:                                 return "My Teachings"
+    if "student" in name:                                  return "Student Management"
+    if "add-student" in name:                              return "Student Management"
+    if "class" in name:                                    return "Class Management"
+    if "teacher" in name or "add-teacher" in name:         return "Teacher Management"
+    if "parent" in name:                                   return "Parent Management"
+    if "log-incident" in name:                             return "Logging Incidents"
+    if "behaviour" in name or "incident" in name:          return "Behaviour Management"
+    if "merit" in name or "award" in name:                 return "Merits & Awards"
+    if "detention" in name:                                return "Detention Management"
+    if "consequence" in name:                              return "Consequence Management"
+    if "intervention" in name:                             return "Interventions & Support"
+    if "discipline" in name:                               return "Discipline Centre"
+    if "report" in name or "analytic" in name:             return "Reports & Analytics"
+    if "notif" in name:                                    return "Notifications"
+    if "bulk" in name or "import" in name:                 return "Bulk Operations"
+    if "setting" in name:                                  return "Settings"
+    if "user-manage" in name:                              return "User Management"
+    if "message" in name or "compose" in name:             return "Messaging"
+    if "child" in name or "children" in name:              return "My Children"
+    if "attend" in name:                                   return "Attendance"
+    if "profile" in name:                                  return "Profile"
     return "Features Overview"
 
 
-# ── Audio helpers ─────────────────────────────────────────────────────────────
-
-def synthesize_narration(text: str, output_wav: Path):
-    """Synthesise narration with Kokoro neural TTS (af_heart female voice)."""
-    k = get_kokoro()
-    samples, sr = k.create(text, voice='af_heart', speed=1.0, lang='en-us')
-    # Resample from Kokoro native rate to 44100
-    g = gcd(sr, SAMPLE_RATE)
-    samples_44k = resample_poly(samples, SAMPLE_RATE // g, sr // g).astype(np.float32)
-    i16 = (np.clip(samples_44k, -1.0, 1.0) * 32767).astype(np.int16)
-    wavfile.write(str(output_wav), SAMPLE_RATE, i16)
-
+# ── Ambient music ──────────────────────────────────────────────────────────────
 
 def generate_ambient_track(duration_sec: float) -> np.ndarray:
-    """
-    Synthesise a soft ambient pad track via sine-wave chord stacking.
-    Returns float64 array normalised to approx -18 dBFS (background level).
-    Four-chord loop: Fmaj9 → Cmaj9 → Gmaj9 → Dmaj9, 12 s per chord.
-    """
     n   = int(SAMPLE_RATE * duration_sec)
     t   = np.arange(n, dtype=np.float64) / SAMPLE_RATE
     out = np.zeros(n, dtype=np.float64)
@@ -472,44 +814,39 @@ def generate_ambient_track(duration_sec: float) -> np.ndarray:
             for f in freqs:
                 seg += np.sin(2 * np.pi * f         * seg_t) * 0.040
                 seg += np.sin(2 * np.pi * f * 2     * seg_t) * 0.010
-                seg += np.sin(2 * np.pi * f * 1.001 * seg_t) * 0.008  # warmth detune
+                seg += np.sin(2 * np.pi * f * 1.001 * seg_t) * 0.008
             xf = min(int(1.5 * SAMPLE_RATE), len(seg) // 3)
             seg[:xf]  *= np.linspace(0, 1, xf)
             seg[-xf:] *= np.linspace(1, 0, xf)
             out[s0:s1] += seg
 
-    # Subtle tremolo for movement
     out *= 0.88 + 0.12 * np.sin(2 * np.pi * 0.07 * t)
-
-    # Normalise to -18 dBFS background level
     peak = np.max(np.abs(out)) + 1e-9
     out  = out / peak * 0.13
-
-    # Fade in / out
     fn = min(int(3 * SAMPLE_RATE), n // 4)
     out[:fn]  *= np.linspace(0, 1, fn)
     out[-fn:] *= np.linspace(1, 0, fn)
     return out
 
 
+# ── Audio track builder ────────────────────────────────────────────────────────
+
 def build_audio_track(slide_timings: list, total_sec: float) -> AudioSegment:
     """
     Compose the full stereo audio track:
-      - Ambient background music for the entire video duration
-      - espeak-ng voiceover placed 0.75 s after each slide starts
-        (giving the 0.6 s crossfade time to settle)
+      - Ambient background music for the entire duration
+      - Kokoro af_heart voiceover for each slide, starting PRE_SILENCE_MS after the slide appears
+      - Voice is NOT clipped — the slide duration is already set to accommodate the full narration
     """
-    # Background music
-    bg_arr  = generate_ambient_track(total_sec + 4)
-    bg_i16  = (bg_arr * 32767).astype(np.int16)
-    bg_seg  = AudioSegment(
+    bg_arr = generate_ambient_track(total_sec + 4)
+    bg_i16 = (bg_arr * 32767).astype(np.int16)
+    bg_seg = AudioSegment(
         bg_i16.tobytes(), frame_rate=SAMPLE_RATE, sample_width=2, channels=1
     ).set_channels(2)
     master = bg_seg[:int(total_sec * 1000)]
 
-    # Voiceover clips
     with tempfile.TemporaryDirectory() as tmpdir:
-        for start_sec, stem in slide_timings:
+        for start_sec, stem, slide_dur in slide_timings:
             base      = re.sub(r"^\d+-", "", stem)
             narration = NARRATIONS.get(base)
             if not narration:
@@ -525,15 +862,15 @@ def build_audio_track(slide_timings: list, total_sec: float) -> AudioSegment:
             voice = AudioSegment.from_wav(str(wav_path))
             if voice.max_dBFS < -60:
                 continue
-            voice = voice.apply_gain(-voice.max_dBFS - 3).set_channels(2)
+            # Normalise voice to -8 dBFS (comfortable foreground level)
+            voice = voice.apply_gain(-voice.max_dBFS - 8).set_channels(2)
 
-            # Safety clip: never let narration overflow into the next slide
-            max_voice_ms = int((SLIDE_DUR - 1.0) * 1000)
+            # Ensure voice does not overflow past the end of its slide
+            max_voice_ms = int((slide_dur - 0.8) * 1000)
             if len(voice) > max_voice_ms:
-                voice = voice[:max_voice_ms].fade_out(150)
+                voice = voice[:max_voice_ms].fade_out(200)
 
-            # 750 ms silence prefix so voice starts after crossfade completes
-            pre   = AudioSegment.silent(750, frame_rate=SAMPLE_RATE).set_channels(2)
+            pre   = AudioSegment.silent(PRE_SILENCE_MS, frame_rate=SAMPLE_RATE).set_channels(2)
             voice = pre + voice
 
             pos_ms = int(start_sec * 1000)
@@ -543,16 +880,16 @@ def build_audio_track(slide_timings: list, total_sec: float) -> AudioSegment:
     return master
 
 
-# ── Core video builder ────────────────────────────────────────────────────────
+# ── Core video builder ─────────────────────────────────────────────────────────
 
 def build_video(portal_key: str, screenshots: list, output_path: Path):
     cfg   = BRAND[portal_key]
     label = cfg["label"]
-    print(f"\n🎬  Building {label} video ({len(screenshots)} slides)...")
+    print(f"\n🎬  Building {label} video ({len(screenshots)} screenshots)...")
 
     clips         = []
     current_sec   = None
-    slide_timings = []  # (start_time_in_video_sec, stem)
+    slide_timings = []   # (start_time_sec, stem, slide_dur)
     t             = 0.0
 
     def add_clip(arr, duration):
@@ -562,19 +899,22 @@ def build_video(portal_key: str, screenshots: list, output_path: Path):
 
     # Opening title card
     add_clip(make_title_card(portal_key,
-             f"Step-by-step feature walkthrough  •  {len(screenshots)} sections"), TITLE_DUR)
+             f"Complete feature walkthrough  •  {len(screenshots)} screens"), TITLE_DUR)
 
     for img_path in screenshots:
-        stem    = img_path.stem
-        section = infer_section(stem)
-        caption = stem_to_caption(stem)
+        stem      = img_path.stem
+        section   = infer_section(stem)
+        caption   = stem_to_caption(stem)
+        base      = re.sub(r"^\d+-", "", stem)
+        narration = NARRATIONS.get(base)
+        dur       = slide_duration_for(stem, narration)
 
         if section != current_sec:
             add_clip(make_section_card(section, portal_key), SECTION_DUR)
             current_sec = section
             print(f"  ── {section}")
 
-        slide_timings.append((t, stem))  # record BEFORE advancing t
+        slide_timings.append((t, stem, dur))
 
         try:
             frame = add_caption(img_path, caption, portal_key)
@@ -583,21 +923,22 @@ def build_video(portal_key: str, screenshots: list, output_path: Path):
             slide_timings.pop()
             continue
 
-        add_clip(frame, SLIDE_DUR)
-        print(f"    ✓ {img_path.name}")
+        add_clip(frame, dur)
+        nar_status = f"({len(narration.split())}w)" if narration else "(no narration)"
+        print(f"    ✓ {img_path.name}  {dur:.1f}s  {nar_status}")
 
     add_clip(make_closing_card(), TITLE_DUR)
-    total_duration = t + FADE  # last clip's FADE wasn't consumed by a successor
+    total_duration = t + FADE
 
-    # ── Audio track ────────────────────────────────────────────────────────────
-    print(f"  🎵  Generating audio ({len(slide_timings)} narrations + ambient music)...")
+    # ── Audio ──────────────────────────────────────────────────────────────────
+    print(f"  🎵  Generating audio ({len(slide_timings)} narrations + ambient)...")
     audio_track = build_audio_track(slide_timings, total_duration)
 
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         audio_wav = tmp.name
     audio_track.export(audio_wav, format="wav")
 
-    # ── Silent video ──────────────────────────────────────────────────────────
+    # ── Silent video ───────────────────────────────────────────────────────────
     silent_mp4 = output_path.with_suffix(".silent.mp4")
     print(f"  Encoding {len(clips)} clips → {silent_mp4.name} ...")
     video = concatenate_videoclips(clips, method="compose", padding=-FADE)
@@ -609,7 +950,7 @@ def build_video(portal_key: str, screenshots: list, output_path: Path):
     )
     video.close()
 
-    # ── Merge audio + video ────────────────────────────────────────────────────
+    # ── Merge ──────────────────────────────────────────────────────────────────
     print(f"  Mixing audio + video → {output_path.name} ...")
     subprocess.run(
         ["ffmpeg", "-y",
@@ -655,27 +996,38 @@ PORTALS = [
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    import sys
+    portal_filter = sys.argv[1] if len(sys.argv) > 1 else None
+
     print("=" * 60)
-    print("  Classly Portal Demo Video Generator  v2")
+    print("  Classly Portal Demo Video Generator  v3")
     print("=" * 60)
 
     for portal in PORTALS:
         key    = portal["key"]
+        if portal_filter and key != portal_filter:
+            continue
         folder = portal["folder"]
         out    = portal["output"]
 
         screenshots = walkthrough_screenshots(folder)
         if not screenshots:
-            print(f"\n⚠  No walkthrough screenshots found in {folder}")
+            print(f"\n⚠  No screenshots found in {folder}")
             continue
 
         build_video(key, screenshots, out)
 
     print("\n" + "=" * 60)
-    print("  All videos generated successfully!")
+    print("  Done!")
     print("=" * 60)
     for portal in PORTALS:
+        if portal_filter and portal["key"] != portal_filter:
+            continue
         out = portal["output"]
         if out.exists():
-            mb = out.stat().st_size / 1_048_576
-            print(f"  {out.relative_to(SCREENSHOTS.parent)}  ({mb:.1f} MB)")
+            mb  = out.stat().st_size / 1_048_576
+            dur = int(subprocess.run(
+                ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+                 "-of", "default=noprint_wrappers=1:nokey=1", str(out)],
+                capture_output=True, text=True).stdout.strip().split(".")[0])
+            print(f"  {out.name}  {dur//60}:{dur%60:02d} min  {mb:.1f} MB")
