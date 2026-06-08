@@ -40,13 +40,34 @@ from moviepy.video.fx import CrossFadeIn
 W, H            = 1440, 900
 FPS             = 30
 CRF             = 18
-SLIDE_DUR_MIN   = 6.0    # minimum slide hold (seconds)
-SLIDE_DUR_DEF   = 8.0    # default if no narration found
-SLIDE_CONT_DUR  = 5.0    # "continuation" scrolled shots — shorter hold
-SECTION_DUR     = 2.2
-TITLE_DUR       = 5.0
-FADE            = 0.6
-PRE_SILENCE_MS  = 900    # voice starts this many ms after slide appears
+SLIDE_DUR_MIN   = 7.5    # minimum slide hold (seconds)
+SLIDE_DUR_DEF   = 8.5    # default if no narration found
+SLIDE_CONT_DUR  = 4.0    # "continuation" scrolled shots — shorter hold
+SECTION_DUR     = 1.5
+TITLE_DUR       = 3.5
+FADE            = 0.5
+PRE_SILENCE_MS  = 700    # voice starts this many ms after slide appears
+
+# Slide names ending with these are skipped — they're scroll continuations
+SKIP_STEMS = {
+    # True scroll-only duplicates — remove to cut runtime
+    "dashboard-bottom",
+    "add-student-form-filled",
+    "class-detail-scroll",
+    "merits-list-scroll",
+    "consequences-list-scroll",
+    "interventions-list-scroll",
+    "reports-bottom",
+    "reports-tab2",
+    "notifications-scroll",
+    "bulk-import-scroll",
+    "settings-school-info-scroll",
+    "settings-preferences-scroll",
+    "settings-language-scroll",
+    "detentions-scroll",
+    "detention-sessions-scroll",
+    "student-merits-tab",
+}
 SAMPLE_RATE     = 44100
 
 FONT_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
@@ -67,550 +88,122 @@ BRAND = {
 }
 
 # ── Narrations ────────────────────────────────────────────────────────────────
-# Each narration is ~20–25 words so Kokoro produces ~6–7 seconds of speech,
-# which fits comfortably within the SLIDE_DUR_MIN of 6 seconds + buffer.
+# Each narration is ~12–14 words → ~4–5 s of speech → slide holds ~6–7 s total.
 NARRATIONS = {
-
-    # ── Login ──
-    "login":
-        "Welcome to Classly, the school disciplinary management platform. "
-        "Sign in with your email, password, and school code to access your portal.",
-
-    "login-filled":
-        "Enter your registered email address and password, then click Sign In. "
-        "Each portal — admin, teacher, grade head, and parent — has its own tailored experience.",
-
-    # ── Dashboard ──
-    "dashboard":
-        "The admin dashboard gives you a real-time overview of your school's discipline activity. "
-        "You can see today's incident count, merit totals, active detentions, and pending reviews at a glance.",
-
-    "dashboard-charts":
-        "Scrolling down reveals detailed behaviour trend charts and a visual breakdown of incidents by category. "
-        "These charts help you identify patterns and spot students who may need early intervention.",
-
-    "dashboard-bottom":
-        "At the bottom of the dashboard you can see recent activity summaries and quick-access statistics "
-        "for attendance, merits, and consequence assignments across the school.",
-
-    # ── Students ──
-    "students-list":
-        "The Students module lists every enrolled student, showing their class, grade level, demerit points, "
-        "and merit points. You can sort, filter by grade or class, and export the list.",
-
-    "students-search":
-        "Use the search bar to instantly locate any student by name or student number. "
-        "Results update in real time as you type, making it fast to find a specific learner.",
-
-    "add-student-modal":
-        "To add a new student, click the Add Student button. "
-        "A form appears where you can enter the student's first name, last name, grade, class, and date of birth.",
-
-    "add-student-form-filled":
-        "Fill in all required details such as the student's name, class assignment, and date of birth, "
-        "then click Save to create the student record and link them to the school.",
-
-    "student-profile":
-        "Each student has a dedicated profile page showing their personal details, current class, "
-        "cumulative demerit and merit point totals, and a complete activity timeline.",
-
-    "student-profile-detail":
-        "Scrolling down the profile reveals the student's incident and merit history, "
-        "any active interventions, consequence assignments, and parent contact information.",
-
-    "student-incidents-tab":
-        "The Incidents tab on a student profile shows every behaviour event logged against that student, "
-        "including the date, type, severity, point deduction, and current approval status.",
-
-    "student-merits-tab":
-        "The Merits tab displays all recognition awards the student has received, "
-        "showing the merit type, points awarded, reason, and the teacher who submitted the award.",
-
-    # ── Classes ──
-    "classes-list":
-        "The Classes module shows every active class in the school with its name, grade level, "
-        "assigned class teacher, student count, and a link to the full class detail view.",
-
-    "class-detail":
-        "Clicking a class opens its detail page, showing all enrolled students and their individual "
-        "demerit and merit summaries, so you can see which learners need attention within that group.",
-
-    "class-detail-scroll":
-        "Scrolling down the class detail reveals additional statistics and quick links "
-        "to log an incident or award a merit for students in this class.",
-
-    # ── Teachers ──
-    "teachers-list":
-        "The Teachers module lists all teaching staff with their department, subjects, and class assignments. "
-        "You can view individual profiles, assign grade head roles, and invite new staff members.",
-
-    "add-teacher-modal":
-        "To add a new teacher, click the Add Teacher button and fill in their name, email, "
-        "department, and subject areas. An invitation is sent for them to set up their account.",
-
-    # ── Parents ──
-    "parents-list":
-        "The Parents module shows all registered parents and guardians, "
-        "the children linked to their accounts, and their contact details for communication.",
-
-    # ── Behaviour ──
-    "behaviour-all-incidents":
-        "The Behaviour module displays all behaviour incidents logged across the school. "
-        "Each row shows the student name, class, incident type, severity, point deduction, date, and current status.",
-
-    "behaviour-pending-filter":
-        "Click the Pending filter to focus only on incidents that still require your review and approval. "
-        "Pending incidents are highlighted so you can quickly work through your review queue.",
-
-    "incident-detail-modal":
-        "Clicking an incident opens the full detail view, showing the complete description, "
-        "the reporting teacher, location, date, and any supporting notes. You can approve or reject from here.",
-
-    "incident-approved":
-        "Once you approve an incident, demerit points are automatically deducted from the student's total, "
-        "and a notification is sent to the relevant teacher and the student's parent if enabled.",
-
-    "log-incident-blank":
-        "To log a new behaviour incident, navigate to Log Incident. "
-        "Select the class, then the specific student, the rule that was broken, and the severity level.",
-
-    "log-incident-filled":
-        "After selecting the class, student, incident type, and severity, "
-        "add a detailed description of what happened, then click Submit to send the incident for admin review.",
-
-    # ── Merits ──
-    "merits-list":
-        "The Merits module shows all recognition awards given across the school, "
-        "with the student name, merit category, points awarded, reason, and the date of the award.",
-
-    "merits-list-scroll":
-        "Scrolling through the merits list reveals the full history of awards, "
-        "helping you track which students and classes are being recognised for positive behaviour and achievement.",
-
-    "award-merit-blank":
-        "To award a merit, click Award Merit. "
-        "Select the student from the dropdown, then choose the merit category that best describes the achievement.",
-
-    "award-merit-filled":
-        "Add a meaningful reason for the award, describing exactly what the student did to deserve recognition. "
-        "This reason is visible on the student's profile and shared with parents.",
-
-    "award-merit-confirm":
-        "A confirmation dialog appears so you can review all the details before the merit is saved. "
-        "Check the student name, category, points, and reason are all correct.",
-
-    "award-merit-success":
-        "The merit has been successfully awarded. Merit points are added to the student's total, "
-        "their profile is updated, and a notification is sent to the student and their parent.",
-
-    # ── Detentions ──
-    "detention-sessions":
-        "The Detention Sessions module shows all scheduled, active, and completed detention sessions. "
-        "Each card shows the date, time, location, capacity, and the number of students currently assigned.",
-
-    "detention-qualifying-students":
-        "The Qualifying Students panel shows every student who has accumulated enough demerit points "
-        "to be eligible for a detention session, based on the thresholds set in your school rules.",
-
-    "detention-queue":
-        "The detention queue shows students who have been formally placed in the next available session. "
-        "You can manage this list, remove students, or move them to a different scheduled session.",
-
-    "detention-create-modal":
-        "To schedule a new detention session, click Create Session. "
-        "Enter the date, start time, location, and the maximum number of students the venue can accommodate.",
-
-    "detention-create-filled":
-        "Fill in all session details — date, time, venue, and capacity — then click Save. "
-        "The session is immediately available for assigning qualifying students.",
-
-    "detention-session-detail":
-        "Open a session to see the full detail: the list of assigned students, attendance status, "
-        "teacher on duty, and a button to add more qualifying students to this session.",
-
-    # ── Consequences ──
-    "consequences-list":
-        "The Consequences module tracks all formal sanctions assigned to students, "
-        "including verbal warnings, detentions, suspensions, community service, and parent meetings.",
-
-    "consequences-list-scroll":
-        "Each consequence shows the student name, type of sanction, the reason it was issued, "
-        "start and end dates, current status, and the administrator who assigned it.",
-
-    "consequence-detail-modal":
-        "Click a consequence to view its full details, update its status, add progress notes, "
-        "or mark it as completed once the student has fulfilled the requirement.",
-
-    "consequence-management":
-        "The Consequence Management page lets you configure the types of consequences available in your school, "
-        "set their descriptions, and manage which consequence categories are active.",
-
-    # ── Interventions ──
-    "interventions-list":
-        "The Interventions module logs all supportive actions put in place for students "
-        "who need additional help, including counselling, academic support, and behavioural monitoring plans.",
-
-    "interventions-list-scroll":
-        "Each intervention record shows the student name, type of intervention, assigned facilitator, "
-        "start and end dates, progress goals, and current status — active, completed, or on hold.",
-
-    "intervention-detail-modal":
-        "Open an intervention to view its full plan, stated goals, progress notes, "
-        "and update the outcome once the intervention period is complete.",
-
-    # ── Discipline Centre ──
-    "discipline-centre":
-        "The Discipline Centre is the analytics hub of the admin portal. "
-        "It provides a school-wide view of behaviour data, trends, and comparative class performance.",
-
-    "discipline-centre-charts":
-        "The charts section breaks down incidents by category, class, grade level, and time period. "
-        "Use these visualisations to present behaviour data to school leadership and governing bodies.",
-
-    "discipline-centre-leaderboard":
-        "The leaderboard ranks classes and individual students by behaviour and merit performance, "
-        "helping you celebrate positive improvement and identify groups that need targeted support.",
-
-    "discipline-rules":
-        "The Discipline Rules page lets you define the school's full code of conduct, "
-        "listing each rule, its category, the default demerit points, and the severity classification.",
-
-    "discipline-rules-scroll":
-        "Scroll through the rules to review all active codes of conduct. "
-        "You can edit existing rules, adjust point values, or add entirely new rule categories.",
-
-    # ── Reports ──
-    "reports-overview":
-        "The Reports module generates detailed analytics on behaviour trends, merit distribution, "
-        "detention frequency, and intervention outcomes across any selected date range.",
-
-    "reports-charts":
-        "Visual charts make it easy to present insights to parents, school leadership, and governing boards. "
-        "You can export reports as PDF or share them directly from the portal.",
-
-    "reports-bottom":
-        "The lower section of reports provides detailed data tables with filterable columns, "
-        "allowing you to drill down by class, grade, date range, or incident type.",
-
-    "reports-tab2":
-        "Additional report tabs offer more specialised views, including term-over-term comparisons "
-        "and individual student progress reports that can be shared with parents.",
-
-    # ── Notifications ──
-    "notifications":
-        "The Notifications centre shows all system alerts, including new incident submissions, "
-        "merit awards, detention updates, and messages from teachers and parents.",
-
-    "notifications-scroll":
-        "Older notifications are kept in your history so you can always review past alerts. "
-        "You can mark individual notifications as read or dismiss them in bulk.",
-
-    # ── Bulk Import ──
-    "bulk-import":
-        "The Bulk Import tool lets you upload large numbers of student or staff records at once "
-        "using a spreadsheet template, saving significant time at the start of each academic year.",
-
-    "bulk-import-scroll":
-        "Download the provided template, fill in the required columns for each student or staff member, "
-        "then upload the completed file to import all records in a single step.",
-
-    "smart-import":
-        "The Smart Import feature uses intelligent data mapping to handle variations in your spreadsheet format, "
-        "automatically matching columns and flagging any rows that need manual correction before importing.",
-
-    # ── Settings — all 5 tabs ──
-    "settings-profile-tab":
-        "The Settings page opens on the Profile tab, where you can update your display name "
-        "and email address. Changes are saved immediately and reflected across the platform.",
-
-    "settings-password-tab":
-        "The Password tab lets you change your account password. "
-        "Enter your current password for verification, then set and confirm your new password.",
-
-    "settings-school-info-tab":
-        "The School Info tab displays your school's name and unique school code. "
-        "Share this code with parents so they can link their accounts to your school when registering.",
-
-    "settings-school-info-scroll":
-        "Scrolling the School Info tab shows additional school details such as the subscription tier "
-        "and maximum student and teacher capacity configured for your school.",
-
-    "settings-preferences-tab":
-        "The Preferences tab lets you configure your notification settings, "
-        "choosing which system events trigger alerts and how you receive them.",
-
-    "settings-preferences-scroll":
-        "Scroll through the preferences to review all available notification options, "
-        "including incident approvals, merit awards, detention reminders, and parent messages.",
-
-    "settings-language-tab":
-        "The Language tab gives admins two important controls: the Global Language setting "
-        "changes the platform language for all users at your school, while My Language sets only your own preference.",
-
-    "settings-language-scroll":
-        "Classly supports English, Afrikaans, Zulu, and Xhosa. "
-        "Select the appropriate language for your school community and click Save to apply the change.",
-
-    # ── User Management ──
-    "user-management":
-        "The User Management page shows all registered users at your school, "
-        "including their email, role, and account status. You can deactivate accounts or reset passwords here.",
-
-    # ── Teacher portal ──
-    "my-classes":
-        "The My Classes page shows all the classes you are currently assigned to teach. "
-        "Click any class card to view its students and manage their behaviour records.",
-
-    "class-detail":
-        "The class detail page shows a full roster of enrolled students with their current "
-        "demerit and merit point totals, giving you an at-a-glance view of class behaviour.",
-
-    "class-detail-scroll":
-        "Scroll down to see class statistics and quick action buttons "
-        "that let you log an incident or award a merit for any student in this class.",
-
-    "log-incident-blank":
-        "To log a behaviour incident, select the class, then choose the specific student involved. "
-        "Next, select the rule that was broken from the discipline code list.",
-
-    "log-incident-filled":
-        "After filling in the class, student, incident type, and severity level, "
-        "add a detailed written description of what occurred before submitting for admin review.",
-
-    "log-incident-submitted":
-        "The incident has been submitted successfully. "
-        "It now sits in the admin review queue and you will be notified once it has been approved or rejected.",
-
-    "behaviour-list":
-        "The Behaviour page shows all incidents you have logged across your classes. "
-        "You can see the status of each report — pending, approved, or rejected.",
-
-    "award-merit-blank":
-        "To award a merit, select a student from your classes and choose the appropriate merit category. "
-        "Merit categories are configured by your school admin.",
-
-    "award-merit-filled":
-        "Add a clear reason for the award that describes what the student did to deserve recognition. "
-        "This message is visible to the student and their parents.",
-
-    "award-merit-confirm":
-        "Review the merit details on the confirmation screen before finalising. "
-        "Check the student, category, points, and reason are all correct.",
-
-    "award-merit-success":
-        "The merit has been successfully awarded. The student's merit total is updated immediately "
-        "and a notification is sent to both the student and their parent.",
-
-    "merits-list":
-        "The Merits list shows all awards you have given across your classes, "
-        "with dates, point values, and the reasons recorded for each award.",
-
-    "detentions":
-        "The Detentions page shows all upcoming and past detention sessions relevant to your classes. "
-        "You can see which of your students have been assigned to attend.",
-
-    "detentions-scroll":
-        "Scroll down to see a full list of your students' detention history, "
-        "including whether they attended, arrived late, or were absent from a scheduled session.",
-
-    "interventions":
-        "The Interventions page shows all active support plans in place for students in your classes. "
-        "Each plan shows the goals, timeline, facilitator, and current progress status.",
-
-    "interventions-scroll":
-        "Scroll to review the details of each intervention, including the specific goals set for the student "
-        "and any notes recorded by the facilitator during the intervention period.",
-
-    "consequences":
-        "The Consequences page shows all formal sanctions assigned to students in your classes, "
-        "helping you stay informed of the outcomes following incident approvals.",
-
-    "reports":
-        "The Reports page gives you a breakdown of behaviour and merit data "
-        "specifically for your classes over the current term.",
-
-    "reports-scroll":
-        "Scroll to access detailed charts showing incident frequency, merit distribution, "
-        "and trend data for each of your classes.",
-
-    "settings-profile":
-        "The Settings page lets you update your personal profile information, "
-        "including your display name and contact email address.",
-
-    "settings-password":
-        "Use the Password tab to update your account password. "
-        "Always use a strong, unique password to keep your account secure.",
-
-    "settings-preferences":
-        "The Preferences tab lets you control which types of notifications you receive "
-        "and how they are delivered — either in-app, by email, or both.",
-
-    "settings-language":
-        "The Language tab lets you set your preferred language for the portal interface. "
-        "Classly supports English, Afrikaans, Zulu, and Xhosa.",
-
-    # ── Grade Head portal ──
-    "dashboard":
-        "The grade head dashboard shows behaviour and merit data for your entire grade. "
-        "Summary cards display the total incidents, merit awards, and active interventions for all grade classes.",
-
-    "dashboard-charts":
-        "Scroll down to see charts comparing behaviour trends across all classes in your grade, "
-        "helping you identify which classes need the most attention.",
-
-    "students-list":
-        "The Students page lists all learners across your entire grade, "
-        "with their class, demerit points, merit points, and a link to their individual profile.",
-
-    "students-search":
-        "Search for any student within your grade by name or student number. "
-        "The list filters instantly to show matching results.",
-
-    "student-profile":
-        "The student profile shows personal details, current class, point totals, "
-        "and the complete incident and merit history for this learner.",
-
-    "student-incidents-tab":
-        "The Incidents tab shows every behaviour event logged against this student, "
-        "with the full details of each incident including the reporting teacher and outcome.",
-
-    "classes":
-        "The Classes page shows all classes within your grade, "
-        "their class teacher, enrolment numbers, and a direct link to each class detail page.",
-
-    "behaviour-all":
-        "The Behaviour page shows all incidents logged across your grade, "
-        "giving you a complete view of discipline activity for the classes you are responsible for.",
-
-    "behaviour-pending":
-        "The Pending view shows only incidents awaiting review within your grade. "
-        "As grade head, you can review and approve these incidents directly.",
-
-    "log-incident-blank":
-        "Log a behaviour incident for any student in your grade by selecting their class "
-        "and choosing the relevant rule from the discipline code.",
-
-    "log-incident-filled":
-        "After selecting the class, student, and incident type, add a description "
-        "of the behaviour observed before submitting the incident for review.",
-
-    "merits-list":
-        "The Merits list shows all recognition awards given to students across your grade, "
-        "allowing you to monitor positive reinforcement at the grade level.",
-
-    "award-merit-blank":
-        "Award a merit to any student in your grade by selecting them from the dropdown "
-        "and choosing the appropriate merit category.",
-
-    "award-merit-filled":
-        "Add a reason for the award before confirming. "
-        "This description appears on the student's profile and is shared with their parents.",
-
-    "detention-sessions":
-        "The Detention Sessions page shows scheduled sessions relevant to your grade. "
-        "You can view which of your students have been assigned to each session.",
-
-    "detention-sessions-scroll":
-        "Scroll to see older or completed sessions and review past attendance records "
-        "for students in your grade.",
-
-    "my-teachings":
-        "My Teachings shows the subjects and classes you personally teach, "
-        "separate from your grade head responsibilities. Manage your own class behaviour here.",
-
-    "discipline-centre":
-        "The Discipline Centre shows analytics specific to your grade, "
-        "breaking down incidents, trends, and class comparisons within your area of responsibility.",
-
-    "discipline-charts":
-        "Charts show incident frequency, severity distribution, and month-on-month trends "
-        "for all classes in your grade.",
-
-    "consequence-management":
-        "The Consequence Management page lets you review and update formal sanctions "
-        "assigned to students within your grade.",
-
-    # ── Parent portal ──
-    "my-children":
-        "My Children shows a summary card for each child linked to your parent account. "
-        "Each card displays the child's current class, merit points, and any recent activity.",
-
-    "child-profile":
-        "Click a child's card to open their full school profile, showing their class, "
-        "current demerit and merit totals, and a summary of recent incidents and awards.",
-
-    "child-profile-scroll":
-        "Scrolling the child profile reveals their complete incident history, merit awards, "
-        "upcoming detentions, and any active intervention plans.",
-
-    "behaviour":
-        "The Behaviour page shows all incidents recorded for your children at school. "
-        "Each entry shows the date, what happened, the severity, and the current status.",
-
-    "behaviour-detail":
-        "Click an incident to read the full details, including the teacher's description, "
-        "the rule that was broken, and any outcome or consequence that followed.",
-
-    "merits":
-        "The Merits page shows all positive recognition awards your children have received. "
-        "Celebrate their achievements and track their progress throughout the term.",
-
-    "attendance":
-        "The Attendance page shows your child's daily attendance record for the current term, "
-        "including present, absent, and late entries with dates and any notes from the school.",
-
-    "attendance-scroll":
-        "Scroll to see a full term view of attendance data, "
-        "helping you identify any patterns of absence or lateness that may need to be addressed.",
-
-    "detentions":
-        "The Detentions page shows whether your child has been assigned to any scheduled detention sessions. "
-        "Details include the date, time, venue, and the reason for the assignment.",
-
-    "interventions":
-        "The Interventions page shows any support plans currently in place for your child. "
-        "These are set up by the school to help students who need additional academic or behavioural assistance.",
-
-    "consequences":
-        "The Consequences page shows any formal sanctions your child has received, "
-        "such as verbal warnings, community service, or suspension notifications.",
-
-    "consequence-detail":
-        "Open a consequence to read the full details, including the reason it was issued, "
-        "the timeline, and any actions required from you as a parent.",
-
-    "messages-inbox":
-        "The Messages inbox shows all communications sent to you by the school. "
-        "These may include incident notifications, progress updates, and meeting requests.",
-
-    "messages-sent":
-        "The Sent tab shows a history of all messages you have sent to the school, "
-        "so you can keep track of your communications and follow up if needed.",
-
-    "compose-blank":
-        "To send a message to the school, click Compose. "
-        "Enter a subject and your message, then select the appropriate recipient.",
-
-    "compose-filled":
-        "Review your message carefully before sending. "
-        "Once sent, a copy is saved in your Sent folder and the school will be notified.",
-
-    "profile":
-        "Your profile page shows your personal contact details and the children linked to your account. "
-        "Keep your information up to date so the school can always reach you.",
-
-    "profile-scroll":
-        "Scroll down to manage emergency contacts and update your contact preferences. "
-        "Accurate emergency contact information is important for the school's records.",
-
-    "settings":
-        "The Settings page lets you update your account details, change your password, "
-        "and configure your notification preferences.",
-
-    "settings-scroll":
-        "Scroll through the settings to find options for managing linked children, "
-        "language preferences, and communication preferences for your parent account.",
+    "login":                       "Welcome to Classly. Sign in with your email and school code.",
+    "login-filled":                "Enter your credentials and click Sign In to access your portal.",
+    "dashboard":                   "The dashboard shows live totals for incidents, merits, detentions, and pending reviews.",
+    "dashboard-charts":            "Scroll down to see behaviour trend charts and performance summaries.",
+    "dashboard-bottom":            "Recent activity cards keep you updated on the latest school events.",
+    "students-list":               "Students lists every learner with class, grade, and point totals.",
+    "students-search":             "Search by name to instantly locate any student in the school.",
+    "add-student-modal":           "Click Add Student to enrol a new learner and enter their details.",
+    "add-student-form-filled":     "Fill in the student's name, class, and date of birth, then save.",
+    "student-profile":             "Each profile shows personal details, class, and cumulative point history.",
+    "student-profile-detail":      "Scroll to see the student's full incident and merit history.",
+    "student-incidents-tab":       "The Incidents tab shows every behaviour event logged for this student.",
+    "student-merits-tab":          "The Merits tab shows all recognition awards the student has received.",
+    "classes-list":                "Classes shows every active group with teacher and enrolment details.",
+    "class-detail":                "Drill into a class to view all students and their behaviour summaries.",
+    "class-detail-scroll":         "Scroll for class statistics and quick links to log incidents or merits.",
+    "teachers-list":               "Teachers lists all staff with their departments and class assignments.",
+    "add-teacher-modal":           "Click Add Teacher to invite a new staff member to the portal.",
+    "parents-list":                "Parents shows all registered guardians and their linked children.",
+    "behaviour-all-incidents":     "Behaviour lists every incident logged across the school with status.",
+    "behaviour-pending-filter":    "Filter to Pending to focus on incidents awaiting your approval.",
+    "incident-detail-modal":       "Click an incident to view full details and approve or reject it.",
+    "incident-approved":           "On approval, demerit points are applied and parents notified automatically.",
+    "log-incident-blank":          "Log an incident by selecting the student, rule broken, and severity.",
+    "log-incident-filled":         "Add a description, then click Submit to send for admin review.",
+    "merits-list":                 "Merits shows all recognition awards given across the school.",
+    "merits-list-scroll":          "Browse the full awards history with dates, categories, and point values.",
+    "award-merit-blank":           "Award a merit by selecting the student and the merit category.",
+    "award-merit-filled":          "Add a reason for the award before confirming — it appears on the profile.",
+    "award-merit-confirm":         "Confirm all details are correct before saving the merit award.",
+    "award-merit-success":         "The merit is saved, points are added, and the parent is notified.",
+    "detention-sessions":          "Detention Sessions shows all scheduled and completed sessions.",
+    "detention-qualifying-students": "Qualifying Students lists learners who have reached the demerit threshold.",
+    "detention-queue":             "The queue shows students formally placed in the next available session.",
+    "detention-create-modal":      "Create a session by entering the date, time, venue, and capacity.",
+    "detention-create-filled":     "Review session details, then save to make it available for assignments.",
+    "detention-session-detail":    "Open a session to manage attendance and add qualifying students.",
+    "consequences-list":           "Consequences tracks all formal sanctions assigned to students.",
+    "consequences-list-scroll":    "Each record shows the type, reason, dates, status, and assigning admin.",
+    "consequence-detail-modal":    "Open a consequence to update its status or add progress notes.",
+    "consequence-management":      "Configure the consequence types available at your school here.",
+    "interventions-list":          "Interventions logs all support plans put in place for at-risk students.",
+    "interventions-list-scroll":   "Each record shows the type, goals, facilitator, dates, and status.",
+    "intervention-detail-modal":   "Open an intervention to review its plan, goals, and outcome notes.",
+    "discipline-centre":           "The Discipline Centre is your analytics hub for school-wide behaviour data.",
+    "discipline-centre-charts":    "Charts break down incidents by category, class, and time period.",
+    "discipline-centre-leaderboard": "Leaderboards rank classes and students by behaviour and merit performance.",
+    "discipline-rules":            "Manage your school's discipline code, point values, and rule categories.",
+    "discipline-rules-scroll":     "Edit existing rules or add new categories to the code of conduct.",
+    "reports-overview":            "Reports generates analytics on behaviour trends and student progress.",
+    "reports-charts":              "Visual charts let you present insights to leadership and parents.",
+    "reports-bottom":              "Data tables allow you to filter and drill down by class or date.",
+    "notifications":               "Notifications shows all system alerts for incidents, merits, and messages.",
+    "notifications-scroll":        "Older notifications are archived here for your reference.",
+    "bulk-import":                 "Bulk Import lets you upload student or staff records from a spreadsheet.",
+    "bulk-import-scroll":          "Download the template, fill it in, and upload to import all records.",
+    "smart-import":                "Smart Import maps your spreadsheet columns automatically and flags errors.",
+    "settings-profile-tab":        "Update your display name and email address on the Profile tab.",
+    "settings-password-tab":       "Change your account password here to keep your account secure.",
+    "settings-school-info-tab":    "School Info shows your school name and the unique school code to share.",
+    "settings-school-info-scroll": "Scroll to see subscription tier and maximum capacity details.",
+    "settings-preferences-tab":    "Preferences lets you choose which system events trigger notifications.",
+    "settings-preferences-scroll": "Review all notification options including incidents, merits, and messages.",
+    "settings-language-tab":       "Set the Global Language for all users, or your own personal preference.",
+    "settings-language-scroll":    "Classly supports English, Afrikaans, Zulu, and Xhosa.",
+    "user-management":             "User Management shows all registered accounts with roles and status.",
+    # teacher
+    "my-classes":                  "My Classes shows all classes you currently teach.",
+    "behaviour-list":              "Browse all incidents you have logged with their approval status.",
+    "detentions":                  "Detentions shows upcoming sessions and which of your students are assigned.",
+    "detentions-scroll":           "Scroll to review your students' full detention history.",
+    "interventions":               "Interventions shows all active support plans for students in your classes.",
+    "consequences":                "Consequences shows formal sanctions for students in your classes.",
+    "reports":                     "Reports provides behaviour and merit analytics for your classes.",
+    "reports-scroll":              "Scroll for detailed charts on incident frequency and merit distribution.",
+    "settings-profile":            "Update your display name and email on the Profile settings tab.",
+    "settings-password":           "Use the Password tab to update your account password.",
+    "settings-preferences":        "Configure which notification types you receive in Preferences.",
+    "settings-language":           "Set your preferred portal language in the Language tab.",
+    # grade head
+    "students-list":               "Students lists every learner in your grade with class and point totals.",
+    "students-search":             "Search by name to find any student within your grade.",
+    "classes":                     "Classes shows all groups in your grade with teachers and enrolment.",
+    "behaviour-all":               "Behaviour shows all incidents logged across your entire grade.",
+    "behaviour-pending":           "Pending shows only incidents in your grade awaiting review.",
+    "detention-sessions":          "Detention Sessions shows scheduled sessions relevant to your grade.",
+    "detention-sessions-scroll":   "Scroll to see older sessions and past attendance records.",
+    "my-teachings":                "My Teachings shows all subjects and classes you personally teach.",
+    "discipline-centre":           "Discipline Centre shows analytics specific to your grade.",
+    "discipline-charts":           "Charts show incident frequency and trends across your grade's classes.",
+    "consequence-management":      "Review and update formal sanctions for students in your grade here.",
+    # parent
+    "my-children":                 "My Children shows a summary card for each child in your account.",
+    "child-profile":               "Click a child to view their class, points, and full activity history.",
+    "child-profile-scroll":        "Scroll for incidents, merits, detentions, and active interventions.",
+    "behaviour":                   "Behaviour shows all incidents recorded for your children at school.",
+    "behaviour-detail":            "Open an incident to read the full description and outcome.",
+    "merits":                      "Merits shows all positive recognition awards your children have received.",
+    "attendance":                  "Attendance shows your child's daily present, absent, and late records.",
+    "attendance-scroll":           "Scroll for a full term view to spot patterns in attendance.",
+    "detentions":                  "Detentions shows whether your child has been assigned to a session.",
+    "interventions":               "Interventions shows any active support plans set up for your child.",
+    "consequences":                "Consequences shows any formal sanctions your child has received.",
+    "consequence-detail":          "Open a consequence to read the full details and required actions.",
+    "messages-inbox":              "Messages shows all communications received from the school.",
+    "messages-sent":               "Sent keeps a record of all messages you have sent to the school.",
+    "compose-blank":               "Compose a message by choosing a recipient and entering your subject.",
+    "compose-filled":              "Review your message before sending it to the school.",
+    "profile":                     "Your profile shows your contact details and linked children.",
+    "profile-scroll":              "Scroll to manage emergency contacts and communication preferences.",
+    "settings":                    "Settings lets you update account details and notification preferences.",
+    "settings-scroll":             "Scroll to manage linked children and language preferences.",
 }
+
 
 
 # ── TTS helpers ────────────────────────────────────────────────────────────────
@@ -644,9 +237,16 @@ def slide_duration_for(stem: str, narration: str | None) -> float:
 # ── Screenshot selection ───────────────────────────────────────────────────────
 
 def walkthrough_screenshots(folder: Path):
-    """Return all PNGs in folder, sorted by name, excluding the video file."""
-    files = sorted(folder.glob("*.png"))
-    return [f for f in files if not f.name.startswith("._")]
+    """Return PNGs sorted by name, skipping continuation/scroll slides."""
+    result = []
+    for f in sorted(folder.glob("*.png")):
+        if f.name.startswith("._"):
+            continue
+        base = re.sub(r"^\d+-", "", f.stem)
+        if base in SKIP_STEMS:
+            continue
+        result.append(f)
+    return result
 
 
 # ── Visual helpers ─────────────────────────────────────────────────────────────
