@@ -50,7 +50,7 @@ PRE_SILENCE_MS  = 700    # voice starts this many ms after slide appears
 
 # Slide names ending with these are skipped — they're scroll continuations
 SKIP_STEMS = {
-    # True scroll-only duplicates — remove to cut runtime
+    # Admin scroll-only duplicates
     "dashboard-bottom",
     "add-student-form-filled",
     "class-detail-scroll",
@@ -67,6 +67,9 @@ SKIP_STEMS = {
     "detentions-scroll",
     "detention-sessions-scroll",
     "student-merits-tab",
+    # Teacher scroll-only duplicates
+    "dashboard-scroll",
+    "detentions-scroll",
 }
 SAMPLE_RATE     = 44100
 
@@ -157,18 +160,35 @@ NARRATIONS = {
     "settings-language-scroll":    "Classly supports English, Afrikaans, Zulu, and Xhosa.",
     "user-management":             "User Management shows all registered accounts with roles and status.",
     # teacher
-    "my-classes":                  "My Classes shows all classes you currently teach.",
-    "behaviour-list":              "Browse all incidents you have logged with their approval status.",
+    "my-classes":                  "My Classes shows every class you currently teach with enrolment details.",
+    "class-detail":                "Click a class to view all enrolled students and their point summaries.",
+    "student-incidents-tab":       "The Incidents tab shows every logged behaviour event for this student.",
+    "behaviour-incidents":         "The Incident History tab shows every behaviour event you have logged.",
+    "behaviour-list":              "Behaviour lists every incident you have logged with its current status.",
+    "incident-detail":             "Click an incident to read the full description and outcome.",
+    "log-incident-blank":          "Log an incident by selecting the class, student, rule, and severity.",
+    "log-incident-filled":         "Add a description and submit — the incident goes to admin for approval.",
+    "log-incident-submitted":      "Submission confirmed. The admin receives the incident for review.",
+    "merits-list":                 "Merits shows all positive awards you have given to students.",
+    "award-merit-blank":           "Award a merit by choosing the student and the merit category.",
+    "award-merit-filled":          "Add a brief reason before submitting — it appears on the student profile.",
+    "award-merit-confirm":         "Confirm the merit details before saving the award.",
+    "award-merit-success":         "Merit saved. Points are added and the parent is notified automatically.",
     "detentions":                  "Detentions shows upcoming sessions and which of your students are assigned.",
-    "detentions-scroll":           "Scroll to review your students' full detention history.",
-    "interventions":               "Interventions shows all active support plans for students in your classes.",
-    "consequences":                "Consequences shows formal sanctions for students in your classes.",
-    "reports":                     "Reports provides behaviour and merit analytics for your classes.",
-    "reports-scroll":              "Scroll for detailed charts on incident frequency and merit distribution.",
+    "interventions-list":          "Interventions shows all active support plans for students in your classes.",
+    "intervention-detail":         "Open a plan to review its goals, notes, and progress updates.",
+    "guided-intervention":         "Guided Intervention walks you step by step through creating a support plan.",
+    "consequences-list":           "Consequences shows all formal sanctions for students in your classes.",
+    "consequence-detail":          "Click a consequence to view its details, status, and required actions.",
+    "assign-consequence-blank":    "Assign a consequence by selecting the student and consequence type.",
+    "assign-consequence-filled":   "Add a reason and submit to formally record the consequence.",
+    "reports-overview":            "Reports gives you behaviour and merit analytics for your own classes.",
+    "reports-charts":              "Charts show incident trends and merit distribution across your students.",
+    "notifications":               "Notifications shows all system alerts for your incidents and awards.",
     "settings-profile":            "Update your display name and email on the Profile settings tab.",
-    "settings-password":           "Use the Password tab to update your account password.",
-    "settings-preferences":        "Configure which notification types you receive in Preferences.",
-    "settings-language":           "Set your preferred portal language in the Language tab.",
+    "settings-password":           "Use the Password tab to update your account password securely.",
+    "settings-preferences":        "Configure which notification events you receive in Preferences.",
+    "settings-language":           "Set your preferred portal language from English, Afrikaans, Zulu, or Xhosa.",
     # grade head
     "students-list":               "Students lists every learner in your grade with class and point totals.",
     "students-search":             "Search by name to find any student within your grade.",

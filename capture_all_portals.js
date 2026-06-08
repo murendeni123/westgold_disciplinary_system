@@ -548,7 +548,7 @@ async function captureTeacher(browser) {
 
   const { token, user } = await getToken('teacher.rodriguez@school.com', 'teacher123', 'DEFAULT');
 
-  // Login page — once
+  // ── 1. Login page — shown ONCE only ─────────────────────────────────────────
   {
     const ctx = await browser.newContext({ viewport: VP });
     const page = await ctx.newPage();
@@ -560,46 +560,76 @@ async function captureTeacher(browser) {
     await ctx.close();
   }
 
-  // Dashboard
+  // ── 2. Dashboard ─────────────────────────────────────────────────────────────
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="dashboard"], h1');
+    await wait(page, '[class*="dashboard"], [class*="stat"], h1', 12000);
+    await waitNet(page);
     await ss(page, dir, 'dashboard');
     await scrollTo(page, 400);
-    await ss(page, dir, 'dashboard-charts');
+    await ss(page, dir, 'dashboard-scroll');
     await ctx.close(); }
 
-  // My Classes
+  // ── 3. My Classes ─────────────────────────────────────────────────────────────
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/classes`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="class"], h1');
+    await wait(page, '[class*="class"], [class*="card"], h1', 10000);
+    await waitNet(page);
     await ss(page, dir, 'my-classes');
-    const cls = await page.$('[class*="card"]:first-child, table tbody tr:first-child, a[href*="class"]');
+    // Click into a class
+    const cls = await page.$('[class*="card"]:first-child a, [class*="card"]:first-child button, table tbody tr:first-child a, a[href*="/teacher/classes/"]');
     if (cls) {
       await cls.click({ force: true });
-      await wait(page, '[class*="student"], table, h1');
+      await wait(page, '[class*="student"], table tbody tr, h2', 8000);
+      await waitNet(page);
       await ss(page, dir, 'class-detail');
       await scrollTo(page, 400);
       await ss(page, dir, 'class-detail-scroll');
     }
     await ctx.close(); }
 
-  // Student profile
+  // ── 4. Student profile ────────────────────────────────────────────────────────
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/students/1`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="profile"], h1');
+    await wait(page, '[class*="profile"], h1, h2', 10000);
+    await waitNet(page);
     await ss(page, dir, 'student-profile');
     await scrollTo(page, 350);
     await ss(page, dir, 'student-profile-detail');
+    // Incidents tab
+    const incTab = await page.$('[role="tab"]:has-text("Incident"), [role="tab"]:has-text("History"), [role="tab"]:has-text("Behaviour")');
+    if (incTab) { await incTab.click({ force: true }); await page.waitForTimeout(800);
+                  await ss(page, dir, 'student-incidents-tab'); }
     await ctx.close(); }
 
-  // Log incident — blank + filled + submitted
+  // ── 5. Behaviour list ─────────────────────────────────────────────────────────
+  { const { page, ctx } = await newPage(browser, token, user);
+    await page.goto(`${BASE_URL}/teacher/behaviour`, { waitUntil: 'networkidle' });
+    await wait(page, 'button, [role="tab"], h1');
+    // Click "Incident History" tab to show the list of logged incidents
+    const histTab = await page.$('button:has-text("Incident History"), [role="tab"]:has-text("History"), button:has-text("History")');
+    if (histTab) { await histTab.click({ force: true }); await page.waitForTimeout(1000); }
+    await waitNet(page);
+    await ss(page, dir, 'behaviour-incidents');
+    // Open incident detail
+    try {
+      const row = await page.$('table tbody tr:first-child td:first-child, table tbody tr:first-child');
+      if (row) {
+        await page.evaluate(el => el.click(), row);
+        await wait(page, '[role="dialog"]', 5000);
+        const dlg = await page.$('[role="dialog"]');
+        if (dlg) { await ss(page, dir, 'incident-detail'); await page.keyboard.press('Escape'); }
+      }
+    } catch (_) {}
+    await ctx.close(); }
+
+  // ── 6. Log Incident ───────────────────────────────────────────────────────────
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/behaviour/log`, { waitUntil: 'networkidle' });
     await wait(page, 'form, select, h1');
     await ss(page, dir, 'log-incident-blank');
     const cs = await page.$('select[name*="class"], [class*="class"] select, select:first-of-type');
-    if (cs) { await cs.selectOption({ index: 1 }); await page.waitForTimeout(600); }
+    if (cs) { await cs.selectOption({ index: 1 }); await page.waitForTimeout(700); }
     const st = await page.$('select[name*="student"]');
     if (st) { await st.selectOption({ index: 1 }); await page.waitForTimeout(400); }
     const rt = await page.$('select[name*="rule"], select[name*="type"], select[name*="incident"]');
@@ -607,7 +637,7 @@ async function captureTeacher(browser) {
     const sv = await page.$('select[name*="severity"]');
     if (sv) { await sv.selectOption({ index: 1 }); }
     const ta = await page.$('textarea, input[name*="description"]');
-    if (ta) await ta.fill('Student was disrupting the class by speaking loudly and refusing to follow seating instructions.');
+    if (ta) await ta.fill('Student was disrupting the class by speaking loudly and refusing to follow seating instructions despite multiple warnings.');
     await ss(page, dir, 'log-incident-filled');
     const sub = await page.$('button[type="submit"], button:has-text("Submit"), button:has-text("Log Incident")');
     if (sub) {
@@ -617,14 +647,18 @@ async function captureTeacher(browser) {
     }
     await ctx.close(); }
 
-  // Behaviour list
+  // ── 7. Merits list ────────────────────────────────────────────────────────────
   { const { page, ctx } = await newPage(browser, token, user);
-    await page.goto(`${BASE_URL}/teacher/behaviour`, { waitUntil: 'networkidle' });
-    await wait(page, 'table tbody tr, [class*="incident"], h1');
-    await ss(page, dir, 'behaviour-list');
+    await page.goto(`${BASE_URL}/teacher/merits`, { waitUntil: 'networkidle' });
+    await wait(page, 'button, [role="tab"], h1');
+    // Click "View Merits" tab to show the awarded merits list
+    const viewTab = await page.$('button:has-text("View Merits"), [role="tab"]:has-text("View"), button:has-text("View Merit")');
+    if (viewTab) { await viewTab.click({ force: true }); await page.waitForTimeout(1000); }
+    await waitNet(page);
+    await ss(page, dir, 'merits-list');
     await ctx.close(); }
 
-  // Award merit — blank + filled + confirm + success
+  // ── 8. Award Merit ────────────────────────────────────────────────────────────
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/merits/award`, { waitUntil: 'networkidle' });
     await wait(page, 'form, select, h1');
@@ -634,9 +668,9 @@ async function captureTeacher(browser) {
     if (s1) await s1.selectOption({ index: 1 });
     if (s2) await s2.selectOption({ index: 1 });
     const r = await page.$('textarea, input[name*="reason"]');
-    if (r) await r.fill('Excellent participation in class discussions and outstanding submission of the science project.');
+    if (r) await r.fill('Excellent participation in class discussions and outstanding submission of the science project this term.');
     await ss(page, dir, 'award-merit-filled');
-    const conf = await page.$('button[type="submit"], button:has-text("Award"), button:has-text("Confirm")');
+    const conf = await page.$('button[type="submit"], button:has-text("Award"), button:has-text("Submit")');
     if (conf) {
       await conf.click({ force: true });
       await wait(page, '[role="dialog"], [class*="confirm"], [class*="success"]', 5000);
@@ -650,66 +684,114 @@ async function captureTeacher(browser) {
     }
     await ctx.close(); }
 
-  // Merits list
-  { const { page, ctx } = await newPage(browser, token, user);
-    await page.goto(`${BASE_URL}/teacher/merits`, { waitUntil: 'networkidle' });
-    await wait(page, 'table tbody tr, [class*="merit"], h1');
-    await ss(page, dir, 'merits-list');
-    await ctx.close(); }
-
-  // Detentions
+  // ── 9. Detentions ─────────────────────────────────────────────────────────────
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/detentions`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="detention"], h1');
+    await wait(page, '[class*="detention"], table, h1');
+    await waitNet(page);
     await ss(page, dir, 'detentions');
     await scrollTo(page, 400);
     await ss(page, dir, 'detentions-scroll');
     await ctx.close(); }
 
-  // Interventions
+  // ── 10. Interventions ─────────────────────────────────────────────────────────
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/interventions`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="intervention"], h1');
-    await ss(page, dir, 'interventions');
-    await scrollTo(page, 400);
-    await ss(page, dir, 'interventions-scroll');
+    await wait(page, '[class*="intervention"], table, h1');
+    await waitNet(page);
+    await ss(page, dir, 'interventions-list');
+    // Open intervention detail
+    try {
+      const row = await page.$('table tbody tr:first-child, [class*="card"]:first-child');
+      if (row) {
+        await page.evaluate(el => el.click(), row);
+        await wait(page, '[role="dialog"]', 5000);
+        const dlg = await page.$('[role="dialog"]');
+        if (dlg) { await ss(page, dir, 'intervention-detail'); await page.keyboard.press('Escape'); }
+      }
+    } catch (_) {}
+    // Guided Intervention
+    await page.goto(`${BASE_URL}/teacher/interventions/guided`, { waitUntil: 'networkidle' });
+    await wait(page, 'form, [class*="guided"], [class*="step"], h1', 8000);
+    await waitNet(page);
+    await ss(page, dir, 'guided-intervention');
     await ctx.close(); }
 
-  // Consequences
+  // ── 11. Consequences ──────────────────────────────────────────────────────────
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/consequences`, { waitUntil: 'networkidle' });
-    await wait(page, '[class*="consequence"], h1');
-    await ss(page, dir, 'consequences');
+    await wait(page, '[class*="consequence"], table, h1');
+    await waitNet(page);
+    await ss(page, dir, 'consequences-list');
+    // Open consequence detail
+    try {
+      const row = await page.$('table tbody tr:first-child, [class*="card"]:first-child');
+      if (row) {
+        await page.evaluate(el => el.click(), row);
+        await wait(page, '[role="dialog"]', 5000);
+        const dlg = await page.$('[role="dialog"]');
+        if (dlg) { await ss(page, dir, 'consequence-detail'); await page.keyboard.press('Escape'); }
+      }
+    } catch (_) {}
     await ctx.close(); }
 
-  // Reports
+  // ── 12. Assign Consequence ────────────────────────────────────────────────────
+  { const { page, ctx } = await newPage(browser, token, user);
+    await page.goto(`${BASE_URL}/teacher/assign-consequence`, { waitUntil: 'networkidle' });
+    await wait(page, 'form, select, [class*="consequence"], h1', 8000);
+    await waitNet(page);
+    await ss(page, dir, 'assign-consequence-blank');
+    // Try to fill the form
+    const s1 = await page.$('select[name*="student"], select:nth-of-type(1)');
+    if (s1) { await s1.selectOption({ index: 1 }); await page.waitForTimeout(500); }
+    const s2 = await page.$('select[name*="type"], select[name*="consequence"]');
+    if (s2) { await s2.selectOption({ index: 1 }); await page.waitForTimeout(400); }
+    const ta = await page.$('textarea, input[name*="reason"], input[name*="notes"]');
+    if (ta) await ta.fill('Repeated disruptive behaviour during lessons despite prior warnings — formal consequence required.');
+    await ss(page, dir, 'assign-consequence-filled');
+    await ctx.close(); }
+
+  // ── 13. Reports ───────────────────────────────────────────────────────────────
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/reports`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="report"], h1');
-    await ss(page, dir, 'reports');
+    await waitNet(page);
+    await ss(page, dir, 'reports-overview');
     await scrollTo(page, 400);
-    await ss(page, dir, 'reports-scroll');
+    await ss(page, dir, 'reports-charts');
     await ctx.close(); }
 
-  // Notifications
+  // ── 14. Notifications ─────────────────────────────────────────────────────────
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/notifications`, { waitUntil: 'networkidle' });
     await wait(page, '[class*="notification"], h1');
+    await waitNet(page);
     await ss(page, dir, 'notifications');
     await ctx.close(); }
 
-  // Settings — all tabs
+  // ── 15. Settings — all 4 tabs ─────────────────────────────────────────────────
   { const { page, ctx } = await newPage(browser, token, user);
     await page.goto(`${BASE_URL}/teacher/settings`, { waitUntil: 'networkidle' });
     await wait(page, 'form, [class*="setting"], h1');
+
+    // Profile (default)
     await ss(page, dir, 'settings-profile');
+
+    // Password
     await clickTab(page, 'Password');
     await ss(page, dir, 'settings-password');
+
+    // Preferences
     const prefDone = await clickTab(page, 'Preferences');
     if (!prefDone) await clickTab(page, 'Notif');
+    await wait(page, '[class*="pref"], [class*="toggle"], input[type="checkbox"]', 4000);
     await ss(page, dir, 'settings-preferences');
+
+    // Language
     await clickTab(page, 'Language');
+    await wait(page, '[class*="lang"], select, h2', 4000);
     await ss(page, dir, 'settings-language');
+
     await ctx.close(); }
 
   const n = fs.readdirSync(dir).filter(f => f.endsWith('.png')).length;
