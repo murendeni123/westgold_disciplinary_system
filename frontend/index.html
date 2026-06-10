@@ -38,16 +38,18 @@
     </div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Register Service Worker
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((registration) => {
-              console.log('Service Worker registered:', registration);
-            })
-            .catch((error) => {
-              console.log('Service Worker registration failed:', error);
+          // In dev mode, unregister any cached SW so Vite HMR works correctly
+          if (location.hostname === 'localhost' || location.port === '3001') {
+            navigator.serviceWorker.getRegistrations().then(regs => {
+              regs.forEach(r => r.unregister());
             });
+          } else {
+            navigator.serviceWorker.register('/sw.js')
+              .then(r => console.log('Service Worker registered:', r))
+              .catch(e => console.log('Service Worker registration failed:', e));
+          }
         });
       }
     </script>
