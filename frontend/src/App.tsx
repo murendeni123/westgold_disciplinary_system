@@ -47,6 +47,7 @@ const ConsequenceManagement = lazy(() => import('./pages/admin/ConsequenceManage
 const ReportsAnalytics = lazy(() => import('./pages/admin/ReportsAnalytics'));
 const BehaviourDashboard = lazy(() => import('./pages/admin/BehaviourDashboard'));
 const AdminNotifications = lazy(() => import('./pages/admin/NotificationsEnhanced'));
+const SchoolDayConfig = lazy(() => import('./pages/admin/SchoolDayConfig'));
 
 // Platform pages — lazy loaded
 const PlatformDashboard = lazy(() => import('./pages/platform/PlatformDashboard'));
@@ -84,6 +85,8 @@ const TeacherConsequences = lazy(() => import('./pages/teacher/Consequences'));
 const AssignConsequence = lazy(() => import('./pages/teacher/AssignConsequence'));
 const TeacherNotifications = lazy(() => import('./pages/teacher/NotificationsPage'));
 const TeacherReports = lazy(() => import('./pages/teacher/TeacherReports'));
+const TeacherAttendance = lazy(() => import('./pages/teacher/TeacherAttendance'));
+const MyTimetable = lazy(() => import('./pages/teacher/MyTimetable'));
 const GradeHeadSettings = lazy(() => import('./pages/grade-head/GradeHeadSettings'));
 const GradeHeadMyClass = lazy(() => import('./pages/grade-head/GradeHeadMyClass'));
 const GradeHeadMyDashboard = lazy(() => import('./pages/grade-head/GradeHeadMyDashboard'));
@@ -170,6 +173,7 @@ function App() {
             <Route path="reports" element={<ReportsAnalytics />} />
             <Route path="bulk-import" element={<BulkImport />} />
             <Route path="smart-import" element={<BulkImportV2 />} />
+            <Route path="school-day-config" element={<SchoolDayConfig />} />
             <Route path="settings" element={<AdminSettings />} />
             <Route path="notifications" element={<AdminNotifications />} />
           </Route>
@@ -178,6 +182,8 @@ function App() {
             <Route index element={<TeacherDashboard />} />
             <Route path="classes" element={<MyClasses />} />
             <Route path="classes/:id" element={<ClassDetails />} />
+            <Route path="attendance" element={<TeacherAttendance />} />
+            <Route path="my-timetable" element={<MyTimetable />} />
             <Route path="behaviour" element={<TeacherBehaviour />} />
             <Route path="behaviour/log" element={<LogIncident />} />
             <Route path="merits" element={<TeacherMerits />} />

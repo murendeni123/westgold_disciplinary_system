@@ -185,6 +185,43 @@ router.get('/my-schedule', authenticateToken, async (req, res) => {
 });
 
 /**
+ * GET /api/teacher-timetable/my-week   (teacher only)
+ * Returns ALL of the authenticated teacher's confirmed slots, grouped by day,
+ * so they can review/edit their full weekly timetable. Declared before the
+ * admin `/:teacherId` route so it is matched first.
+ */
+router.get('/my-week', authenticateToken, async (req, res) => {
+    try {
+        if (!isTeacher(req)) return res.status(403).json({ error: 'Teacher access required' });
+        const schema = getSchema(req);
+        if (!schema) return res.status(403).json({ error: 'School context required' });
+
+        const teacherId = await getTeacherId(req);
+        if (!teacherId) return res.status(404).json({ error: 'Teacher record not found' });
+
+        const slots = await schemaAll(req,
+            `SELECT tts.*, c.class_name
+               FROM teacher_timetable_slots tts
+               LEFT JOIN classes c ON tts.class_id = c.id
+              WHERE tts.teacher_id = $1
+              ORDER BY tts.day_of_week, tts.lesson_number`,
+            [teacherId]);
+
+        const byDay = {};
+        for (let d = 0; d <= 4; d++) byDay[d] = [];
+        for (const s of slots) {
+            if (!byDay[s.day_of_week]) byDay[s.day_of_week] = [];
+            byDay[s.day_of_week].push(s);
+        }
+
+        res.json({ teacher_id: teacherId, slots, by_day: byDay });
+    } catch (error) {
+        console.error('Error fetching own teacher timetable:', error);
+        res.status(500).json({ error: 'Failed to fetch your timetable' });
+    }
+});
+
+/**
  * GET /api/teacher-timetable/:teacherId   (admin only)
  * Full week schedule for a teacher.
  */

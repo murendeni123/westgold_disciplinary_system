@@ -799,6 +799,53 @@ export const api = {
   getGlobalLanguage: () => axiosInstance.get('/language/global'),
   setUserLanguage: (language: string | null) => axiosInstance.patch('/language/me', { language }),
   setGlobalLanguage: (language: string) => axiosInstance.patch('/language/global', { language }),
+
+  // ── Attendance system: school day config (admin defines the daily schedule) ──
+  getSchoolDayConfig: () => axiosInstance.get('/school-day-config'),
+  setupSchoolDayConfig: (data: {
+    days: Array<{
+      day_of_week: number;
+      school_start_time: string;
+      total_lessons: number;
+      lesson_duration_minutes: number;
+      breaks?: Array<{ after_lesson_number: number; duration_minutes: number }>;
+    }>;
+  }) => axiosInstance.post('/school-day-config/setup', data),
+
+  // ── Attendance system: teacher timetable ──
+  getMyWeekTimetable: () => axiosInstance.get('/teacher-timetable/my-week'),
+  getMySchedule: () => axiosInstance.get('/teacher-timetable/my-schedule'),
+  confirmTimetable: (slots: Array<{
+    day_of_week: number;
+    lesson_number: number;
+    subject?: string | null;
+    room?: string | null;
+    class_id?: number | null;
+    is_off_period?: boolean;
+  }>) => axiosInstance.post('/teacher-timetable/confirm', { slots }),
+
+  // ── Attendance system: morning register ──
+  getMorningRegisterToday: () => axiosInstance.get('/morning-register/today'),
+  openMorningRegister: () => axiosInstance.post('/morning-register/open'),
+  updateMorningEntry: (entryId: number, data: { status?: string; note?: string }) =>
+    axiosInstance.patch(`/morning-register/entry/${entryId}`, data),
+  submitMorningRegister: (registerId: number) =>
+    axiosInstance.post(`/morning-register/submit/${registerId}`),
+  assignMorningSubstitute: (data: { class_id: number; substitute_teacher_id: number; date: string }) =>
+    axiosInstance.post('/morning-register/substitute', data),
+  getMorningRegisterHistory: (classId: number, params?: { limit?: number; offset?: number }) =>
+    axiosInstance.get(`/morning-register/class/${classId}`, { params }),
+
+  // ── Attendance system: lesson register ──
+  getLessonRegistersToday: () => axiosInstance.get('/lesson-register/today'),
+  openLessonRegister: (timetableSlotId: number) =>
+    axiosInstance.post('/lesson-register/open', { timetable_slot_id: timetableSlotId }),
+  updateLessonEntry: (entryId: number, data: { status?: string; note?: string }) =>
+    axiosInstance.patch(`/lesson-register/entry/${entryId}`, data),
+  submitLessonRegister: (registerId: number) =>
+    axiosInstance.post(`/lesson-register/submit/${registerId}`),
+  getLessonRegisterHistory: (classId: number, params?: { limit?: number; offset?: number }) =>
+    axiosInstance.get(`/lesson-register/class/${classId}`, { params }),
 };
 
 // Export the axios instance for direct use when needed

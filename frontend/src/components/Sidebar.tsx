@@ -22,6 +22,8 @@ import {
   Building2,
   Clock,
   Bell,
+  CalendarCheck,
+  CalendarClock,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -49,6 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
     { path: '/admin/merits', label: t('nav.meritsRecognition'), icon: Award },
     { path: '/admin/reports', label: t('nav.reports'), icon: BarChart3 },
     { path: '/admin/smart-import', label: t('nav.smartImport'), icon: Upload },
+    { path: '/admin/school-day-config', label: 'School Day Setup', icon: CalendarClock },
     { path: '/admin/notifications', label: t('nav.notifications'), icon: Bell },
     { path: '/admin/settings', label: t('nav.settings'), icon: Settings },
   ];
@@ -56,6 +59,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
   const teacherMenu = [
     { path: '/teacher', label: t('nav.dashboard'), icon: LayoutDashboard },
     { path: '/teacher/classes', label: t('nav.myClasses'), icon: BookOpen },
+    { path: '/teacher/attendance', label: 'Attendance', icon: CalendarCheck },
+    { path: '/teacher/my-timetable', label: 'My Timetable', icon: CalendarClock },
     { path: '/teacher/behaviour', label: t('nav.behaviour'), icon: AlertTriangle },
     { path: '/teacher/merits', label: t('nav.merits'), icon: Award },
     { path: '/teacher/detentions', label: t('nav.detentions'), icon: Clock },
