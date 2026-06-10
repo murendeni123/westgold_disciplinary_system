@@ -725,5 +725,113 @@ CREATE INDEX IF NOT EXISTS idx_import_history_school   ON {SCHEMA_NAME}.import_h
 CREATE INDEX IF NOT EXISTS idx_import_history_created  ON {SCHEMA_NAME}.import_history(created_at DESC);
 
 -- ============================================================================
+-- ATTENDANCE / TIMETABLE SYSTEM (Morning + Lesson registers)
+-- Separate from the legacy `attendance`/`timetables` tables and from all
+-- detention_* tables. Lesson start/end times are DERIVED at read time from
+-- school_day_config + school_breaks (not stored per-lesson).
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.school_day_config (
+    id SERIAL PRIMARY KEY,
+    day_of_week INTEGER NOT NULL,
+    school_start_time TIME NOT NULL,
+    total_lessons INTEGER NOT NULL DEFAULT 0,
+    lesson_duration_minutes INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(day_of_week)
+);
+
+CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.school_breaks (
+    id SERIAL PRIMARY KEY,
+    day_of_week INTEGER NOT NULL,
+    after_lesson_number INTEGER NOT NULL,
+    duration_minutes INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_school_breaks_day ON {SCHEMA_NAME}.school_breaks(day_of_week);
+
+CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.teacher_timetable_slots (
+    id SERIAL PRIMARY KEY,
+    teacher_id INTEGER NOT NULL REFERENCES {SCHEMA_NAME}.teachers(id) ON DELETE CASCADE,
+    day_of_week INTEGER NOT NULL,
+    lesson_number INTEGER NOT NULL,
+    class_id INTEGER REFERENCES {SCHEMA_NAME}.classes(id) ON DELETE SET NULL,
+    subject VARCHAR(150),
+    room VARCHAR(100),
+    is_off_period BOOLEAN DEFAULT false,
+    confirmed BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(teacher_id, day_of_week, lesson_number)
+);
+CREATE INDEX IF NOT EXISTS idx_tt_slots_teacher ON {SCHEMA_NAME}.teacher_timetable_slots(teacher_id);
+CREATE INDEX IF NOT EXISTS idx_tt_slots_teacher_day ON {SCHEMA_NAME}.teacher_timetable_slots(teacher_id, day_of_week);
+
+CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.morning_register (
+    id SERIAL PRIMARY KEY,
+    class_id INTEGER NOT NULL REFERENCES {SCHEMA_NAME}.classes(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    taken_by_teacher_id INTEGER REFERENCES {SCHEMA_NAME}.teachers(id) ON DELETE SET NULL,
+    submitted_at TIMESTAMP,
+    is_substitute BOOLEAN DEFAULT false,
+    locked BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(class_id, date)
+);
+CREATE INDEX IF NOT EXISTS idx_morning_register_date ON {SCHEMA_NAME}.morning_register(date);
+CREATE INDEX IF NOT EXISTS idx_morning_register_class_date ON {SCHEMA_NAME}.morning_register(class_id, date);
+
+CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.morning_register_entries (
+    id SERIAL PRIMARY KEY,
+    morning_register_id INTEGER NOT NULL REFERENCES {SCHEMA_NAME}.morning_register(id) ON DELETE CASCADE,
+    student_id INTEGER NOT NULL REFERENCES {SCHEMA_NAME}.students(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'present' CHECK (status IN ('present', 'absent', 'late', 'excused', 'early_departure')),
+    note TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(morning_register_id, student_id)
+);
+CREATE INDEX IF NOT EXISTS idx_mr_entries_register ON {SCHEMA_NAME}.morning_register_entries(morning_register_id);
+
+CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.morning_register_substitutes (
+    id SERIAL PRIMARY KEY,
+    class_id INTEGER NOT NULL REFERENCES {SCHEMA_NAME}.classes(id) ON DELETE CASCADE,
+    substitute_teacher_id INTEGER NOT NULL REFERENCES {SCHEMA_NAME}.teachers(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    created_by INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(class_id, date)
+);
+CREATE INDEX IF NOT EXISTS idx_mr_subs_teacher_date ON {SCHEMA_NAME}.morning_register_substitutes(substitute_teacher_id, date);
+
+CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.lesson_register (
+    id SERIAL PRIMARY KEY,
+    teacher_timetable_slot_id INTEGER NOT NULL REFERENCES {SCHEMA_NAME}.teacher_timetable_slots(id) ON DELETE CASCADE,
+    class_id INTEGER NOT NULL REFERENCES {SCHEMA_NAME}.classes(id) ON DELETE CASCADE,
+    teacher_id INTEGER NOT NULL REFERENCES {SCHEMA_NAME}.teachers(id) ON DELETE CASCADE,
+    lesson_number INTEGER NOT NULL,
+    day_of_week INTEGER NOT NULL,
+    date DATE NOT NULL,
+    submitted_at TIMESTAMP,
+    locked BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(teacher_timetable_slot_id, date)
+);
+CREATE INDEX IF NOT EXISTS idx_lesson_register_date ON {SCHEMA_NAME}.lesson_register(date);
+CREATE INDEX IF NOT EXISTS idx_lesson_register_teacher_date ON {SCHEMA_NAME}.lesson_register(teacher_id, date);
+CREATE INDEX IF NOT EXISTS idx_lesson_register_class_date ON {SCHEMA_NAME}.lesson_register(class_id, date);
+
+CREATE TABLE IF NOT EXISTS {SCHEMA_NAME}.lesson_register_entries (
+    id SERIAL PRIMARY KEY,
+    lesson_register_id INTEGER NOT NULL REFERENCES {SCHEMA_NAME}.lesson_register(id) ON DELETE CASCADE,
+    student_id INTEGER NOT NULL REFERENCES {SCHEMA_NAME}.students(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'present' CHECK (status IN ('present', 'absent', 'late', 'excused', 'early_departure')),
+    note TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(lesson_register_id, student_id)
+);
+CREATE INDEX IF NOT EXISTS idx_lr_entries_register ON {SCHEMA_NAME}.lesson_register_entries(lesson_register_id);
+
+-- ============================================================================
 -- END OF SCHOOL SCHEMA TEMPLATE
 -- ============================================================================

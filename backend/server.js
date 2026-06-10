@@ -152,6 +152,11 @@ app.use('/api/timetables', authenticateToken, setSchemaFromToken, enforceSchemaA
 app.use('/api/period-timetables', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/periodTimetables'));
 app.use('/api/subjects', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/subjects'));
 app.use('/api/period-register', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/periodRegister'));
+// Morning + lesson register system (school day config, teacher timetable, registers)
+app.use('/api/school-day-config', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/schoolDayConfig'));
+app.use('/api/teacher-timetable', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/teacherTimetable'));
+app.use('/api/morning-register', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/morningRegister'));
+app.use('/api/lesson-register', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/lessonRegister'));
 const { router: detentionsRouter, startDetentionAutoClose } = require('./routes/detentions');
 app.use('/api/detentions', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, detentionsRouter);
 app.use('/api/merits', authenticateToken, setSchemaFromToken, enforceSchemaAccess, enforceActivePlan, require('./routes/merits'));
