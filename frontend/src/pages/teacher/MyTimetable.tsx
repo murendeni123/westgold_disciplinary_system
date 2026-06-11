@@ -25,7 +25,14 @@ const MyTimetable: React.FC = () => {
   const [classes, setClasses] = useState<any[]>([]);
   const [lessonsPerDay, setLessonsPerDay] = useState<Record<number, number>>({});
   const [configured, setConfigured] = useState(false);
-  const [grid, setGrid] = useState<Grid>({});
+  const [grid, setGrid] = useState<Grid>(() => {
+    const g: Grid = {};
+    for (let d = 0; d < 5; d++) {
+      g[d] = {};
+      for (let l = 1; l <= DEFAULT_LESSONS_PER_DAY; l++) g[d][l] = emptyCell();
+    }
+    return g;
+  });
   const [selectedDay, setSelectedDay] = useState(0);
 
   useEffect(() => {
@@ -80,7 +87,7 @@ const MyTimetable: React.FC = () => {
   const updateCell = (day: number, lesson: number, patch: Partial<Cell>) => {
     setGrid((g) => ({
       ...g,
-      [day]: { ...g[day], [lesson]: { ...g[day][lesson], ...patch } },
+      [day]: { ...(g[day] || {}), [lesson]: { ...(g[day]?.[lesson] || emptyCell()), ...patch } },
     }));
   };
 
