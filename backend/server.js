@@ -14,6 +14,8 @@ const { repairAllSchoolSchemas } = require('./utils/schemaRepair');
 const path = require('path');
 const billingScheduler = require('./jobs/billingScheduler');
 
+const helmet = require('helmet');
+
 const app = express();
 const server = http.createServer(app);
 
@@ -86,6 +88,12 @@ io.on('connection', (socket) => {
 app.set('io', io);
 app.set('userSockets', userSockets);
 
+// Security headers
+app.use(helmet({
+  contentSecurityPolicy: false, // Managed by frontend (Vite serves HTML)
+  crossOriginEmbedderPolicy: false, // Allow embedding for school portals
+}));
+
 // Middleware
 app.use(cors({
   origin: (origin, cb) => {
@@ -127,9 +135,6 @@ app.use('/api/auth', require('./routes/auth'));
 
 // Password Management (requires auth)
 app.use('/api/password', require('./routes/password'));
-
-// TEMPORARY: Emergency password reset (requires auth, no current password needed)
-app.use('/api/emergency-password-reset', require('./routes/emergency-password-reset'));
 
 // Routes - Platform Admin (school onboarding)
 app.use('/api/schools', require('./routes/schoolOnboarding'));

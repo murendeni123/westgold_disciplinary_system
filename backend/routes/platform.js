@@ -10,8 +10,38 @@ const { FREE_PLAN_LIMITS } = require('../utils/planEnforcement');
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const PLATFORM_ADMIN_EMAIL = process.env.PLATFORM_ADMIN_EMAIL || 'superadmin@pds.com';
-const PLATFORM_ADMIN_PASSWORD = process.env.PLATFORM_ADMIN_PASSWORD || 'superadmin123';
+
+// ── Platform admin seeding ────────────────────────────────────────────────────
+// On startup, ensure at least one platform_admin exists in the database.
+// Credentials come from env vars (used ONLY for first-time seeding, never for
+// live comparison). After seeding the plaintext password is never stored.
+const seedPlatformAdmin = async () => {
+    try {
+        const count = await dbGet('SELECT COUNT(*) as cnt FROM platform_users WHERE is_active = true');
+        if (count && parseInt(count.cnt, 10) > 0) return; // already seeded
+
+        const seedEmail = process.env.PLATFORM_ADMIN_EMAIL || 'platform@classly.app';
+        const seedPassword = process.env.PLATFORM_ADMIN_PASSWORD;
+        if (!seedPassword) {
+            console.warn('⚠️  PLATFORM_ADMIN_PASSWORD not set — cannot seed default platform admin');
+            return;
+        }
+
+        const hash = await bcrypt.hash(seedPassword, 12);
+        await dbRun(
+            `INSERT INTO platform_users (name, email, password_hash, is_active, created_at)
+             VALUES ($1, $2, $3, true, CURRENT_TIMESTAMP)
+             ON CONFLICT (email) DO NOTHING`,
+            ['Super Admin', seedEmail, hash]
+        );
+        console.log('✅ Platform admin seeded to database:', seedEmail);
+    } catch (err) {
+        console.warn('⚠️  Could not seed platform admin (table may not exist yet):', err.message);
+    }
+};
+
+// Run seeding asynchronously after module load — non-fatal
+setImmediate(() => seedPlatformAdmin().catch(() => {}));
 
 // Platform login (separate from regular auth)
 router.post('/login', loginLimiter, async (req, res) => {
@@ -22,29 +52,28 @@ router.post('/login', loginLimiter, async (req, res) => {
             return res.status(400).json({ error: 'Email and password required' });
         }
 
-        // First, try to find platform user in database
-        let platformUser = null;
-        try {
-            platformUser = await dbGet(
-                'SELECT * FROM platform_users WHERE email = ? AND is_active = true',
-                [email]
-            );
-        } catch (dbError) {
-            // If platform_users table doesn't exist yet, fall back to env vars
-        }
+        // Always authenticate against the database — no env-var plaintext fallback
+        const platformUser = await dbGet(
+            'SELECT * FROM platform_users WHERE email = $1 AND is_active = true',
+            [email]
+        );
 
         if (platformUser) {
-            // Verify password from database
             const passwordMatch = await bcrypt.compare(password, platformUser.password_hash);
             if (passwordMatch) {
-                // Update last login
                 await dbRun(
-                    'UPDATE platform_users SET last_login = CURRENT_TIMESTAMP WHERE id = ?',
+                    'UPDATE platform_users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
                     [platformUser.id]
                 );
 
                 const token = jwt.sign(
-                    { userId: platformUser.id, role: 'platform_admin' },
+                    {
+                        platformUserId: platformUser.id,
+                        email: platformUser.email,
+                        role: 'platform_admin',
+                        name: platformUser.name,
+                        isPlatformAdmin: true,
+                    },
                     JWT_SECRET,
                     { expiresIn: '24h' }
                 );
@@ -55,26 +84,7 @@ router.post('/login', loginLimiter, async (req, res) => {
                         id: platformUser.id,
                         email: platformUser.email,
                         role: 'platform_admin',
-                        name: platformUser.name
-                    }
-                });
-            }
-        } else {
-            // Fallback to environment variables for backward compatibility
-            if (email === PLATFORM_ADMIN_EMAIL && password === PLATFORM_ADMIN_PASSWORD) {
-                const token = jwt.sign(
-                    { userId: 'platform', role: 'platform_admin' },
-                    JWT_SECRET,
-                    { expiresIn: '24h' }
-                );
-
-                return res.json({
-                    token,
-                    user: {
-                        id: 'platform',
-                        email: PLATFORM_ADMIN_EMAIL,
-                        role: 'platform_admin',
-                        name: 'Super Admin'
+                        name: platformUser.name,
                     }
                 });
             }
@@ -1615,24 +1625,24 @@ router.post('/users', requirePlatformAdmin, async (req, res) => {
             return res.status(400).json({ error: 'Name, email, and password are required' });
         }
 
-        if (password.length < 6) {
-            return res.status(400).json({ error: 'Password must be at least 6 characters' });
+        if (password.length < 12) {
+            return res.status(400).json({ error: 'Password must be at least 12 characters' });
         }
 
         // Check if email already exists
-        const existing = await dbGet('SELECT id FROM platform_users WHERE email = ?', [email]);
+        const existing = await dbGet('SELECT id FROM platform_users WHERE email = $1', [email]);
         if (existing) {
             return res.status(400).json({ error: 'Email already in use' });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, 12);
         const result = await dbRun(
             `INSERT INTO platform_users (name, email, password_hash, is_active, created_at)
-             VALUES (?, ?, ?, true, CURRENT_TIMESTAMP) RETURNING id`,
+             VALUES ($1, $2, $3, true, CURRENT_TIMESTAMP) RETURNING id`,
             [name, email, hashedPassword]
         );
 
-        const user = await dbGet('SELECT id, name, email, is_active, created_at FROM platform_users WHERE id = ?', [result.id]);
+        const user = await dbGet('SELECT id, name, email, is_active, created_at FROM platform_users WHERE id = $1', [result.id]);
         res.status(201).json(user);
     } catch (error) {
         console.error('Error creating platform user:', error);

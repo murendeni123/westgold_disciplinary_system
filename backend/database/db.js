@@ -35,13 +35,21 @@ pool.on('error', (err) => {
 // SCHEMA CONTEXT MANAGEMENT
 // ============================================================================
 
+// Valid schema name pattern — mirrors schemaHelper.js for defence-in-depth
+const VALID_SCHEMA_RE = /^school_[a-z0-9_]+$/;
+
 /**
- * Set the search_path for a database client to use a specific school schema
+ * Set the search_path for a database client to use a specific school schema.
+ * SECURITY: validates the schema name format before interpolation to prevent
+ * SQL injection via the SET search_path command (which cannot be parameterised).
  * @param {object} client - PostgreSQL client from pool
  * @param {string} schemaName - The schema name (e.g., "school_ws2025")
  */
 const setClientSchema = async (client, schemaName) => {
     if (schemaName && schemaName !== 'public') {
+        if (!VALID_SCHEMA_RE.test(schemaName) || schemaName.length > 63) {
+            throw new Error(`SECURITY: Rejected invalid schema name: ${schemaName}`);
+        }
         await client.query(`SET search_path TO ${schemaName}, public`);
     } else {
         await client.query('SET search_path TO public');

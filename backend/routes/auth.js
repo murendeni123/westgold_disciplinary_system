@@ -31,9 +31,12 @@ const router = express.Router();
 
 /**
  * GET /api/auth/debug-context
- * Debug endpoint to check current authentication state
+ * Debug endpoint — restricted to platform admins only
  */
 router.get('/debug-context', authenticateToken, async (req, res) => {
+    if (req.user?.role !== 'platform_admin') {
+        return res.status(403).json({ error: 'Platform admin access required' });
+    }
     try {
         res.json({
             user: {
@@ -625,7 +628,7 @@ router.put('/change-password', authenticateToken, async (req, res) => {
         }
 
         if (newPassword.length < 6) {
-            return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+            return res.status(400).json({ error: 'New password must be at least 8 characters long' });
         }
 
         console.log('🔍 Looking up user with ID from token:', req.user.id);
@@ -738,8 +741,8 @@ router.post('/signup', signupLimiter, validateSignup, async (req, res) => {
             return res.status(400).json({ error: 'Phone number is required' });
         }
 
-        if (password.length < 6) {
-            return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+        if (password.length < 8) {
+            return res.status(400).json({ error: 'Password must be at least 8 characters long' });
         }
 
         // Check if email already exists
@@ -934,183 +937,146 @@ router.post('/link-student', authenticateToken, linkStudentLimiter, validateLink
 });
 
 // Supabase user sync endpoint - handles OAuth users from Supabase Auth
-router.post('/supabase-sync', async (req, res) => {
+// SECURITY: rate-limited; uses shared pool; validates schema names before interpolation
+const VALID_SCHEMA_SYNC_RE = /^school_[a-z0-9_]+$/;
+router.post('/supabase-sync', linkStudentLimiter, async (req, res) => {
     try {
         const { supabase_user_id, email, name, auth_provider } = req.body;
-
-        console.log('Supabase sync request:', { supabase_user_id, email, name, auth_provider });
 
         if (!supabase_user_id || !email) {
             return res.status(400).json({ error: 'Supabase user ID and email required' });
         }
 
-        const { Pool } = require('pg');
-        const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: false });
+        // Basic email format guard
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
 
-        try {
-            // Check if user already exists by supabase_user_id
-            let userResult = await pool.query(
-                'SELECT * FROM public.users WHERE supabase_user_id = $1',
-                [supabase_user_id]
-            );
-            let user = userResult.rows[0];
+        // Use the shared pool — never open a new Pool per request
+        let user = await dbGet('SELECT * FROM public.users WHERE supabase_user_id = $1', [supabase_user_id]);
 
-            console.log('User by supabase_user_id:', user);
+        if (!user) {
+            // Check if user exists by email (for linking existing accounts)
+            user = await dbGet('SELECT * FROM public.users WHERE email = $1', [email]);
 
-            if (!user) {
-                // Check if user exists by email (for linking existing accounts)
-                userResult = await pool.query('SELECT * FROM public.users WHERE email = $1', [email]);
-                user = userResult.rows[0];
-                console.log('User by email:', user);
-                
-                if (user) {
-                    // Link existing account to Supabase
-                    await pool.query(
-                        'UPDATE public.users SET supabase_user_id = $1, auth_provider = $2, last_sign_in = CURRENT_TIMESTAMP WHERE id = $3',
-                        [supabase_user_id, auth_provider || 'google', user.id]
-                    );
-                    // Refresh user data
-                    userResult = await pool.query('SELECT * FROM public.users WHERE id = $1', [user.id]);
-                    user = userResult.rows[0];
-                } else {
-                    // Create new parent user (password is NULL for OAuth users)
-                    const insertResult = await pool.query(
-                        `INSERT INTO public.users (email, name, role, supabase_user_id, auth_provider, password, created_at, last_sign_in)
-                         VALUES ($1, $2, 'parent', $3, $4, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                         RETURNING id`,
-                        [email, name || email.split('@')[0], supabase_user_id, auth_provider || 'google']
-                    );
-                    
-                    console.log('Insert result:', insertResult.rows[0]);
-                    
-                    if (!insertResult.rows[0] || !insertResult.rows[0].id) {
-                        console.error('Failed to get user ID from insert');
-                        return res.status(500).json({ error: 'Failed to create user account' });
-                    }
-                    
-                    userResult = await pool.query('SELECT * FROM public.users WHERE id = $1', [insertResult.rows[0].id]);
-                    user = userResult.rows[0];
-                }
-            } else {
-                // Update last sign in
-                await pool.query(
-                    'UPDATE public.users SET last_sign_in = CURRENT_TIMESTAMP WHERE id = $1',
-                    [user.id]
+            if (user) {
+                // Link existing account to Supabase
+                await dbRun(
+                    'UPDATE public.users SET supabase_user_id = $1, auth_provider = $2, last_sign_in = CURRENT_TIMESTAMP WHERE id = $3',
+                    [supabase_user_id, auth_provider || 'google', user.id]
                 );
-            }
+                user = await dbGet('SELECT * FROM public.users WHERE id = $1', [user.id]);
+            } else {
+                // Create new parent user (password is NULL for OAuth users)
+                const insertResult = await dbRun(
+                    `INSERT INTO public.users (email, name, role, supabase_user_id, auth_provider, password, created_at, last_sign_in)
+                     VALUES ($1, $2, 'parent', $3, $4, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                     RETURNING id`,
+                    [email, name || email.split('@')[0], supabase_user_id, auth_provider || 'google']
+                );
 
-            if (!user) {
-                console.error('Failed to create or find user');
-                await pool.end();
-                return res.status(500).json({ error: 'Failed to create user account' });
+                if (!insertResult.id) {
+                    return res.status(500).json({ error: 'Failed to create user account' });
+                }
+                user = await dbGet('SELECT * FROM public.users WHERE id = $1', [insertResult.id]);
             }
-
-            // Get user's school and schema
-            let schoolInfo = null;
-            let schemaName = null;
-            
-            // First check user_schools table
-            const userSchoolsResult = await pool.query(
-                `SELECT s.id, s.name, s.code, s.schema_name 
-                 FROM public.schools s 
-                 JOIN public.user_schools us ON s.id = us.school_id 
-                 WHERE us.user_id = $1 AND s.status = 'active'
-                 ORDER BY us.is_primary DESC
-                 LIMIT 1`,
+        } else {
+            await dbRun(
+                'UPDATE public.users SET last_sign_in = CURRENT_TIMESTAMP WHERE id = $1',
                 [user.id]
             );
-            
-            if (userSchoolsResult.rows.length > 0) {
-                schoolInfo = userSchoolsResult.rows[0];
-                schemaName = schoolInfo.schema_name;
-            } else if (user.primary_school_id) {
-                // Fall back to primary_school_id
-                const primarySchoolResult = await pool.query(
-                    'SELECT id, name, code, schema_name FROM public.schools WHERE id = $1 AND status = $2',
-                    [user.primary_school_id, 'active']
-                );
-                if (primarySchoolResult.rows.length > 0) {
-                    schoolInfo = primarySchoolResult.rows[0];
-                    schemaName = schoolInfo.schema_name;
-                }
-            }
+        }
 
-            // Generate JWT token for the user with school context
-            const token = jwt.sign(
-                { 
-                    userId: user.id, 
-                    role: user.role,
-                    schoolId: schoolInfo?.id,
-                    schemaName: schemaName
-                },
-                JWT_SECRET,
-                { expiresIn: '24h' }
+        if (!user) {
+            return res.status(500).json({ error: 'Failed to create user account' });
+        }
+
+        // Get user's school and schema
+        let schoolInfo = await dbGet(
+            `SELECT s.id, s.name, s.code, s.schema_name
+               FROM public.schools s
+               JOIN public.user_schools us ON s.id = us.school_id
+              WHERE us.user_id = $1 AND s.status = 'active'
+              ORDER BY us.is_primary DESC
+              LIMIT 1`,
+            [user.id]
+        );
+
+        if (!schoolInfo && user.primary_school_id) {
+            schoolInfo = await dbGet(
+                'SELECT id, name, code, schema_name FROM public.schools WHERE id = $1 AND status = $2',
+                [user.primary_school_id, 'active']
             );
+        }
 
-            // Get additional user info based on role
-            let userInfo = { ...user };
-            delete userInfo.password;
-            delete userInfo.password_hash;
-            
-            // Add school info
-            if (schoolInfo) {
-                userInfo.schoolId = schoolInfo.id;
-                userInfo.schoolName = schoolInfo.name;
-                userInfo.schoolCode = schoolInfo.code;
-                userInfo.schemaName = schemaName;
-            }
+        const schemaName = schoolInfo?.schema_name || null;
 
-            if (user.role === 'teacher' && schemaName) {
-                const teacherResult = await pool.query(
+        // Generate JWT token
+        const token = jwt.sign(
+            {
+                version: 2,
+                userId: user.id,
+                role: user.role,
+                schoolId: schoolInfo?.id,
+                schemaName,
+            },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        const userInfo = { ...user };
+        delete userInfo.password;
+        delete userInfo.password_hash;
+
+        if (schoolInfo) {
+            userInfo.schoolId = schoolInfo.id;
+            userInfo.schoolName = schoolInfo.name;
+            userInfo.schoolCode = schoolInfo.code;
+            userInfo.schemaName = schemaName;
+        }
+
+        // Fetch teacher record — validate schema name before interpolation
+        if (user.role === 'teacher' && schemaName) {
+            if (VALID_SCHEMA_SYNC_RE.test(schemaName)) {
+                userInfo.teacher = await dbGet(
                     `SELECT * FROM ${schemaName}.teachers WHERE user_id = $1`,
                     [user.id]
                 );
-                userInfo.teacher = teacherResult.rows[0];
             }
-
-            if (user.role === 'parent') {
-                // Fetch children from ALL linked schools
-                const allSchemasResult = await pool.query(
-                    `SELECT DISTINCT s.schema_name FROM public.schools s
-                     JOIN public.user_schools us ON s.id = us.school_id
-                     WHERE us.user_id = $1 AND s.status = 'active'
-                     UNION
-                     SELECT s.schema_name FROM public.schools s
-                     JOIN public.users u ON s.id = u.primary_school_id
-                     WHERE u.id = $1 AND s.status = 'active'`,
-                    [user.id]
-                );
-                let allChildren = [];
-                for (const row of allSchemasResult.rows) {
-                    try {
-                        const cr = await pool.query(
-                            `SELECT s.*, c.class_name 
-                             FROM ${row.schema_name}.students s 
-                             LEFT JOIN ${row.schema_name}.classes c ON s.class_id = c.id 
-                             WHERE s.parent_id = $1`,
-                            [user.id]
-                        );
-                        allChildren = allChildren.concat(cr.rows);
-                    } catch (e) {
-                        console.log(`Supabase-sync children error for schema ${row.schema_name}:`, e.message);
-                    }
-                }
-                userInfo.children = allChildren;
-            }
-
-            console.log('Supabase sync successful, returning user:', userInfo.email, 'schema:', schemaName);
-
-            await pool.end();
-
-            res.json({
-                token,
-                user: userInfo
-            });
-        } catch (poolError) {
-            console.error('Supabase sync pool error:', poolError);
-            await pool.end();
-            throw poolError;
         }
+
+        // Fetch children for parent — validate each schema before interpolation
+        if (user.role === 'parent') {
+            const allSchemas = await dbAll(
+                `SELECT DISTINCT s.schema_name FROM public.schools s
+                  JOIN public.user_schools us ON s.id = us.school_id
+                 WHERE us.user_id = $1 AND s.status = 'active'
+                 UNION
+                 SELECT s.schema_name FROM public.schools s
+                  JOIN public.users u ON s.id = u.primary_school_id
+                 WHERE u.id = $1 AND s.status = 'active'`,
+                [user.id]
+            );
+            let allChildren = [];
+            for (const row of allSchemas) {
+                if (!VALID_SCHEMA_SYNC_RE.test(row.schema_name)) continue;
+                try {
+                    const kids = await dbAll(
+                        `SELECT s.*, c.class_name
+                           FROM ${row.schema_name}.students s
+                           LEFT JOIN ${row.schema_name}.classes c ON s.class_id = c.id
+                          WHERE s.parent_id = $1`,
+                        [user.id]
+                    );
+                    allChildren = allChildren.concat(kids);
+                } catch (e) {
+                    // Non-fatal — skip this schema
+                }
+            }
+            userInfo.children = allChildren;
+        }
+
+        res.json({ token, user: userInfo });
     } catch (error) {
         console.error('Supabase sync error:', error);
         res.status(500).json({ error: 'Internal server error' });

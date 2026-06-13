@@ -366,7 +366,7 @@ const verifyPassword = async (plainPassword, hashedPassword) => {
 };
 
 const hashPassword = async (plainPassword) => {
-    const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(12);
     return bcrypt.hash(plainPassword, salt);
 };
 

@@ -242,8 +242,8 @@ const enforceSchemaAccess = async (req, res, next) => {
         
         const schema = getSchema(req);
         if (!schema) {
-            // No schema context - let other middleware handle this
-            return next();
+            console.warn(`SECURITY: enforceSchemaAccess — no schema context for ${req.method} ${req.path}, user: ${req.user?.id}`);
+            return res.status(403).json({ error: 'School context required' });
         }
         
         // Validate schema format (SQL injection prevention)
